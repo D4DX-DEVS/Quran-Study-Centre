@@ -55,17 +55,7 @@ exports.addExamRegistration = async (req, res) => {
     console.log({ existingRecord });
 
     if (existingRecord) {
-      let duplicateField = "";
-      if (existingRecord.regno === regno) duplicateField = "registration number";
-      else if (existingRecord.mobileNumber === normalizedMobileNumber) {
-        duplicateField = "mobile number";
-        return res.status(400).json({ success: false, customMessage: "This mobile number is already used in another registration." });
-      } else if (existingRecord.nameOfApplicant === nameOfApplicant) duplicateField = "name";
-
-      return res.status(400).json({
-        success: false,
-        customMessage: `This ${duplicateField} is already registered with another user.`,
-      });
+      return res.status(400).json({ success: false, customMessage: "This mobile number is already taken." });
     }
 
     // Create new exam registration if no conflicts are found
