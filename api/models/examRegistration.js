@@ -119,6 +119,11 @@ const ExamRegistrationSchema = new mongoose.Schema(
         return "";
       },
     },
+    // The exam year (from ExamSettings) this registration belongs to.
+    // Used to scope duplicate-mobile checks: same number may register again in a new year.
+    examYear: {
+      type: Number,
+    },
   },
   { timestamps: true }
 );

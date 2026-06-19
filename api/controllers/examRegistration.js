@@ -50,16 +50,19 @@ exports.addExamRegistration = async (req, res) => {
       return res.status(400).json({ success: false, customMessage: "The educational qualification should be typed in English only. Malayalam or other non-English characters are not allowed." });
     }
 
-    // Check for existing regno, mobileNumber, or nameOfApplicant in a single query
-    const existingRecord = await ExamRegistration.findOne({ mobileNumber: normalizedMobileNumber });
+    // Check for existing mobile number within the current exam year only.
+    // Same number is allowed to register again in a future year.
+    const settings = await ExamSettings.getCurrent();
+    const currentYear = settings.year;
+    const existingRecord = await ExamRegistration.findOne({ mobileNumber: normalizedMobileNumber, examYear: currentYear });
     console.log({ existingRecord });
 
     if (existingRecord) {
-      return res.status(400).json({ success: false, customMessage: "This mobile number is already taken." });
+      return res.status(400).json({ success: false, customMessage: "This mobile number is already registered for this year." });
     }
 
     // Create new exam registration if no conflicts are found
-    const payload = { ...req.body, mobileNumber: normalizedMobileNumber };
+    const payload = { ...req.body, mobileNumber: normalizedMobileNumber, examYear: currentYear };
 
     // Phase 2.1/2.2: default assigned exam centre = the student's own study centre.
     // Clubbing / ≥threshold rule runs asynchronously after save (see below).
@@ -612,29 +615,47 @@ exports.getExamRegistrationList = async (req, res) => {
   try {
     const { skip = 0, limit = 10, searchkey, district, examCenter } = req.query;
 
-    // Build the query
-    const query = {
-      ...req.filter,
-      // Handle district filter with proper ObjectId conversion - check both regular and exam districts
-      ...(district &&
-        mongoose.Types.ObjectId.isValid(district) && {
-          $or: [{ district: new mongoose.Types.ObjectId(district) }, { examDistrict: new mongoose.Types.ObjectId(district) }],
-        }),
-      // Handle examCenter filter with proper ObjectId conversion - check both regular and outside exam centers
-      ...(examCenter &&
-        mongoose.Types.ObjectId.isValid(examCenter) && {
-          $or: [{ examCenter: new mongoose.Types.ObjectId(examCenter) }, { outsideExamCenter: new mongoose.Types.ObjectId(examCenter) }],
-        }),
-      // Handle search
-      ...(searchkey && {
-        $or: [{ nameOfApplicant: { $regex: searchkey, $options: "i" } }, { regno: { $regex: searchkey, $options: "i" } }].filter((cond) => Object.values(cond)[0] !== null),
-      }),
-    };
+    // Build base filter excluding fields that need special $or treatment so they
+    // don't conflict when spread into the query.
+    const baseFilter = { ...(req.filter || {}) };
+    delete baseFilter.district;
+    delete baseFilter.examCenter;
 
-    // If examCenter is provided in the filter, ensure it's included in the query
-    if (req.filter && req.filter.examCenter) {
-      query.$or = [{ examCenter: new mongoose.Types.ObjectId(req.filter.examCenter) }, { outsideExamCenter: new mongoose.Types.ObjectId(req.filter.examCenter) }];
+    // Collect $or groups; combine them via $and so they never overwrite each other.
+    const andConditions = [];
+
+    // District: match home district OR exam district (outside-centre students)
+    if (district && mongoose.Types.ObjectId.isValid(district)) {
+      andConditions.push({
+        $or: [
+          { district: new mongoose.Types.ObjectId(district) },
+          { examDistrict: new mongoose.Types.ObjectId(district) },
+        ],
+      });
     }
+
+    // ExamCenter: match regular OR outside exam center
+    const effectiveExamCenter = examCenter || req.filter?.examCenter;
+    if (effectiveExamCenter && mongoose.Types.ObjectId.isValid(String(effectiveExamCenter))) {
+      andConditions.push({
+        $or: [
+          { examCenter: new mongoose.Types.ObjectId(String(effectiveExamCenter)) },
+          { outsideExamCenter: new mongoose.Types.ObjectId(String(effectiveExamCenter)) },
+        ],
+      });
+    }
+
+    // Searchkey
+    if (searchkey) {
+      andConditions.push({
+        $or: [
+          { nameOfApplicant: { $regex: searchkey, $options: "i" } },
+          { regno: { $regex: searchkey, $options: "i" } },
+        ],
+      });
+    }
+
+    const query = andConditions.length > 0 ? { ...baseFilter, $and: andConditions } : { ...baseFilter };
 
     // Get registrations with selected fields
     const registrations = await ExamRegistration.find(query).populate("district", "district").populate("examDistrict", "district").populate("examCenter", "centerName").populate("outsideExamCenter", "centerName").populate("nameOfExamAppearingNow", "examType").select("district examDistrict nameOfApplicant examCenter outsideExamCenter regno examName").skip(parseInt(skip)).limit(parseInt(limit)).sort({ _id: -1 });
