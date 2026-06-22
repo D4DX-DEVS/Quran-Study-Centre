@@ -522,7 +522,8 @@ const ListItems = React.memo(
           } else if (item.type === "number") {
             updateValuesTemp[item.name] = parseFloat(itemValue);
           } else if (item.type === "select") {
-            updateValuesTemp[item.name] = typeof itemValue === "undefined" ? "" : typeof itemValue === "string" || typeof itemValue === "number" || typeof itemValue === "boolean" ? itemValue : value[item.name]?._id ? value[item.name]._id : "";
+            const rawSelectValue = value[item.name];
+            updateValuesTemp[item.name] = rawSelectValue?._id ? rawSelectValue._id : (rawSelectValue == null ? "" : rawSelectValue);
           } else if (item.type === "multiSelect") {
             try {
               if (item.apiType === "API") {
