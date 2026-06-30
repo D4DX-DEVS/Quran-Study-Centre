@@ -5,6 +5,7 @@ import { Container } from "../../../core/layout/styels";
 import { getData } from "../../../../backend/api";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { registerMalayalamFont, malayalamCellHooks } from "./malayalamFont";
 //src/components/styles/page/index.js
 //if you want to write custom style wirte in above file
 const ExamRegistration = (props) => {
@@ -33,8 +34,17 @@ const ExamRegistration = (props) => {
       }
 
       // Group the listing by exam name, and within each exam group males first then females.
+      // When the download is district-wise (multiple areas present), we sort AREA FIRST so that
+      // one area's registrations are fully listed before the next area begins.  Within each area
+      // the existing exam-name → gender → name grouping is preserved.
       const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
+      const hasMultipleAreas = new Set(rows.map((r) => r.area).filter(Boolean)).size > 1;
+
       const sortedRows = [...rows].sort((a, b) => {
+        if (hasMultipleAreas) {
+          const area = (a.area || "").localeCompare(b.area || "");
+          if (area !== 0) return area;
+        }
         const exam = (a.examType || "").localeCompare(b.examType || "");
         if (exam !== 0) return exam;
         const gender = genderRank(a.gender) - genderRank(b.gender);
@@ -43,6 +53,10 @@ const ExamRegistration = (props) => {
       });
 
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      // Load the Malayalam font into the DOM so Malayalam cells can be shaped
+      // by the browser and embedded as images (jsPDF can't shape Indic scripts).
+      await registerMalayalamFont();
+      const malayalam = malayalamCellHooks(doc);
       const pageWidth = doc.internal.pageSize.getWidth();
 
       // Build a clean district label from the actual result rows
@@ -60,27 +74,26 @@ const ExamRegistration = (props) => {
 
       doc.autoTable({
         startY: 60,
-        head: [["Sl", "Reg No", "Name", "Gender", "Mobile", "Study Centre", "Area", "P/R", "Exam Centre", "Exam"]],
+        head: [["Sl", "Name", "Gender", "Mobile", "Area", "Private/Regular", "Exam Centre", "Exam"]],
         body: sortedRows.map((r, i) => [
           i + 1,
-          r.regno,
           r.name,
           r.gender || "-",
           r.mobile,
-          r.studyCentre || "-",
           r.area || "-",
-          r.status ? r.status.charAt(0).toUpperCase() : "-",
+          r.status || "-",
           r.examCentre || "-",
           r.examType || "-",
         ]),
         styles: { fontSize: 8, cellPadding: 3, lineColor: 0, lineWidth: 0.2, textColor: 0 },
         headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+        didParseCell: malayalam.didParseCell,
+        didDrawCell: malayalam.didDrawCell,
         theme: "grid",
         columnStyles: {
           0: { halign: "center", cellWidth: 26 },
-          1: { cellWidth: 70 },
-          3: { halign: "center", cellWidth: 48 },
-          7: { halign: "center", cellWidth: 24 },
+          2: { halign: "center", cellWidth: 48 },
+          5: { halign: "center", cellWidth: 60 },
         },
         didDrawPage: (d) => {
           doc.setFontSize(9);
@@ -125,6 +138,8 @@ const ExamRegistration = (props) => {
         ],
         styles: { fontSize: 10, cellPadding: 4, lineColor: 0, lineWidth: 0.2 },
         headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+        didParseCell: malayalam.didParseCell,
+        didDrawCell: malayalam.didDrawCell,
         theme: "grid",
         columnStyles: { 1: { halign: "center" }, 2: { halign: "center" }, 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
       });
@@ -359,7 +374,7 @@ const ExamRegistration = (props) => {
     },
     {
       type: "info",
-      content: "ഖുർആൻ സ്റ്റഡി സെന്റർ കേരളയിൽ അഫിലിയേറ്റ് ചെയ്തിട്ടുള്ള പ്രാദേശിക സെന്ററുകളിൽ പഠിക്കുന്നവർ Regular വിഭാഗത്തിലും അല്ലാത്തവർ Private വിഭാഗത്തിലും ഉൾപ്പെടുന്നു.(ഈ രണ്ട് വിഭാഗങ്ങളിലും വെവ്വേറെ റാങ്ക് ലിസ്റ്റ് പ്രസിദ്ധീകരിക്കുന്നതാണ്)",
+      content: "ഖുർആൻ സ്റ്റഡി സെന്റർ കേരളയിൽ അഫിലിയേറ്റ് ചെയ്തിട്ടുള്ള പ്രാദേശിക സെന്ററുകളിൽ പഠിക്കുന്നവർ Regular വിഭാഗത്തിലും അല്ലാത്തവർ Private വിഭാഗത്തിലും ഉൾപ്പെടുന്നു.(ഈ രണ്ട് വിഭാഗങ്ങളിലും വെവ്വേറെ ేറ്റ് ేറ്റ് റാങ്ക് ലിസ്റ്റ് പ്രസിദ്ധീകരിക്കുന്നതാണ്)",
       add: true,
       update: true,
       export: false,
