@@ -63,12 +63,14 @@ const ExamRegistration = (props) => {
       const districtSet = new Set(rows.map((r) => r.district).filter(Boolean));
       const districtName = districtSet.size === 1 ? [...districtSet][0] : "All Districts";
 
-      const today = new Date().toLocaleDateString("en-GB");
+      const now = new Date();
+      const today = now.toLocaleDateString("en-GB");
+      const printedTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 
       doc.setFontSize(14);
       doc.text("Registered Students — Verification Sheet", pageWidth / 2, 30, { align: "center" });
       doc.setFontSize(11);
-      doc.text(`${districtName}  |  Total: ${rows.length}  |  Printed: ${today}`, pageWidth / 2, 48, {
+      doc.text(`${districtName}  |  Total: ${rows.length}  |  Printed: ${today} ${printedTime}`, pageWidth / 2, 48, {
         align: "center",
       });
 
