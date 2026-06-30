@@ -410,9 +410,15 @@ const ListItems = React.memo(
     // end processing attributes
     useEffect(() => {
       //setLoaderBox(users.isLoading);
-      if (currentIndex === 0 && users?.count) {
-        setCount(users.filterCount);
-        setCounts(users.counts);
+      // Use the presence of a loaded response (an array, even if empty) as the
+      // "fresh data" signal — NOT users.count. When a filter matches zero rows,
+      // data.length is 0 (falsy), and gating on it would leave the cards and
+      // pager showing stale counts from the previous filter. The backend always
+      // returns the correctly scoped filterCount/counts (zeros when empty), so
+      // apply them whenever a page-0 response has arrived.
+      if (currentIndex === 0 && users?.response) {
+        setCount(users.filterCount ?? 0);
+        setCounts(users.counts ?? {});
         // setTotalCount(users.totalCount);
       }
     }, [users, currentIndex]);

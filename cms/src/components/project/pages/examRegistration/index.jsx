@@ -32,6 +32,16 @@ const ExamRegistration = (props) => {
         return;
       }
 
+      // Group the listing by exam name, and within each exam group males first then females.
+      const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
+      const sortedRows = [...rows].sort((a, b) => {
+        const exam = (a.examType || "").localeCompare(b.examType || "");
+        if (exam !== 0) return exam;
+        const gender = genderRank(a.gender) - genderRank(b.gender);
+        if (gender !== 0) return gender;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -50,11 +60,12 @@ const ExamRegistration = (props) => {
 
       doc.autoTable({
         startY: 60,
-        head: [["Sl", "Reg No", "Name", "Mobile", "Study Centre", "Area", "P/R", "Exam Centre", "Exam"]],
-        body: rows.map((r) => [
-          r.sl,
+        head: [["Sl", "Reg No", "Name", "Gender", "Mobile", "Study Centre", "Area", "P/R", "Exam Centre", "Exam"]],
+        body: sortedRows.map((r, i) => [
+          i + 1,
           r.regno,
           r.name,
+          r.gender || "-",
           r.mobile,
           r.studyCentre || "-",
           r.area || "-",
@@ -68,7 +79,8 @@ const ExamRegistration = (props) => {
         columnStyles: {
           0: { halign: "center", cellWidth: 26 },
           1: { cellWidth: 70 },
-          6: { halign: "center", cellWidth: 24 },
+          3: { halign: "center", cellWidth: 48 },
+          7: { halign: "center", cellWidth: 24 },
         },
         didDrawPage: (d) => {
           doc.setFontSize(9);
@@ -117,7 +129,23 @@ const ExamRegistration = (props) => {
         columnStyles: { 1: { halign: "center" }, 2: { halign: "center" }, 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
       });
 
-      const filename = `Registered-Students-${districtName.replace(/\s+/g, "-")}-${today.replace(/\//g, "-")}.pdf`;
+      // Build a human-readable file name based on the active filters.
+      // - No filter:        "All Students <year>"
+      // - District filter:  "Registration <district> <year>"
+      // - Area filter:      "Registration <area> <year>"
+      const year = new Date().getFullYear();
+      const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
+      const areaName = areaSet.size === 1 ? [...areaSet][0] : null;
+
+      let title;
+      if (activeFilter.area && areaName) {
+        title = `Registration ${areaName} ${year}`;
+      } else if (activeFilter.district && districtSet.size === 1) {
+        title = `Registration ${districtName} ${year}`;
+      } else {
+        title = `All Students ${year}`;
+      }
+      const filename = `${title}.pdf`;
       doc.save(filename);
     } catch (e) {
       console.error(e);
