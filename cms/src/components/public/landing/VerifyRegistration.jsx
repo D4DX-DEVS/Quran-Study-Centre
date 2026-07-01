@@ -233,6 +233,10 @@ function VerifyRegistration({ onClose, setMessage, setLoaderBox }) {
                   <dd>{item.area?.area || "-"}</dd>
                 </div>
                 <div>
+                  <dt>Exam Center</dt>
+                  <dd>{item.centerRegistration?.nameOfCenter || "-"}</dd>
+                </div>
+                <div>
                   <dt>Registered On</dt>
                   <dd>{item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}</dd>
                 </div>

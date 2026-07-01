@@ -43,6 +43,12 @@ function CustomSelect(props) {
   const [filter] = useState(props.filter ?? {});
   const [selectedId, setSelectedId] = useState(props.value);
   const [initialized, setInitialized] = useState(false);
+
+  // Keep selectedId in sync when the value is changed externally (e.g. the
+  // parent form resetting this field because a field it depends on changed).
+  useEffect(() => {
+    setSelectedId(props.value);
+  }, [props.value]);
   const [selectedValue, setSelectedValue] = useState(props.placeholder);
   const [options, setOptions] = useState([]);
   const [filteredOptions, setFilteredOptions] = useState([]);

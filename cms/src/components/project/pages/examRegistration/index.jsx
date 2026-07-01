@@ -67,7 +67,7 @@ const ExamRegistration = (props) => {
       // heading and the saved file name so they always match.
       // - No filter:            "All Registrations <year>"
       // - District filter:      "<district> Registration <year>"
-      // - Area filter:          "<area> <district> Registration <year>"
+      // - Area filter:          "<area> Registration <year>"
       // - Exam centre filter:   "<exam centre> Registrations <year>"
       const year = new Date().getFullYear();
       const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
@@ -79,7 +79,7 @@ const ExamRegistration = (props) => {
       if (activeFilter.centerRegistration && centreName) {
         title = `${centreName} Registrations ${year}`;
       } else if (activeFilter.area && areaName) {
-        title = `${areaName} ${districtName} Registration ${year}`;
+        title = `${areaName} Registration ${year}`;
       } else if (activeFilter.district && districtSet.size === 1) {
         title = `${districtName} Registration ${year}`;
       } else {

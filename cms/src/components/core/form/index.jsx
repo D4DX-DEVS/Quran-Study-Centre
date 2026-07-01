@@ -341,6 +341,26 @@ const AutoForm = (props) => {
         ...additionalValues,
         [field.name]: value,
       };
+
+      // Reset any select fields whose options depend on this field (directly
+      // or transitively, e.g. district -> area -> centerRegistration), since
+      // their previously selected value no longer matches the refreshed options.
+      if (type === "select") {
+        let changedNames = [field.name];
+        while (changedNames.length) {
+          const nextChanged = [];
+          formState.forEach((dependent) => {
+            if (dependent.type !== "select" && dependent.type !== "multiSelect") return;
+            const dependsOn = Array.isArray(dependent.updateOn) ? dependent.updateOn : [dependent.updateOn];
+            if (dependent.name && dependsOn.some((name) => changedNames.includes(name)) && udpateValue[dependent.name] !== "") {
+              udpateValue[dependent.name] = "";
+              nextChanged.push(dependent.name);
+            }
+          });
+          changedNames = nextChanged;
+        }
+      }
+
       setFormValues(udpateValue);
 
       // Validating the fields

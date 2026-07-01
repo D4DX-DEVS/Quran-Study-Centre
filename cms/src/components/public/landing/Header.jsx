@@ -479,13 +479,15 @@ function Header(props) {
                 Hall Ticket
               </button>
             )}
-            <button
-              type="button"
-              className="landing-header-btn primary landing-register-highlight"
-              onClick={() => openActionPanel("examRegistration")}
-            >
-              Exam Registration
-            </button>
+            {showExamRegistration && (
+              <button
+                type="button"
+                className="landing-header-btn primary landing-register-highlight"
+                onClick={() => openActionPanel("examRegistration")}
+              >
+                Exam Registration
+              </button>
+            )}
             <button
               type="button"
               className="landing-header-btn secondary"
@@ -546,13 +548,15 @@ function Header(props) {
                 Hall Ticket
               </button>
             )}
-            <button
-              type="button"
-              className="landing-mob-register-btn landing-register-highlight"
-              onClick={() => openActionPanel("examRegistration")}
-            >
-              Exam Registration
-            </button>
+            {showExamRegistration && (
+              <button
+                type="button"
+                className="landing-mob-register-btn landing-register-highlight"
+                onClick={() => openActionPanel("examRegistration")}
+              >
+                Exam Registration
+              </button>
+            )}
             <button
               type="button"
               className="landing-nav-btn"
@@ -564,7 +568,8 @@ function Header(props) {
         )}
       </header>
 
-      {isFloating &&
+      {showExamRegistration &&
+        isFloating &&
         !showMenu &&
         !openMenuSetup &&
         !openAffiliation &&
