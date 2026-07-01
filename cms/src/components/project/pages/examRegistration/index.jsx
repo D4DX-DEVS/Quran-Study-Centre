@@ -33,10 +33,9 @@ const ExamRegistration = (props) => {
         return;
       }
 
-      // Group the listing by exam name, and within each exam group males first then females.
       // When the download is district-wise (multiple areas present), we sort AREA FIRST so that
-      // one area's registrations are fully listed before the next area begins.  Within each area
-      // the existing exam-name → gender → name grouping is preserved.
+      // one area's registrations are fully listed before the next area begins (with an area
+      // header row inserted between areas). Within each area, group by exam centre, then gender.
       const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
       const hasMultipleAreas = new Set(rows.map((r) => r.area).filter(Boolean)).size > 1;
 
@@ -45,8 +44,8 @@ const ExamRegistration = (props) => {
           const area = (a.area || "").localeCompare(b.area || "");
           if (area !== 0) return area;
         }
-        const exam = (a.examType || "").localeCompare(b.examType || "");
-        if (exam !== 0) return exam;
+        const centre = (a.examCentre || "").localeCompare(b.examCentre || "");
+        if (centre !== 0) return centre;
         const gender = genderRank(a.gender) - genderRank(b.gender);
         if (gender !== 0) return gender;
         return (a.name || "").localeCompare(b.name || "");
@@ -74,11 +73,21 @@ const ExamRegistration = (props) => {
         align: "center",
       });
 
-      doc.autoTable({
-        startY: 60,
-        head: [["Sl", "Name", "Gender", "Mobile", "Area", "Private/Regular", "Exam Centre", "Exam"]],
-        body: sortedRows.map((r, i) => [
-          i + 1,
+      // Build table body, inserting a full-width area header row each time the area changes
+      // (only relevant for district-wise downloads where multiple areas are present).
+      const tableBody = [];
+      let lastArea = null;
+      let sl = 0;
+      sortedRows.forEach((r) => {
+        if (hasMultipleAreas && r.area !== lastArea) {
+          tableBody.push([
+            { content: r.area || "-", colSpan: 8, styles: { fontStyle: "bold", fillColor: [210, 210, 210], halign: "left" } },
+          ]);
+          lastArea = r.area;
+        }
+        sl += 1;
+        tableBody.push([
+          sl,
           r.name,
           r.gender || "-",
           r.mobile,
@@ -86,7 +95,13 @@ const ExamRegistration = (props) => {
           r.status || "-",
           r.examCentre || "-",
           r.examType || "-",
-        ]),
+        ]);
+      });
+
+      doc.autoTable({
+        startY: 60,
+        head: [["Sl", "Name", "Gender", "Mobile", "Area", "Private/Regular", "Exam Centre", "Exam"]],
+        body: tableBody,
         styles: { fontSize: 8, cellPadding: 3, lineColor: 0, lineWidth: 0.2, textColor: 0 },
         headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
         didParseCell: malayalam.didParseCell,
