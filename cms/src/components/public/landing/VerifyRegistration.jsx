@@ -7,7 +7,7 @@ import { FormContainer, formReg, validatePhoneNumber } from "./registrationForm"
 const lookupForm = [
   {
     type: "info",
-    content: "Enter your registered mobile number to view your registrations and update any mismatched details.",
+    content: "രജിസ്ട്രേഷൻ സമയത്ത് നൽകിയ മൊബൈൽ നമ്പർ നൽകി സെർച്ച് ചെയ്യുക",
   },
   {
     type: "number",

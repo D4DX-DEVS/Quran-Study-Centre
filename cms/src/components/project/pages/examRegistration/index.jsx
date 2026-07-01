@@ -63,12 +63,35 @@ const ExamRegistration = (props) => {
       const districtSet = new Set(rows.map((r) => r.district).filter(Boolean));
       const districtName = districtSet.size === 1 ? [...districtSet][0] : "All Districts";
 
+      // Build a human-readable title based on the active filter — used for both the PDF
+      // heading and the saved file name so they always match.
+      // - No filter:            "All Registrations <year>"
+      // - District filter:      "<district> Registration <year>"
+      // - Area filter:          "<area> <district> Registration <year>"
+      // - Exam centre filter:   "<exam centre> Registrations <year>"
+      const year = new Date().getFullYear();
+      const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
+      const areaName = areaSet.size === 1 ? [...areaSet][0] : null;
+      const centreSet = new Set(rows.map((r) => r.examCentre).filter(Boolean));
+      const centreName = centreSet.size === 1 ? [...centreSet][0] : null;
+
+      let title;
+      if (activeFilter.centerRegistration && centreName) {
+        title = `${centreName} Registrations ${year}`;
+      } else if (activeFilter.area && areaName) {
+        title = `${areaName} ${districtName} Registration ${year}`;
+      } else if (activeFilter.district && districtSet.size === 1) {
+        title = `${districtName} Registration ${year}`;
+      } else {
+        title = `All Registrations ${year}`;
+      }
+
       const now = new Date();
       const today = now.toLocaleDateString("en-GB");
       const printedTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 
       doc.setFontSize(14);
-      doc.text("Registered Students — Verification Sheet", pageWidth / 2, 30, { align: "center" });
+      doc.text(title, pageWidth / 2, 30, { align: "center" });
       doc.setFontSize(11);
       doc.text(`${districtName}  |  Total: ${rows.length}  |  Printed: ${today} ${printedTime}`, pageWidth / 2, 48, {
         align: "center",
@@ -162,27 +185,6 @@ const ExamRegistration = (props) => {
         columnStyles: { 1: { halign: "center" }, 2: { halign: "center" }, 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
       });
 
-      // Build a human-readable file name based on the active filter.
-      // - No filter:            "All Registrations <year>"
-      // - District filter:      "<district> Registration <year>"
-      // - Area filter:          "<area> <district> Registration <year>"
-      // - Exam centre filter:   "<exam centre> Registrations <year>"
-      const year = new Date().getFullYear();
-      const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
-      const areaName = areaSet.size === 1 ? [...areaSet][0] : null;
-      const centreSet = new Set(rows.map((r) => r.examCentre).filter(Boolean));
-      const centreName = centreSet.size === 1 ? [...centreSet][0] : null;
-
-      let title;
-      if (activeFilter.centerRegistration && centreName) {
-        title = `${centreName} Registrations ${year}`;
-      } else if (activeFilter.area && areaName) {
-        title = `${areaName} ${districtName} Registration ${year}`;
-      } else if (activeFilter.district && districtSet.size === 1) {
-        title = `${districtName} Registration ${year}`;
-      } else {
-        title = `All Registrations ${year}`;
-      }
       const filename = `${title}.pdf`;
       doc.save(filename);
     } catch (e) {
