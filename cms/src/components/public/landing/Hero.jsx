@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BookOpen,
   Building2,
+  ClipboardCheck,
   FileDown,
   LayoutDashboard,
   MapPinned,
@@ -97,6 +98,13 @@ function Hero() {
           action: () => triggerLandingAction("hallTicket"),
         }
       : null,
+    {
+      key: "verify-registration",
+      title: "Verify Your Registration",
+      description: "Look up your registration with your mobile number and fix any mismatched details.",
+      icon: ClipboardCheck,
+      action: () => triggerLandingAction("verifyRegistration"),
+    },
     landingSettings.centerRegistration
       ? {
           key: "centre-affiliation",
@@ -183,6 +191,13 @@ function Hero() {
                   Open registration
                 </button>
               )}
+              <button
+                type="button"
+                className="landing-chip-button secondary"
+                onClick={() => triggerLandingAction("verifyRegistration")}
+              >
+                Verify Your Registration
+              </button>
               <a href="/admin" className="landing-chip-button secondary">
                 Admin panel
               </a>

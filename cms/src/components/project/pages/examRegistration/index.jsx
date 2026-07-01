@@ -33,19 +33,20 @@ const ExamRegistration = (props) => {
         return;
       }
 
-      // When the download is district-wise (multiple areas present), we sort AREA FIRST so that
-      // one area's registrations are fully listed before the next area begins (with an area
-      // header row inserted between areas). Within each area, group by exam centre, then gender.
+      // Sorting logic is fixed and applies to every download regardless of the active filter
+      // (all registrations, district-wise, area-wise, or exam-centre-wise): area, then exam
+      // centre, then exam name, then gender. An area header row is inserted between areas when
+      // more than one area is present in the export (e.g. district-wise downloads).
       const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
       const hasMultipleAreas = new Set(rows.map((r) => r.area).filter(Boolean)).size > 1;
 
       const sortedRows = [...rows].sort((a, b) => {
-        if (hasMultipleAreas) {
-          const area = (a.area || "").localeCompare(b.area || "");
-          if (area !== 0) return area;
-        }
+        const area = (a.area || "").localeCompare(b.area || "");
+        if (area !== 0) return area;
         const centre = (a.examCentre || "").localeCompare(b.examCentre || "");
         if (centre !== 0) return centre;
+        const exam = (a.examType || "").localeCompare(b.examType || "");
+        if (exam !== 0) return exam;
         const gender = genderRank(a.gender) - genderRank(b.gender);
         if (gender !== 0) return gender;
         return (a.name || "").localeCompare(b.name || "");
@@ -161,21 +162,26 @@ const ExamRegistration = (props) => {
         columnStyles: { 1: { halign: "center" }, 2: { halign: "center" }, 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
       });
 
-      // Build a human-readable file name based on the active filters.
-      // - No filter:        "All Students <year>"
-      // - District filter:  "Registration <district> <year>"
-      // - Area filter:      "Registration <area> <year>"
+      // Build a human-readable file name based on the active filter.
+      // - No filter:            "All Registrations <year>"
+      // - District filter:      "<district> Registration <year>"
+      // - Area filter:          "<area> <district> Registration <year>"
+      // - Exam centre filter:   "<exam centre> Registrations <year>"
       const year = new Date().getFullYear();
       const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
       const areaName = areaSet.size === 1 ? [...areaSet][0] : null;
+      const centreSet = new Set(rows.map((r) => r.examCentre).filter(Boolean));
+      const centreName = centreSet.size === 1 ? [...centreSet][0] : null;
 
       let title;
-      if (activeFilter.area && areaName) {
-        title = `Registration ${areaName} ${year}`;
+      if (activeFilter.centerRegistration && centreName) {
+        title = `${centreName} Registrations ${year}`;
+      } else if (activeFilter.area && areaName) {
+        title = `${areaName} ${districtName} Registration ${year}`;
       } else if (activeFilter.district && districtSet.size === 1) {
-        title = `Registration ${districtName} ${year}`;
+        title = `${districtName} Registration ${year}`;
       } else {
-        title = `All Students ${year}`;
+        title = `All Registrations ${year}`;
       }
       const filename = `${title}.pdf`;
       doc.save(filename);
