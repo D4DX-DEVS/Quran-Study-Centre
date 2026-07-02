@@ -246,29 +246,6 @@ function Hero() {
         </div>
       </section>
 
-      {/* ── Prominent Register Now CTA Band ── */}
-      <section className="landing-register-cta-band">
-        <div className="landing-page-shell">
-          <div className="landing-register-cta-inner">
-            <div className="landing-register-cta-copy">
-              <span className="landing-register-cta-label">Open Registration</span>
-              <h2>Register for QSC Kerala Annual Exam</h2>
-              <p>
-                Students can now submit their details directly from this page.
-                Registrations are reviewed and confirmed by the admin panel.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="landing-register-cta-btn"
-              onClick={() => triggerLandingAction("examRegistration")}
-            >
-              Exam Registration
-            </button>
-          </div>
-        </div>
-      </section>
-
       <section className="landing-page-shell landing-section">
         <div className="landing-section-head">
           <span className="landing-section-kicker">
