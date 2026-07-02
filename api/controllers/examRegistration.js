@@ -131,6 +131,7 @@ exports.getExamRegistration = async (req, res) => {
     // schema, so ObjectId ref fields (district, area, etc.) coming in as plain strings from
     // req.filter must be cast manually or the $match below silently matches nothing.
     const castObjectIdFields = (obj) => {
+      if (obj instanceof mongoose.Types.ObjectId) return obj;
       if (Array.isArray(obj)) return obj.map(castObjectIdFields);
       if (obj && typeof obj === "object") {
         return Object.entries(obj).reduce((acc, [key, value]) => {
