@@ -127,10 +127,45 @@ exports.getExamRegistration = async (req, res) => {
     // Calculate counts when filters are applied or on first page load
     const shouldCalculateCounts = parseInt(skip) === 0 || Object.keys(req.filter || {}).length > 0;
 
-    const [totalCount, filterCount, data, genderCounts] = await Promise.all([
-      parseInt(skip) === 0 && ExamRegistration.countDocuments(),
-      shouldCalculateCounts && ExamRegistration.countDocuments(query),
-      ExamRegistration.find(query)
+    // Unlike Model.find(), Model.aggregate() does not auto-cast query values against the
+    // schema, so ObjectId ref fields (district, area, etc.) coming in as plain strings from
+    // req.filter must be cast manually or the $match below silently matches nothing.
+    const castObjectIdFields = (obj) => {
+      if (Array.isArray(obj)) return obj.map(castObjectIdFields);
+      if (obj && typeof obj === "object") {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+          if (typeof value === "string" && mongoose.isValidObjectId(value)) {
+            acc[key] = new mongoose.Types.ObjectId(value);
+          } else if (value && typeof value === "object") {
+            acc[key] = castObjectIdFields(value);
+          } else {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
+      }
+      return obj;
+    };
+    const matchQuery = castObjectIdFields(query);
+
+    // De-duplicate by mobileNumber (keeping the most recently added record) before
+    // paginating/counting, since the registration form doesn't collect a distinguishing
+    // year field and the same mobile number can end up registered more than once.
+    const dedupedFiltered = await ExamRegistration.aggregate([
+      { $match: matchQuery },
+      { $sort: { _id: -1 } },
+      // Records without a mobileNumber fall back to grouping by their own _id so they are
+      // never merged with unrelated records.
+      { $group: { _id: { $ifNull: ["$mobileNumber", "$_id"] }, docId: { $first: "$_id" }, gender: { $first: "$gender" } } },
+    ]);
+    dedupedFiltered.sort((a, b) => (a.docId < b.docId ? 1 : -1));
+
+    const pageIds = dedupedFiltered.slice(parseInt(skip) || 0, (parseInt(skip) || 0) + (parseInt(limit) || dedupedFiltered.length)).map((d) => d.docId);
+
+    const [totalCount, data] = await Promise.all([
+      parseInt(skip) === 0 &&
+        ExamRegistration.aggregate([{ $group: { _id: "$mobileNumber" } }, { $count: "count" }]).then((r) => r[0]?.count || 0),
+      ExamRegistration.find({ _id: { $in: pageIds } })
         .populate("district")
         .populate("area")
         .populate("nameOfExamAppearingNow")
@@ -138,12 +173,16 @@ exports.getExamRegistration = async (req, res) => {
         .populate("centerRegistration")
         .populate("examDistrict")
         .populate("outsideExamCenter")
-        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age")
-        .skip(parseInt(skip) || 0)
-        .limit(parseInt(limit) || 0)
-        .sort({ _id: -1 }),
-      shouldCalculateCounts && Promise.all([ExamRegistration.countDocuments({ ...query, gender: "Male" }), ExamRegistration.countDocuments({ ...query, gender: "Female" })]),
+        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age"),
     ]);
+
+    const dataById = new Map(data.map((d) => [String(d._id), d]));
+    const orderedData = pageIds.map((id) => dataById.get(String(id))).filter(Boolean);
+
+    const filterCount = shouldCalculateCounts ? dedupedFiltered.length : undefined;
+    const genderCounts = shouldCalculateCounts
+      ? [dedupedFiltered.filter((d) => d.gender === "Male").length, dedupedFiltered.filter((d) => d.gender === "Female").length]
+      : undefined;
 
     const counts = shouldCalculateCounts
       ? {
@@ -162,8 +201,8 @@ exports.getExamRegistration = async (req, res) => {
     res.status(200).json({
       success: true,
       message: `Retrieved all ExamRegistration`,
-      response: data,
-      count: data.length,
+      response: orderedData,
+      count: orderedData.length,
       totalCount: totalCount || 0,
       filterCount: filterCount || 0,
       counts,
@@ -773,7 +812,16 @@ exports.getRegisteredStudentsList = async (req, res) => {
       )
       .sort({ nameOfApplicant: 1 });
 
-    const rows = data.map((d, i) => ({
+    const seenMobiles = new Set();
+    const deduped = data.filter((d) => {
+      const mobile = d.mobileNumber;
+      if (!mobile) return true;
+      if (seenMobiles.has(mobile)) return false;
+      seenMobiles.add(mobile);
+      return true;
+    });
+
+    const rows = deduped.map((d, i) => ({
       sl: i + 1,
       id: d._id,
       name: d.nameOfApplicant || "",

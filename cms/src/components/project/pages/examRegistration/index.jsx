@@ -39,6 +39,8 @@ const ExamRegistration = (props) => {
       // more than one area is present in the export (e.g. district-wise downloads).
       const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
       const hasMultipleAreas = new Set(rows.map((r) => r.area).filter(Boolean)).size > 1;
+      const hasMultipleCentres = new Set(rows.map((r) => r.examCentre).filter(Boolean)).size > 1;
+      const hasMultipleExamTypes = new Set(rows.map((r) => r.examType).filter(Boolean)).size > 1;
 
       const sortedRows = [...rows].sort((a, b) => {
         const area = (a.area || "").localeCompare(b.area || "");
@@ -97,10 +99,16 @@ const ExamRegistration = (props) => {
         align: "center",
       });
 
-      // Build table body, inserting a full-width area header row each time the area changes
-      // (only relevant for district-wise downloads where multiple areas are present).
+      // Build table body, inserting a full-width header row whenever the group changes:
+      // an area header when multiple areas are present (district-wise downloads); otherwise,
+      // when there's only a single area (area-wise downloads), an exam centre header whenever
+      // multiple exam centres are present; otherwise, when there's only a single area and a
+      // single exam centre (exam-centre-wise downloads), an exam name header whenever multiple
+      // exam names are present.
       const tableBody = [];
       let lastArea = null;
+      let lastCentre = null;
+      let lastExamType = null;
       let sl = 0;
       sortedRows.forEach((r) => {
         if (hasMultipleAreas && r.area !== lastArea) {
@@ -108,6 +116,19 @@ const ExamRegistration = (props) => {
             { content: r.area || "-", colSpan: 8, styles: { fontStyle: "bold", fillColor: [210, 210, 210], halign: "left" } },
           ]);
           lastArea = r.area;
+          lastCentre = null;
+          lastExamType = null;
+        } else if (!hasMultipleAreas && hasMultipleCentres && r.examCentre !== lastCentre) {
+          tableBody.push([
+            { content: r.examCentre || "-", colSpan: 8, styles: { fontStyle: "bold", fillColor: [210, 210, 210], halign: "left" } },
+          ]);
+          lastCentre = r.examCentre;
+          lastExamType = null;
+        } else if (!hasMultipleAreas && !hasMultipleCentres && hasMultipleExamTypes && r.examType !== lastExamType) {
+          tableBody.push([
+            { content: r.examType || "-", colSpan: 8, styles: { fontStyle: "bold", fillColor: [210, 210, 210], halign: "left" } },
+          ]);
+          lastExamType = r.examType;
         }
         sl += 1;
         tableBody.push([
