@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../style.css";
 import logo from "../../../../components/project/brand/logo.png";
+import dxLogo from "../assets/d4dx_logo.png";
 import { getData } from "../../../../backend/api";
 import { normalizeLandingSettings } from "../defaults";
 
@@ -102,6 +103,7 @@ const Footer = () => {
             ) : (
               copy.poweredByText
             )}
+            <img src={dxLogo} alt="D4DX" className="landing-powered-by-logo" />
           </span>
         )}
       </div>
