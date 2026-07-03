@@ -79,6 +79,18 @@ function Hero() {
     );
   };
 
+  // Don't render the hero copy (English placeholders) until the real content
+  // (Malayalam, from the DB) has arrived — otherwise the English defaults
+  // flash on screen for a moment before this effect's setContent/setLandingSettings
+  // swap them out.
+  if (loading) {
+    return (
+      <main className="landing-home">
+        <section className="landing-page-shell landing-hero-shell landing-hero-loading" aria-busy="true" />
+      </main>
+    );
+  }
+
   const actionCards = [
     landingSettings.examRegistration
       ? {

@@ -86,7 +86,7 @@ export const Login = () => {
     <PageContainer>
       <div className="min-h-screen bg-white flex flex-col">
         <nav className="flex justify-between items-center p-6">
-          <button onClick={() => (window.location.href = "https://eventhex.ai")} className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors">
+          <button onClick={() => navigate("/")} className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Website
           </button>
