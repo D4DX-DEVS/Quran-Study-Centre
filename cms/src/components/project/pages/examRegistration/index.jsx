@@ -15,14 +15,6 @@ const ExamRegistration = (props) => {
     document.title = `Exam Registration - QSC Automation`;
   }, []);
 
-  // Auto-reload this page every 30s so new registrations show up without a manual refresh.
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      window.location.reload();
-    }, 30000);
-    return () => clearInterval(intervalId);
-  }, []);
-
   // Any user scoped to a single district (mirrors the backend's own check in
   // examRegistration.js: `req.user.districts ? { district: req.user.districts } : {}`)
   // gets a locked district filter — no dropdown, no other districts visible.
@@ -35,6 +27,38 @@ const ExamRegistration = (props) => {
   const [verifyLoading, setVerifyLoading] = useState(false);
   // Tracks the current filter state from the ListTable so the download respects applied filters
   const currentFilterRef = useRef({});
+
+  // Every 30 minutes, ask the backend (scoped to whatever filters are active) whether the
+  // registered-student count changed since the last check. Only reload the page when it has —
+  // no unconditional reload, so an idle admin isn't interrupted for no reason.
+  useEffect(() => {
+    let lastCount = null;
+    let cancelled = false;
+
+    const checkForUpdates = async () => {
+      try {
+        const filter = currentFilterRef.current || {};
+        const r = await getData({ ...filter, limit: 0 }, "exam-registration/registered-list");
+        if (cancelled) return;
+        const count = r?.data?.count ?? r?.data?.response?.length ?? null;
+        if (count === null) return;
+        if (lastCount !== null && count !== lastCount) {
+          window.location.reload();
+          return;
+        }
+        lastCount = count;
+      } catch (e) {
+        // Transient network/API error — leave lastCount as-is and try again next interval.
+      }
+    };
+
+    checkForUpdates();
+    const intervalId = setInterval(checkForUpdates, 30 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   // Phase 2.4 — Registered students verification PDF.
   // Uses /exam-registration/registered-list which respects district scoping and active filters.
