@@ -240,21 +240,6 @@ function Hero() {
               </div>
             )}
           </div>
-
-          <div className="landing-visual-stack">
-            <div className="landing-story-card">
-              {profileImage && (
-                <img src={profileImage} alt="QSC overview" />
-              )}
-              <div className="landing-story-copy">
-                <span>{landingSettings.copy.heroStoryBadge}</span>
-                <h3>{landingSettings.copy.heroStoryTitle}</h3>
-                <p>
-                  {landingSettings.copy.heroStoryDescription}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -318,6 +303,17 @@ function Hero() {
           <span>Admin note</span>
           <p>{landingSettings.copy.adminNote}</p>
         </aside>
+
+        <div className="landing-visual-stack landing-qr-section">
+          <div className="landing-story-card">
+            {profileImage && <img src={profileImage} alt="QSC overview" />}
+            <div className="landing-story-copy">
+              <span>{landingSettings.copy.heroStoryBadge}</span>
+              <h3>{landingSettings.copy.heroStoryTitle}</h3>
+              <p>{landingSettings.copy.heroStoryDescription}</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {landingSettings.showPublicSnapshot && summaryCards.length > 0 && (
