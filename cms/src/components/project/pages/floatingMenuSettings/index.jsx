@@ -518,7 +518,7 @@ const FloatingMenuSettings = (props) => {
                 <ImageField
                   label="About Page Banner"
                   required={!aboutRecordId}
-                  hint="Shown above the public About page content. Recommended: wide image (~1600×600)."
+                  hint="Shown above the public About page content. Recommended: wide image (~1600×600, 8:3 ratio)."
                   existingUrl={aboutForm.image ? `${CDN}${aboutForm.image}` : ""}
                   file={imageFile}
                   onChange={setImageFile}
@@ -551,7 +551,7 @@ const FloatingMenuSettings = (props) => {
                 <ImageField
                   label="Landing Main Banner"
                   required={!aboutRecordId}
-                  hint="Hero image for the homepage. Recommended: 1920×720."
+                  hint="Hero image for the homepage. Recommended: 1920×720 (8:3 ratio)."
                   existingUrl={aboutForm.landingMainbanner ? `${CDN}${aboutForm.landingMainbanner}` : ""}
                   file={bannerFile}
                   onChange={setBannerFile}
