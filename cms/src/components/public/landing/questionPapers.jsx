@@ -175,7 +175,7 @@ const QuestionPapersComponent = () => {
     <>
       <Header />
       <Main style={{ paddingTop: "133px" }}>
-        <img src={import.meta.env.VITE_APP_CDN + bannerImage} style={{ width: "100%", height: "auto" }} alt="GroupImage" />
+        <img src={import.meta.env.VITE_APP_CDN + bannerImage} style={{ width: "auto", height: "auto" }} alt="GroupImage" />
         <Title>Download Question Papers Now!</Title>
         <TabBox>
           {tabs.map((tab, index) => (
