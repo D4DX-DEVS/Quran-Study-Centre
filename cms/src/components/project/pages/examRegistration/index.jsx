@@ -15,6 +15,14 @@ const ExamRegistration = (props) => {
     document.title = `Exam Registration - QSC Automation`;
   }, []);
 
+  // Auto-reload this page every 30s so new registrations show up without a manual refresh.
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      window.location.reload();
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   // Any user scoped to a single district (mirrors the backend's own check in
   // examRegistration.js: `req.user.districts ? { district: req.user.districts } : {}`)
   // gets a locked district filter — no dropdown, no other districts visible.
