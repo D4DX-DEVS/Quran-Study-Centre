@@ -43,19 +43,28 @@ const ExamRegistration = (props) => {
         return;
       }
 
+      // When the admin explicitly filtered by "Exam Center" (centerRegistration), print
+      // that same registered centre for every row instead of examCentre (assignedExamCenter
+      // -first, the exam-day venue an admin may later reassign a student to). Otherwise a
+      // centre-scoped verification list would show other centres' names for students who've
+      // since been reassigned elsewhere for exam-day logistics — confusing on a document whose
+      // whole point is "who registered under this centre". Unfiltered exports (all/district
+      // /area-wise) keep showing the actual assignedExamCenter, which is the relevant info there.
+      const centreField = activeFilter.centerRegistration ? "studyCentre" : "examCentre";
+
       // Sorting logic is fixed and applies to every download regardless of the active filter
       // (all registrations, district-wise, area-wise, or exam-centre-wise): area, then exam
       // centre, then exam name, then gender. An area header row is inserted between areas when
       // more than one area is present in the export (e.g. district-wise downloads).
       const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
       const hasMultipleAreas = new Set(rows.map((r) => r.area).filter(Boolean)).size > 1;
-      const hasMultipleCentres = new Set(rows.map((r) => r.examCentre).filter(Boolean)).size > 1;
+      const hasMultipleCentres = new Set(rows.map((r) => r[centreField]).filter(Boolean)).size > 1;
       const hasMultipleExamTypes = new Set(rows.map((r) => r.examType).filter(Boolean)).size > 1;
 
       const sortedRows = [...rows].sort((a, b) => {
         const area = (a.area || "").localeCompare(b.area || "");
         if (area !== 0) return area;
-        const centre = (a.examCentre || "").localeCompare(b.examCentre || "");
+        const centre = (a[centreField] || "").localeCompare(b[centreField] || "");
         if (centre !== 0) return centre;
         const exam = (a.examType || "").localeCompare(b.examType || "");
         if (exam !== 0) return exam;
@@ -84,11 +93,7 @@ const ExamRegistration = (props) => {
       const year = new Date().getFullYear();
       const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
       const areaName = areaSet.size === 1 ? [...areaSet][0] : null;
-      // Use studyCentre (= centerRegistration.nameOfCenter), not examCentre
-      // (assignedExamCenter-first) — studyCentre is the field the "Exam Center"
-      // filter actually matches on, so it stays consistent even when a student's
-      // exam-day venue (assignedExamCenter) differs from their chosen centre.
-      const centreSet = new Set(rows.map((r) => r.studyCentre).filter(Boolean));
+      const centreSet = new Set(rows.map((r) => r[centreField]).filter(Boolean));
       const centreName = centreSet.size === 1 ? [...centreSet][0] : null;
 
       let title;
@@ -137,11 +142,11 @@ const ExamRegistration = (props) => {
           lastArea = r.area;
           lastCentre = null;
           lastExamType = null;
-        } else if (!hasMultipleAreas && hasMultipleCentres && r.examCentre !== lastCentre) {
+        } else if (!hasMultipleAreas && hasMultipleCentres && r[centreField] !== lastCentre) {
           tableBody.push([
-            { content: r.examCentre || "-", colSpan: 8, styles: { fontStyle: "bold", fillColor: [210, 210, 210], halign: "left" } },
+            { content: r[centreField] || "-", colSpan: 8, styles: { fontStyle: "bold", fillColor: [210, 210, 210], halign: "left" } },
           ]);
-          lastCentre = r.examCentre;
+          lastCentre = r[centreField];
           lastExamType = null;
         } else if (!hasMultipleAreas && !hasMultipleCentres && hasMultipleExamTypes && r.examType !== lastExamType) {
           tableBody.push([
@@ -157,7 +162,7 @@ const ExamRegistration = (props) => {
           r.mobile,
           r.area || "-",
           r.status || "-",
-          r.examCentre || "-",
+          r[centreField] || "-",
           r.examType || "-",
         ]);
       });
