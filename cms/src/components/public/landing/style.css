@@ -63,8 +63,8 @@
 }
 
 .landing-brand img {
-  width: 54px;
-  height: 54px;
+  width: 150px;
+  height: 85px;
   object-fit: contain;
 }
 
@@ -76,7 +76,7 @@
 
 .landing-brand-copy span {
   font-family: "Manrope", sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -85,7 +85,7 @@
 
 .landing-brand-copy strong {
   font-family: "Fraunces", serif;
-  font-size: 23px;
+  font-size: 20px;
   font-weight: 600;
   line-height: 1;
 }
@@ -320,14 +320,14 @@
   margin: 0;
   color: var(--landing-ink);
   font-family: "Fraunces", serif;
-  font-size: clamp(2.6rem, 5vw, 4.65rem);
+  font-size: clamp(1.8rem, 3.5vw, 3.4rem);
   font-weight: 600;
-  line-height: 0.98;
+  line-height: 1.05;
 }
 
 .landing-section-title {
-  font-size: clamp(1.85rem, 3vw, 2.9rem);
-  line-height: 1.05;
+  font-size: clamp(1.3rem, 2.2vw, 2.1rem);
+  line-height: 1.1;
 }
 
 .landing-hero-description,
@@ -341,8 +341,8 @@
   margin: 0;
   color: var(--landing-muted);
   font-family: "Manrope", sans-serif;
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .landing-hero-actions {
@@ -389,7 +389,7 @@
 .landing-stat-value {
   color: var(--landing-ink);
   font-family: "Fraunces", serif;
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 600;
 }
 
@@ -399,7 +399,7 @@
 }
 
 .landing-banner-card {
-  min-height: 320px;
+  height: 570px;
   border-radius: 30px;
   overflow: hidden;
 }
@@ -418,8 +418,8 @@
   padding: 26px;
   color: #ffffff;
   font-family: "Fraunces", serif;
-  font-size: 34px;
-  line-height: 1.05;
+  font-size: 22px;
+  line-height: 1.1;
   background: linear-gradient(140deg, var(--landing-blue), var(--landing-teal));
 }
 
@@ -446,7 +446,7 @@
   margin: 0;
   color: var(--landing-ink);
   font-family: "Fraunces", serif;
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 600;
 }
 
@@ -556,7 +556,7 @@
 .landing-district-header strong {
   color: var(--landing-ink);
   font-family: "Fraunces", serif;
-  font-size: 34px;
+  font-size: 24px;
   font-weight: 600;
 }
 
