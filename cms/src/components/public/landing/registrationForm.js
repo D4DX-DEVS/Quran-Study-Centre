@@ -22,6 +22,13 @@ export const FormContainer = styled.div`
     margin-top: 8px;
   }
 
+  /* Remove background/padding from the AutoForm Overlay wrapper inside the modal */
+  & > div {
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
   /* Override AutoForm specific styles */
   .plain.embed {
     width: 100% !important;

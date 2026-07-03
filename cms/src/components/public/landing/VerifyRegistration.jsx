@@ -58,7 +58,7 @@ const RegistrationList = styled.div`
 
   dt {
     font-size: 12px;
-    color: #888;
+      
   }
 
   dd {
