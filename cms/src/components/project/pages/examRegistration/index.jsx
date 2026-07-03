@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import Layout from "../../../core/layout";
 import ListTable from "../../../core/list/list";
 import { Container } from "../../../core/layout/styels";
@@ -13,6 +14,15 @@ const ExamRegistration = (props) => {
   useEffect(() => {
     document.title = `Exam Registration - QSC Automation`;
   }, []);
+
+  // Any user scoped to a single district (mirrors the backend's own check in
+  // examRegistration.js: `req.user.districts ? { district: req.user.districts } : {}`)
+  // gets a locked district filter — no dropdown, no other districts visible.
+  // Matched on the districts field itself, not the role name, so it can't drift
+  // out of sync with whatever the backend actually enforces.
+  const loggedInUser = useSelector((state) => state.login?.data) || {};
+  const adminDistrictId = loggedInUser?.districts?._id || loggedInUser?.districts || "";
+  const isDistrictAdmin = Boolean(adminDistrictId);
 
   const [verifyLoading, setVerifyLoading] = useState(false);
   // Tracks the current filter state from the ListTable so the download respects applied filters
@@ -74,18 +84,27 @@ const ExamRegistration = (props) => {
       const year = new Date().getFullYear();
       const areaSet = new Set(rows.map((r) => r.area).filter(Boolean));
       const areaName = areaSet.size === 1 ? [...areaSet][0] : null;
-      const centreSet = new Set(rows.map((r) => r.examCentre).filter(Boolean));
+      // Use studyCentre (= centerRegistration.nameOfCenter), not examCentre
+      // (assignedExamCenter-first) — studyCentre is the field the "Exam Center"
+      // filter actually matches on, so it stays consistent even when a student's
+      // exam-day venue (assignedExamCenter) differs from their chosen centre.
+      const centreSet = new Set(rows.map((r) => r.studyCentre).filter(Boolean));
       const centreName = centreSet.size === 1 ? [...centreSet][0] : null;
 
       let title;
+      let scopeName;
       if (activeFilter.centerRegistration && centreName) {
         title = `${centreName} Registrations ${year}`;
+        scopeName = centreName;
       } else if (activeFilter.area && areaName) {
         title = `${areaName} Registration ${year}`;
+        scopeName = areaName;
       } else if (activeFilter.district && districtSet.size === 1) {
         title = `${districtName} Registration ${year}`;
+        scopeName = districtName;
       } else {
         title = `All Registrations ${year}`;
+        scopeName = districtName;
       }
 
       const now = new Date();
@@ -95,7 +114,7 @@ const ExamRegistration = (props) => {
       doc.setFontSize(14);
       doc.text(title, pageWidth / 2, 30, { align: "center" });
       doc.setFontSize(11);
-      doc.text(`${districtName}  |  Total: ${rows.length}  |  Printed: ${today} ${printedTime}`, pageWidth / 2, 48, {
+      doc.text(`${scopeName}  |  Total: ${rows.length}  |  Printed: ${today} ${printedTime}`, pageWidth / 2, 48, {
         align: "center",
       });
 
@@ -396,6 +415,8 @@ const ExamRegistration = (props) => {
       add: true,
       update: true,
       filter: true,
+      // District Admins get a locked, non-editable filter showing only their own district.
+      disabled: isDistrictAdmin,
       customClass: "full",
     },
     {
@@ -546,6 +567,7 @@ const ExamRegistration = (props) => {
         showTitle={false}
         formMode={`single`}
         surfaceTheme={"district"}
+        preFilter={isDistrictAdmin && adminDistrictId ? { district: adminDistrictId } : {}}
         labels={[
           {
             key: "Male Students",

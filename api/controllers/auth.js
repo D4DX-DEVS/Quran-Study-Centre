@@ -102,6 +102,7 @@ const sendTokenResponse = async (user, res, req, meta = {}) => {
     mobile,
     userImage,
     image,
+    districts,
   } = userObject;
   const displayName = meta.fullName || userDisplayName || fullName || name || username || email || "Member";
   const photo = meta.photo || userImage || image || "";
@@ -136,6 +137,7 @@ const sendTokenResponse = async (user, res, req, meta = {}) => {
           userDisplayName: displayName,
           _id,
           franchise,
+          districts,
           username,
           name: displayName,
           fullName: displayName,
@@ -213,6 +215,7 @@ exports.login = async (req, res) => {
   try {
     const user = await User.findOne({ email })
       .populate("userType")
+      .populate("districts", "district")
       .select("+password");
     if (!user) {
       return res.status(200).json({
