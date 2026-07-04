@@ -75,14 +75,17 @@ const ExamRegistration = (props) => {
         return;
       }
 
-      // When the admin explicitly filtered by "Exam Center" (centerRegistration), print
-      // that same registered centre for every row instead of examCentre (assignedExamCenter
-      // -first, the exam-day venue an admin may later reassign a student to). Otherwise a
-      // centre-scoped verification list would show other centres' names for students who've
-      // since been reassigned elsewhere for exam-day logistics — confusing on a document whose
-      // whole point is "who registered under this centre". Unfiltered exports (all/district
-      // /area-wise) keep showing the actual assignedExamCenter, which is the relevant info there.
-      const centreField = activeFilter.centerRegistration ? "studyCentre" : "examCentre";
+      // Whenever the export is scoped to a district, area, or exam centre, print each row's
+      // registered centre (studyCentre = centerRegistration.nameOfCenter) instead of examCentre
+      // (assignedExamCenter-first, the exam-day venue an admin may later reassign a student to).
+      // A student's assignedExamCenter can be reassigned to a centre in a DIFFERENT area/district
+      // for exam-day logistics — so filtering by, say, area=Mukkam and showing examCentre could
+      // print another area's centre name for a reassigned student. studyCentre always matches the
+      // area/district that was actually filtered on, since that's the field district/area filters
+      // apply against. Only a fully unfiltered "All Registrations" export shows the actual
+      // assignedExamCenter, since exam-day venue is the relevant info there.
+      const isScoped = Boolean(activeFilter.centerRegistration || activeFilter.area || activeFilter.district);
+      const centreField = isScoped ? "studyCentre" : "examCentre";
 
       // Sorting logic is fixed and applies to every download regardless of the active filter
       // (all registrations, district-wise, area-wise, or exam-centre-wise): area, then exam
