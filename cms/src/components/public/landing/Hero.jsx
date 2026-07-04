@@ -308,7 +308,7 @@ function Hero() {
           <div className="landing-story-card">
             {profileImage && <img src={profileImage} alt="QSC overview" />}
             <div className="landing-story-copy">
-              <span>{landingSettings.copy.heroStoryBadge}</span>
+              {/* <span>{landingSettings.copy.heroStoryBadge}</span> */}
               <h3>{landingSettings.copy.heroStoryTitle}</h3>
             </div>
           </div>
