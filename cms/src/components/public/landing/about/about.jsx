@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import "./style.css";
-// import { Container, Section } from "../../../core/layout/styels";
 import withLayout from "../../layout";
 import { getData } from "../../../../backend/api";
 import Header from "../Header";
@@ -11,11 +10,12 @@ const Title = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
   color: #1a4993;
   padding: 10px;
   margin-top: 20px;
   font-weight: 100;
+  text-align: center;
 `;
 
 const Description = styled.p`
@@ -23,26 +23,25 @@ const Description = styled.p`
   line-height: 26px;
   color: black;
   max-width: 100%;
-  padding: 0 100px;
-  @media only screen and (max-width: 768px) { 
-    padding 0 20px;
-  }
+  padding: 0;
 `;
 
 const ContainerBox = styled.div`
   background-color: #f5f7fa;
-  padding: 0 100px;
+  padding: 0;
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
+  flex-wrap: wrap;
+  gap: 24px;
 
   @media only screen and (max-width: 768px) {
     flex-direction: column;
-    padding: 0 10px;
+    align-items: center;
   }
 `;
 
-const About = () => {
+const About = (props) => {
   const [bannerImage, setBannerImage] = useState("");
   const [image, setImage] = useState("");
   const [description, setDescription] = useState("");
@@ -56,9 +55,9 @@ const About = () => {
   }, [image]);
   return (
     <>
-    <Header />
-    <Section style={{paddingTop:'133px'}}>
-      <Container style={{display:'flex',flexDirection:'column'}}>
+    <Header {...props} />
+    <main className="landing-home">
+      <div className="landing-page-shell">
         <img
           src={import.meta.env.VITE_APP_CDN + bannerImage}
           style={{ width: "100%", height: "auto" }}
@@ -108,8 +107,8 @@ const About = () => {
             </p>
           </div>
         </ContainerBox>
-      </Container>
-    </Section>
+      </div>
+    </main>
     <Footer />
     </>
   );

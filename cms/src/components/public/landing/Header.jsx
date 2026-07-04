@@ -564,6 +564,12 @@ function Header(props) {
             >
               Verify Your Registration
             </button>
+            <a href="/student" onClick={() => setShowMenu(false)}>
+              Student Login
+            </a>
+            <a href="/admin" onClick={() => setShowMenu(false)}>
+              Admin Login
+            </a>
           </motion.div>
         )}
       </header>

@@ -3,6 +3,8 @@ import { Button, ElementContainer, TextBox } from "../../../core/elements";
 import styled from "styled-components";
 import { getData } from "../../../../backend/api"; // Assuming you have a getData function for fetching data
 import withLayout from "../../layout";
+import Header from "../Header";
+import Footer from "../footer/footer";
 
 const TextDiv = styled.div`
   display: flex;
@@ -149,16 +151,21 @@ const Results = (props) => {
   };
 
   return (
-    <ElementContainer
-      className="dashboard"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        paddingTop: "0px",
-        flexWrap: "nowrap",
-      }}
-    >
-      <div style={{ marginLeft: "30px", marginTop: "50px" }}>
+    <>
+      <Header {...props} />
+      <main className="landing-home">
+        <div className="landing-page-shell">
+          <ElementContainer
+            className="dashboard"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              paddingTop: "24px",
+              paddingBottom: "48px",
+              flexWrap: "nowrap",
+            }}
+          >
+      <div>
         <h2 style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
         <h4 style={{ marginTop: "10px", color: "Red" }}>ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള 2025 വാർഷിക പരീക്ഷ എഴുതിയ ,എല്ലാ വിഭാഗങ്ങളിലുമുള്ള പഠിതാക്കളുടെ റിസൽട്ട് പബ്ലിഷ് ചെയ്തിട്ടുണ്ട്. പഠിതാക്കളുടെ രജിസ്റ്റർ നമ്പർ അല്ലെങ്കിൽ മൊബൈൽ നമ്പർ താഴെ നൽകി, Search Result ക്ലിക്ക് ചെയ്താൽ ലഭിച്ച ഗ്രേഡ് കാണാം. Download Certificate click ചെയ്താൽ ഗ്രേഡ് രേഖപ്പെടുത്തിയ സർട്ടിഫിക്കറ്റ് pdf ഫയൽ ആയി ലഭിക്കുന്നതാണ്. </h4>
         <TextDiv>
@@ -306,7 +313,11 @@ const Results = (props) => {
         </ButtonDiv>
         <div>{renderGradeTable()}</div>
       </div>
-    </ElementContainer>
+          </ElementContainer>
+        </div>
+      </main>
+      <Footer />
+    </>
   );
 };
 

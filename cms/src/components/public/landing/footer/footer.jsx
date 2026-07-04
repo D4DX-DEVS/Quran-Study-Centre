@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../style.css";
 import logo from "../../../../components/project/brand/logo.png";
-import dxLogo from "../assets/d4dx_logo.png";
 import { getData } from "../../../../backend/api";
 import { normalizeLandingSettings } from "../defaults";
 
@@ -89,23 +88,6 @@ const Footer = () => {
 
       <div className="landing-page-shell landing-footer-bottom">
         <span>{copyrightLine}</span>
-        {copy.poweredByText && (
-          <span className="landing-powered-by">
-            Powered by{" "}
-            {copy.poweredByUrl ? (
-              <a
-                href={copy.poweredByUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {copy.poweredByText}
-              </a>
-            ) : (
-              copy.poweredByText
-            )}
-            <img src={dxLogo} alt="D4DX" className="landing-powered-by-logo" />
-          </span>
-        )}
       </div>
     </footer>
   );

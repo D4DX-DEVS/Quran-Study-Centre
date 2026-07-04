@@ -278,6 +278,10 @@
   align-items: stretch;
 }
 
+.landing-hero-grid > * {
+  min-width: 0;
+}
+
 .landing-hero-copy {
   display: flex;
   flex-direction: column;
@@ -323,6 +327,7 @@
   font-size: clamp(1.8rem, 3.5vw, 3.4rem);
   font-weight: 600;
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .landing-section-title {
@@ -343,6 +348,7 @@
   font-family: "Manrope", sans-serif;
   font-size: 13px;
   line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .landing-hero-actions {
@@ -440,7 +446,8 @@
   width: 200px;
   height: 200px;
   border-radius: 24px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
 }
 
 .landing-story-copy h3,
@@ -625,6 +632,10 @@
   align-items: start;
 }
 
+.landing-footer-grid > * {
+  min-width: 0;
+}
+
 .landing-footer-brand img {
   width: 180px;
   margin-bottom: 14px;
@@ -770,6 +781,10 @@
     display: block;
   }
 
+  .landing-header-actions .landing-header-btn {
+    display: none;
+  }
+
   .landing-hero-grid,
   .landing-footer-grid {
     grid-template-columns: 1fr;
@@ -783,6 +798,12 @@
     grid-column: auto;
     grid-row: auto;
     order: -1;
+    height: auto;
+  }
+
+  .landing-banner-card img {
+    height: auto;
+    object-fit: contain;
   }
 
   .landing-hero-grid > .landing-visual-stack {
@@ -807,10 +828,6 @@
 
   .landing-header-shell {
     gap: 12px;
-  }
-
-  .landing-header-actions .landing-header-btn {
-    display: none;
   }
 
   .landing-hero-shell {
@@ -879,6 +896,7 @@
   .landing-mobile-nav {
     top: 86px;
   }
+
 }
 
 .hero-text-section {
