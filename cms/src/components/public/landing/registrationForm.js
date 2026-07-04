@@ -22,11 +22,88 @@ export const FormContainer = styled.div`
     margin-top: 8px;
   }
 
-  /* Remove background/padding from the AutoForm Overlay wrapper inside the modal */
-  & > div {
+  /* Remove background/padding from the AutoForm Overlay wrapper inside the modal.
+     Scoped to ".form-container" (Overlay's own hardcoded className) rather than a
+     bare "> div", so it doesn't also strip the "list" step's own white ListCard
+     (which is a plain direct-child div, not the Overlay). */
+  & > .form-container {
     background: transparent !important;
     padding: 0 !important;
     box-shadow: none !important;
+  }
+
+  /* Card chrome for the AutoForm modals (registration/affiliation/hall ticket/verify).
+     ".form-container" is the Overlay's own hardcoded className, so this only ever
+     matches the AutoForm-based steps and never leaks into the plain "list" step
+     (which renders its own RegistrationList markup with no Overlay wrapper). */
+  .form-container > div {
+    background: var(--landing-surface-strong, #ffffff);
+    border-radius: 20px;
+    box-shadow: var(--landing-shadow, 0 24px 80px rgba(13, 32, 58, 0.12));
+    padding: 8px clamp(20px, 4vw, 40px) 24px;
+  }
+
+  .form-container > div > div:first-child {
+    text-align: center;
+    padding: 20px 0 8px;
+
+    > div > span {
+      font-family: "Fraunces", serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--landing-ink, #0f2743);
+    }
+
+    > span {
+      display: block;
+      margin-top: 8px;
+      font-family: "Manrope", sans-serif;
+      font-size: 14px;
+      color: var(--landing-muted, #59718a);
+      line-height: 1.5;
+    }
+  }
+
+  .form-container > div > div:last-child {
+    display: flex !important;
+    width: 100% !important;
+    gap: 12px !important;
+    padding: 16px 0 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    position: static !important;
+    background: transparent !important;
+    border-top: 1px solid var(--landing-line, #eee) !important;
+
+    button {
+      flex: 1;
+      margin-top: 0 !important;
+    }
+  }
+
+  .form-container button:hover:not(:disabled) {
+    filter: brightness(0.96);
+    transform: translateY(-1px);
+  }
+
+  /* Info banner (rendered with customClass "hint-box" on the relevant field) */
+  .hint-box {
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin: 4px 0 !important;
+    padding: 14px 16px !important;
+    background: rgba(21, 63, 122, 0.06);
+    border: 1px solid rgba(21, 63, 106, 0.14);
+    border-radius: 12px;
+    font-family: "Manrope", sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--landing-ink, #0f2743);
+
+    svg {
+      color: var(--landing-blue, #153f7a);
+      margin-top: 3px;
+    }
   }
 
   /* Override AutoForm specific styles */
@@ -57,6 +134,19 @@ export const FormContainer = styled.div`
       width: 100% !important;
       min-width: 100% !important;
       box-sizing: border-box !important;
+      padding: 12px 14px !important;
+      border: 1px solid var(--landing-line, #ddd) !important;
+      border-radius: 10px !important;
+      font-family: "Manrope", sans-serif;
+      font-size: 15px;
+      color: var(--landing-ink, #222);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &:focus {
+        outline: none;
+        border-color: var(--landing-blue, #153f7a) !important;
+        box-shadow: 0 0 0 3px rgba(21, 63, 122, 0.12);
+      }
     }
 
     /* Target specific fields */
@@ -98,6 +188,10 @@ export const FormContainer = styled.div`
       width: 100% !important;
       display: block !important;
       margin-bottom: 8px !important;
+      font-family: "Manrope", sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--landing-ink, #222);
     }
 
     /* Override any custom classes */
@@ -112,16 +206,22 @@ export const FormContainer = styled.div`
 
   /* Style for form title */
   h2 {
-    font-size: 24px;
-    margin-bottom: 20px;
-    color: #333;
+    font-family: "Fraunces", serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #1f2328;
+    margin: 0 0 8px;
     width: 100%;
   }
 
   /* Style for form description */
   p {
-    margin-bottom: 30px;
-    color: #666;
+    font-family: "Manrope", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+    color: #5c6470;
     width: 100%;
   }
 

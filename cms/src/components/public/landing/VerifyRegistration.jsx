@@ -7,6 +7,7 @@ import { FormContainer, formReg, validatePhoneNumber } from "./registrationForm"
 const lookupForm = [
   {
     type: "info",
+    customClass: "hint-box",
     content: "രജിസ്ട്രേഷൻ സമയത്ത് നൽകിയ മൊബൈൽ നമ്പർ നൽകി സെർച്ച് ചെയ്യുക",
   },
   {
@@ -25,12 +26,33 @@ const lookupForm = [
   },
 ];
 
+const ListCard = styled.div`
+  background: var(--landing-surface-strong, #ffffff);
+  border-radius: 20px;
+  box-shadow: var(--landing-shadow, 0 24px 80px rgba(13, 32, 58, 0.12));
+  padding: 28px clamp(20px, 4vw, 40px) 32px;
+`;
+
+const TitleBox = styled.div`
+  text-align: center;
+  margin-bottom: 24px;
+
+  h2 {
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin-bottom: 0;
+  }
+`;
+
 const RegistrationList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
 
   .reg-card {
+    background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 16px;
@@ -66,7 +88,7 @@ const RegistrationList = styled.div`
     font-size: 14px;
   }
 
-  .reg-card button {
+  .reg-card .edit-btn {
     padding: 10px 16px;
     background-color: #007bff;
     color: white;
@@ -81,6 +103,7 @@ const RegistrationList = styled.div`
 `;
 
 const BackButton = styled.button`
+  display: block;
   margin-top: 8px;
   background: none;
   border: none;
@@ -198,8 +221,11 @@ function VerifyRegistration({ onClose, setMessage, setLoaderBox }) {
   if (step === "list") {
     return (
       <FormContainer>
-        <h2>Your Registrations</h2>
-        <p>Registrations linked to this mobile number, listed in the order you registered.</p>
+       <ListCard>
+        <TitleBox>
+          <h2>Your Registrations</h2>
+          <p>Registrations linked to this mobile number, listed in the order you registered.</p>
+        </TitleBox>
         <RegistrationList>
           {registrations.map((item, index) => (
             <div className="reg-card" key={item._id}>
@@ -243,6 +269,7 @@ function VerifyRegistration({ onClose, setMessage, setLoaderBox }) {
               </dl>
               <button
                 type="button"
+                className="edit-btn"
                 onClick={() => {
                   setSelected(item);
                   setStep("edit");
@@ -250,12 +277,13 @@ function VerifyRegistration({ onClose, setMessage, setLoaderBox }) {
               >
                 Edit Details
               </button>
+              <BackButton type="button" onClick={() => setStep("lookup")}>
+                Search another number
+              </BackButton>
             </div>
           ))}
         </RegistrationList>
-        <BackButton type="button" onClick={() => setStep("lookup")}>
-          Search another number
-        </BackButton>
+       </ListCard>
       </FormContainer>
     );
   }
