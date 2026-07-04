@@ -330,12 +330,25 @@
   overflow-wrap: anywhere;
 }
 
+.landing-hero-title {
+  font-family: "Noto Sans Malayalam", sans-serif;
+  font-size: 28px;
+}
+
 .landing-section-title {
   font-size: clamp(1.3rem, 2.2vw, 2.1rem);
   line-height: 1.1;
 }
 
-.landing-hero-description,
+.landing-hero-description {
+  margin: 0;
+  color: var(--landing-muted);
+  font-family: "Noto Sans Malayalam", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
 .landing-section-text,
 .landing-story-copy p,
 .landing-admin-note p,
