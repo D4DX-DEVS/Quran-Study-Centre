@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useUser } from "../../contexts/UserContext";
 
@@ -18,7 +18,7 @@ import CustomPrivateRoute from "../project/router/private";
 import CustomPublicRoute from "../project/router/public";
 import Public404 from "../public/public404";
 import Signup from "../public/signup";
-import { getGroupedSubMenuSections } from "../../menuSections";
+import { getDefaultMenuPath, getGroupedSubMenuSections } from "../../menuSections";
 
 const PageRouter = () => {
   const userData = useUser();
@@ -139,6 +139,7 @@ const PageRouter = () => {
             <Container className="nopadding" theme={themeColors}>
               <Routes>
                 <Route key="login" path="/" element={<Switch page="login" />} />
+                <Route key="admin-redirect" path="/admin" element={<Navigate to={getDefaultMenuPath(userData.menu ?? [])} replace />} />
                 {menuRoutes}
                 <React.Fragment key="private-routes">{CustomPrivateRoute()}</React.Fragment>
                 <Route key="404" path="*" element={<Page404 />} />
