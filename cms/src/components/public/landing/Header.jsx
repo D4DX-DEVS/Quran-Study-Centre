@@ -437,10 +437,6 @@ function Header(props) {
         <div className="landing-header-shell">
           <a href="/" className="landing-brand">
             <img src={logo} alt="QSC logo" />
-            <div className="landing-brand-copy">
-              <span>Public portal</span>
-              <strong>QSC Kerala</strong>
-            </div>
           </a>
 
           <div className="landing-navbar">

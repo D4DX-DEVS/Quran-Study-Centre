@@ -251,9 +251,9 @@ function Hero() {
           <h2 className="landing-section-title">
             {landingSettings.copy.quickAccessTitle}
           </h2>
-          <p className="landing-section-text">
+          {/* <p className="landing-section-text">
             {landingSettings.copy.quickAccessDescription}
-          </p>
+          </p> */}
         </div>
 
         <div className="landing-action-grid">
@@ -299,10 +299,10 @@ function Hero() {
           })}
         </div>
 
-        <aside className="landing-admin-note">
+        {/* <aside className="landing-admin-note">
           <span>Admin note</span>
           <p>{landingSettings.copy.adminNote}</p>
-        </aside>
+        </aside> */}
 
         <div className="landing-visual-stack landing-qr-section">
           <div className="landing-story-card">
@@ -310,7 +310,6 @@ function Hero() {
             <div className="landing-story-copy">
               <span>{landingSettings.copy.heroStoryBadge}</span>
               <h3>{landingSettings.copy.heroStoryTitle}</h3>
-              <p>{landingSettings.copy.heroStoryDescription}</p>
             </div>
           </div>
         </div>
