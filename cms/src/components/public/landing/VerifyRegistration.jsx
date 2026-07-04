@@ -205,7 +205,7 @@ function VerifyRegistration({ onClose, setMessage, setLoaderBox }) {
             <div className="reg-card" key={item._id}>
               <div className="reg-card-head">
                 <span>#{index + 1}</span>
-                <span>{item.regno || "Reg. No pending"}</span>
+                <span>{item.regno || "Reg No will be provided later"}</span>
               </div>
               <dl>
                 <div>
