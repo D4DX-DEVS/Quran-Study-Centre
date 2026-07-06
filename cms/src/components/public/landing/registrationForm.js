@@ -92,8 +92,8 @@ export const FormContainer = styled.div`
     gap: 10px !important;
     margin: 4px 0 !important;
     padding: 14px 16px !important;
-    background: rgba(21, 63, 122, 0.06);
-    border: 1px solid rgba(21, 63, 106, 0.14);
+    background: rgba(29, 78, 216, 0.06);
+    border: 1px solid rgba(29, 78, 216, 0.14);
     border-radius: 12px;
     font-family: "Manrope", sans-serif;
     font-size: 13.5px;
@@ -101,7 +101,7 @@ export const FormContainer = styled.div`
     color: var(--landing-ink, #0f2743);
 
     svg {
-      color: var(--landing-blue, #153f7a);
+      color: var(--landing-blue, #1d4ed8);
       margin-top: 3px;
     }
   }
@@ -144,8 +144,8 @@ export const FormContainer = styled.div`
 
       &:focus {
         outline: none;
-        border-color: var(--landing-blue, #153f7a) !important;
-        box-shadow: 0 0 0 3px rgba(21, 63, 122, 0.12);
+        border-color: var(--landing-blue, #1d4ed8) !important;
+        box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
       }
     }
 

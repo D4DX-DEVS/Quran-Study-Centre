@@ -15,7 +15,7 @@ const AccordionContainer = styled.div`
 `;
 
 const AccordionItemWrapper = styled.div`
-  background: #ebf1ff80;
+  background: #eff6ff80;
   /* background-color: red; */
   overflow: hidden;
   &.first-child {
@@ -33,13 +33,13 @@ const AccordionItemWrapper = styled.div`
 const AccordionHeader = styled.div`
   width: 100%;
   padding: 1rem;
-  background-color: #ebf1ff80;
+  background-color: #eff6ff80;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   border: none;
   cursor: ${(props) => (props["aria-expanded"] ? "pointer" : "initial")};
-  background-color: ${(props) => (props["aria-expanded"] ? "white" : "#ebf1ff80")};
+  background-color: ${(props) => (props["aria-expanded"] ? "white" : "#eff6ff80")};
   & > svg {
     height: 10px;
     width: 10px;
@@ -75,8 +75,8 @@ const StatusCircle = styled.div`
         `;
       case "current":
         return `
-          background-color: #EBF1FF;
-          color: #375DFB;
+          background-color: #eff6ff;
+          color: #1D4ED8;
         `;
       case "pending":
         return `

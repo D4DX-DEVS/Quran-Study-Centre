@@ -9,8 +9,8 @@ export const projectSettings = {
   },
   formInputView: "mixed", // classic, modern, mixed
   theme: {
-    theme: "#375DFB",
-    themeLight: "#f7f7ff",
+    theme: "#1D4ED8",
+    themeLight: "#eff6ff",
     pageBackground: "white",
     background: "white",
     foreground: "#4f4f4f",
@@ -25,7 +25,7 @@ export const projectSettings = {
     foregroundInvert: "white",
     backgroundInvert: "black;",
     borderThinkness: "0px",
-    themeBackground: "#375DFB",
+    themeBackground: "#1D4ED8",
     themeForeground: "white",
     disabledBackground: "rgba(156, 156, 156, 0.41)",
     disabledForeground: "white",
@@ -35,11 +35,11 @@ export const projectSettings = {
 export const appTheme = {
   // Logo-based colors (Primary)
   primary: {
-    darkest: "#050505", // dark
-    dark: "#253EA7", // blue-dark
-    base: "#375DFB", // blue-base
-    light: "#C2D6FF", // blue-light
-    lightest: "#EBF1FF", // blue-lightest
+    darkest: "#0B1440", // navy-darkest
+    dark: "#1E3A8A", // blue-dark
+    base: "#1D4ED8", // blue-base
+    light: "#BFDBFE", // blue-light
+    lightest: "#EFF6FF", // blue-lightest
   },
 
   // Background Colors

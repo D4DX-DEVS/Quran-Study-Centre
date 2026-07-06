@@ -159,7 +159,7 @@ const ActionButton = styled.button`
 
   &:hover {
     background: #f1f5f9;
-    color: #375dfb;
+    color: #1D4ED8;
   }
 
   &:disabled {
@@ -241,7 +241,7 @@ const PageDescription = styled.p`
 `;
 
 const AddButton = styled.button`
-  background: #375dfb;
+  background: #1D4ED8;
   color: white;
   border: none;
   border-radius: 6px;

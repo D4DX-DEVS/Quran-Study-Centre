@@ -77,7 +77,7 @@ const ActionButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    color: ${(props) => props.theme?.primaryBase || "#375DFB"};
+    color: ${(props) => props.theme?.primaryBase || "#1D4ED8"};
   }
 
   &:disabled {
@@ -114,7 +114,7 @@ const DragHandle = styled.div`
   margin-right: 8px;
 
   &:hover {
-    color: ${(props) => props.theme?.primaryBase || "#375DFB"};
+    color: ${(props) => props.theme?.primaryBase || "#1D4ED8"};
   }
 `;
 
@@ -195,7 +195,7 @@ const SearchInput = styled.div`
 
     &:focus {
       outline: none;
-      border-color: ${(props) => props.theme?.primaryBase || "#375DFB"};
+      border-color: ${(props) => props.theme?.primaryBase || "#1D4ED8"};
     }
 
     &::placeholder {

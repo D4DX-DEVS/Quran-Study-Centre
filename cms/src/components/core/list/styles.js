@@ -998,7 +998,7 @@ export const Filter = styled.button`
     max-height: 21px;
     min-width: 21px;
     min-height: 21px;
-    background: var(--state-information, #375dfb);
+    background: var(--state-information, #1D4ED8);
     color: white;
     border-radius: 50%;
     border: 3px solid;

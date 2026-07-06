@@ -543,7 +543,7 @@ export const Round = styled.div`
   border: 1px solid ${appTheme.stroke.soft};
   color: ${appTheme.text.sub};
   &.active {
-    background: #375dfb;
+    background: #1D4ED8;
     color: ${appTheme.text.white};
   }
   &.done {

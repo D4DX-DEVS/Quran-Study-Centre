@@ -250,7 +250,7 @@ const FormInput = React.memo((props) => {
             type={props.type}
             onClick={props.onChange}
             style={{
-              border: props.isSelected ? "2px solid #375DFB" : "1px solid #ccc",
+              border: props.isSelected ? "2px solid #1D4ED8" : "1px solid #ccc",
             }}
           >
             {props.icon ? <GetIcon icon={props.icon}></GetIcon> : null}

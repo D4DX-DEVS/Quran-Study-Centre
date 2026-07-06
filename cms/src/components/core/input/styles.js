@@ -267,7 +267,7 @@ export const InputContainer = styled.div`
     }
 
     .right-radio:checked {
-      border-color: #375dfb;
+      border-color: #1D4ED8;
       background-color: #fff;
     }
 
@@ -277,7 +277,7 @@ export const InputContainer = styled.div`
       width: 13px;
       height: 13px;
       border-radius: 50%;
-      background-color: #375dfb;
+      background-color: #1D4ED8;
       position: absolute;
       top: 50%;
       left: 50%;

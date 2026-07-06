@@ -13,7 +13,7 @@ import VerifyRegistration from "./VerifyRegistration";
 // import { tr } from "date-fns/locale";
 
 const RegisterBtn = styled.button`
-  background: linear-gradient(135deg, #153f7a, #245fb4);
+  background: linear-gradient(135deg, #1d4ed8, #3b6ff0);
   color: white;
   border-radius: 999px;
   border: none;
@@ -491,11 +491,12 @@ function Header(props) {
             >
               Verify Your Registration
             </button>
-            <a href="/student" className="landing-header-btn subtle">
-              Student Login
-            </a>
-            <a href="/admin" className="landing-header-btn subtle">
-              Admin Login
+            <a
+              href="/admin"
+              className="landing-header-btn secondary"
+              style={{ padding: "14px 28px", fontSize: "15px", minWidth: "110px" }}
+            >
+              Login
             </a>
             {showMenu ? (
               <RiCloseFill className="landing-hamburger" onClick={handleMenu} />
@@ -560,11 +561,8 @@ function Header(props) {
             >
               Verify Your Registration
             </button>
-            <a href="/student" onClick={() => setShowMenu(false)}>
-              Student Login
-            </a>
             <a href="/admin" onClick={() => setShowMenu(false)}>
-              Admin Login
+              Login
             </a>
           </motion.div>
         )}
