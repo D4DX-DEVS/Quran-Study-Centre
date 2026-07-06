@@ -110,16 +110,6 @@ const QuestionPapersComponent = (props) => {
   const [syllabusActiveTab, setSyllabusActiveTab] = useState(0);
   const [tabs, setTabs] = useState([]);
   const [syllabusTabs, setSyllabusTabs] = useState([]);
-  const [bannerImage, setBannerImage] = useState("");
-  const [image, setImage] = useState("");
-
-  useEffect(() => {
-    getData({}, "about-us").then((res) => {
-      setImage(res.data.response[0].image);
-      setBannerImage(res.data.response[0].landingMainbanner);
-    });
-  }, [image]);
-
   useEffect(() => {
     // Fetch data from the backend when the component mounts
     getData({}, "old-question-papers")
@@ -178,7 +168,6 @@ const QuestionPapersComponent = (props) => {
       <main className="landing-home">
         <div className="landing-page-shell">
           <Main>
-            <img src={import.meta.env.VITE_APP_CDN + bannerImage} style={{ width: "100%", height: "auto" }} alt="GroupImage" />
             <Title>Download Question Papers Now!</Title>
             <TabBox>
               {tabs.map((tab, index) => (
