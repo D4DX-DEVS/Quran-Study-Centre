@@ -1,5 +1,6 @@
 const FloatingSettings = require("../models/floatingMenuSettings");
 const { default: mongoose } = require("mongoose");
+const { errorLog } = require("../utils/errorLog");
 
 // @desc      ADD USER TYPE
 // @route     POST /api/user/exam-type
