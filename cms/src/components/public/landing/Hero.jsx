@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   ArrowRight,
-  BookOpen,
   Building2,
-  ClipboardCheck,
-  FileDown,
-  LayoutDashboard,
   MapPinned,
   School,
-  ScrollText,
-  Ticket,
-  Trophy,
   Users,
 } from "lucide-react";
 import "./style.css";
@@ -91,88 +84,6 @@ function Hero() {
     );
   }
 
-  const actionCards = [
-    landingSettings.examRegistration
-      ? {
-          key: "exam-registration",
-          title: "Exam Registration",
-          description: "Open the public candidate form from the landing page.",
-          icon: ScrollText,
-          action: () => triggerLandingAction("examRegistration"),
-        }
-      : null,
-    landingSettings.hallTicket
-      ? {
-          key: "hall-ticket",
-          title: "Hall Ticket",
-          description: "Let candidates fetch their hall ticket in one step.",
-          icon: Ticket,
-          action: () => triggerLandingAction("hallTicket"),
-        }
-      : null,
-    landingSettings.verifyRegistration
-      ? {
-          key: "verify-registration",
-          title: "Verify Your Registration",
-          description: "Look up your registration with your mobile number and fix any mismatched details.",
-          icon: ClipboardCheck,
-          action: () => triggerLandingAction("verifyRegistration"),
-        }
-      : null,
-    landingSettings.centerRegistration
-      ? {
-          key: "centre-affiliation",
-          title: "Centre Affiliation",
-          description: "Collect new centre affiliation requests without leaving the page.",
-          icon: Building2,
-          action: () => triggerLandingAction("centerRegistration"),
-        }
-      : null,
-    landingSettings.downloads
-      ? {
-          key: "downloads",
-          title: "Downloads",
-          description: "Question papers and public files stay one click away.",
-          icon: FileDown,
-          href: "/question-papers",
-        }
-      : null,
-    landingSettings.about
-      ? {
-          key: "about",
-          title: "About QSC",
-          description: "Share the mission, structure and public introduction page.",
-          icon: BookOpen,
-          href: "/about-us",
-        }
-      : null,
-    landingSettings.result
-      ? {
-          key: "result",
-          title: "Result",
-          description: "Expose published results from the same public front page.",
-          icon: Trophy,
-          href: "/result",
-        }
-      : null,
-    landingSettings.examInstruction
-      ? {
-          key: "instructions",
-          title: "Exam Instructions",
-          description: "Keep exam-day guidance available as a quick modal action.",
-          icon: BookOpen,
-          action: () => triggerLandingAction("examInstructions"),
-        }
-      : null,
-    {
-      key: "admin-panel",
-      title: "Admin Panel",
-      description: "Sign in to update landing content and menu visibility settings.",
-      icon: LayoutDashboard,
-      href: "/admin",
-    },
-  ].filter(Boolean);
-
   const heroStats = landingSettings.heroStats.filter(
     (item) => item?.label || item?.value
   );
@@ -248,61 +159,6 @@ function Hero() {
       </section>
 
       <section className="landing-page-shell landing-section">
-        <div className="landing-section-head">
-          <span className="landing-section-kicker">
-            {landingSettings.copy.quickAccessKicker}
-          </span>
-          <h2 className="landing-section-title">
-            {landingSettings.copy.quickAccessTitle}
-          </h2>
-          {/* <p className="landing-section-text">
-            {landingSettings.copy.quickAccessDescription}
-          </p> */}
-        </div>
-
-        <div className="landing-action-grid">
-          {actionCards.map((item) => {
-            const Icon = item.icon;
-
-            if (item.href) {
-              return (
-                <a key={item.key} href={item.href} className="landing-action-card">
-                  <span className="landing-action-icon">
-                    <Icon size={20} />
-                  </span>
-                  <div className="landing-action-copy">
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                    <span className="landing-action-link">
-                      Open <ArrowRight size={15} />
-                    </span>
-                  </div>
-                </a>
-              );
-            }
-
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className="landing-action-card"
-                onClick={item.action}
-              >
-                <span className="landing-action-icon">
-                  <Icon size={20} />
-                </span>
-                <div className="landing-action-copy">
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                  <span className="landing-action-link">
-                    Open <ArrowRight size={15} />
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
         {/* <aside className="landing-admin-note">
           <span>Admin note</span>
           <p>{landingSettings.copy.adminNote}</p>

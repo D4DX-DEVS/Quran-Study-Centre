@@ -8,11 +8,30 @@ import Footer from "./footer/footer";
 
 const Main = styled.div`
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+`;
+
+const Column = styled.div`
+  display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  width: 50%;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
+
 const Title = styled.div`
   display: flex;
   align-items: center;
@@ -120,7 +139,11 @@ const QuestionPapersComponent = (props) => {
             if (!grouped[item.year]) grouped[item.year] = { year: item.year, items: [] };
             grouped[item.year].items.push(item);
           });
-          setTabs(Object.values(grouped).sort((a, b) => String(b.year).localeCompare(String(a.year))));
+          const groupedTabs = Object.values(grouped).sort((a, b) => String(b.year).localeCompare(String(a.year)));
+          groupedTabs.forEach((tab) => {
+            tab.items.sort((a, b) => String(a.title).localeCompare(String(b.title)));
+          });
+          setTabs(groupedTabs);
         }
       })
       .catch((error) => {
@@ -147,6 +170,9 @@ const QuestionPapersComponent = (props) => {
           });
           // Convert the syllabusTabs object into an array
           const tabsArray = Object.values(syllabusTabs);
+          tabsArray.forEach((tab) => {
+            tab.items.sort((a, b) => String(a.syllabus).localeCompare(String(b.syllabus)));
+          });
           setSyllabusTabs(tabsArray);
         }
       })
@@ -168,49 +194,54 @@ const QuestionPapersComponent = (props) => {
       <main className="landing-home">
         <div className="landing-page-shell">
           <Main>
-            <Title>Download Question Papers Now!</Title>
-            <TabBox>
-              {tabs.map((tab, index) => (
-                <StyledButton key={index} onClick={() => handleTabClick(index)}>
-                  {tab.year}
-                </StyledButton>
-              ))}
-            </TabBox>
-            <ContentBox>
-              {tabs.length === 0 ? (
-                <p style={{ textAlign: "center", color: "#888" }}>
-                  No question papers found.
-                </p>
-              ) : (
-                tabs[activeTab]?.items.map((item, index) => (
-                  <ListItem key={index}>
-                    <Arrow>&#11208;</Arrow>
-                    <a href={import.meta.env.VITE_APP_CDN + item.attachment} target="_blank" rel="noopener noreferrer" download={import.meta.env.VITE_APP_CDN + item.attachment} style={{ color: "#1a4993" }}>
-                      <p>{item.title}</p>
-                    </a>
-                  </ListItem>
-                ))
-              )}
-            </ContentBox>
-            <Title>Download Syllabus Now!</Title>
-            <TabBox>
-              {syllabusTabs.map((tab, index) => (
-                <StyledButton key={index} onClick={() => handleSyllabusTabClick(index)}>
-                  {tab.year}
-                </StyledButton>
-              ))}
-            </TabBox>
-            <ContentBox>
-              {syllabusTabs.length > 0 &&
-                syllabusTabs[syllabusActiveTab].items.map((item, index) => (
-                  <ListItem key={index}>
-                    <Arrow>&#11208;</Arrow>
-                    <a href={import.meta.env.VITE_APP_CDN + item.attachment} target="_blank" rel="noopener noreferrer" download={import.meta.env.VITE_APP_CDN + item.attachment} style={{ color: "#1a4993" }}>
-                      <p>{item.syllabus}</p>
-                    </a>
-                  </ListItem>
+            <Column>
+              <Title>Download Question Papers Now!</Title>
+              <TabBox>
+                {tabs.map((tab, index) => (
+                  <StyledButton key={index} onClick={() => handleTabClick(index)}>
+                    {tab.year}
+                  </StyledButton>
                 ))}
-            </ContentBox>
+              </TabBox>
+              <ContentBox>
+                {tabs.length === 0 ? (
+                  <p style={{ textAlign: "center", color: "#888" }}>
+                    No question papers found.
+                  </p>
+                ) : (
+                  tabs[activeTab]?.items.map((item, index) => (
+                    <ListItem key={index}>
+                      <Arrow>&#11208;</Arrow>
+                      <a href={import.meta.env.VITE_APP_CDN + item.attachment} target="_blank" rel="noopener noreferrer" download={import.meta.env.VITE_APP_CDN + item.attachment} style={{ color: "#1a4993" }}>
+                        <p>{item.title}</p>
+                      </a>
+                    </ListItem>
+                  ))
+                )}
+              </ContentBox>
+            </Column>
+
+            <Column>
+              <Title>Download Syllabus Now!</Title>
+              <TabBox>
+                {syllabusTabs.map((tab, index) => (
+                  <StyledButton key={index} onClick={() => handleSyllabusTabClick(index)}>
+                    {tab.year}
+                  </StyledButton>
+                ))}
+              </TabBox>
+              <ContentBox>
+                {syllabusTabs.length > 0 &&
+                  syllabusTabs[syllabusActiveTab].items.map((item, index) => (
+                    <ListItem key={index}>
+                      <Arrow>&#11208;</Arrow>
+                      <a href={import.meta.env.VITE_APP_CDN + item.attachment} target="_blank" rel="noopener noreferrer" download={import.meta.env.VITE_APP_CDN + item.attachment} style={{ color: "#1a4993" }}>
+                        <p>{item.syllabus}</p>
+                      </a>
+                    </ListItem>
+                  ))}
+              </ContentBox>
+            </Column>
           </Main>
         </div>
       </main>
