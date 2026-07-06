@@ -378,6 +378,7 @@ function Header(props) {
   const [showAboutUs, setAboutUs] = useState(false);
   const [showResult, setResult] = useState(false);
   const [showExamInstructions, setExamInstructions] = useState(false);
+  const [showVerifyRegistration, setShowVerifyRegistration] = useState(true);
 
   useEffect(() => {
     getData({}, "floating-menu-settings").then((response) => {
@@ -393,6 +394,7 @@ function Header(props) {
       setAboutUs(!!settings.about);
       setResult(!!settings.result);
       setExamInstructions(!!settings.examInstruction);
+      setShowVerifyRegistration(settings.verifyRegistration !== false);
     });
   }, []);
 
@@ -484,13 +486,15 @@ function Header(props) {
                 Exam Registration
               </button>
             )}
-            <button
-              type="button"
-              className="landing-header-btn secondary"
-              onClick={() => openActionPanel("verifyRegistration")}
-            >
-              Verify Your Registration
-            </button>
+            {showVerifyRegistration && (
+              <button
+                type="button"
+                className="landing-header-btn secondary"
+                onClick={() => openActionPanel("verifyRegistration")}
+              >
+                Verify Your Registration
+              </button>
+            )}
             <a
               href="/admin"
               className="landing-header-btn secondary"
@@ -554,13 +558,15 @@ function Header(props) {
                 Exam Registration
               </button>
             )}
-            <button
-              type="button"
-              className="landing-nav-btn"
-              onClick={() => openActionPanel("verifyRegistration")}
-            >
-              Verify Your Registration
-            </button>
+            {showVerifyRegistration && (
+              <button
+                type="button"
+                className="landing-nav-btn"
+                onClick={() => openActionPanel("verifyRegistration")}
+              >
+                Verify Your Registration
+              </button>
+            )}
             <a href="/admin" onClick={() => setShowMenu(false)}>
               Login
             </a>

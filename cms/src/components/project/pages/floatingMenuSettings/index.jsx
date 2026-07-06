@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BookOpen,
   Building2,
+  ClipboardCheck,
   ClipboardList,
   Download,
   Eye,
@@ -76,6 +77,14 @@ const MENU_ITEMS = [
     description: "Shows instructions candidates must read before the exam.",
     icon: BookOpen,
     tone: "bg-violet-50 text-violet-600 ring-violet-100",
+  },
+  {
+    key: "verifyRegistration",
+    label: "Verify Your Registration",
+    description:
+      "Lets candidates look up their registration by mobile number and fix mismatched details.",
+    icon: ClipboardCheck,
+    tone: "bg-teal-50 text-teal-600 ring-teal-100",
   },
 ];
 

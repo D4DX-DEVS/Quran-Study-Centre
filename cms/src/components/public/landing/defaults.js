@@ -6,6 +6,7 @@ export const LANDING_MENU_DEFAULTS = {
   about: true,
   result: false,
   examInstruction: false,
+  verifyRegistration: true,
 };
 
 export const LANDING_COPY_DEFAULTS = {

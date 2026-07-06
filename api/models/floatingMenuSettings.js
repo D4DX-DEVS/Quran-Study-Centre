@@ -97,6 +97,10 @@ const FloatingSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    verifyRegistration: {
+      type: Boolean,
+      default: true,
+    },
     showPublicSnapshot: {
       type: Boolean,
       default: true,
