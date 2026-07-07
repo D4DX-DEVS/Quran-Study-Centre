@@ -134,13 +134,13 @@ const ExamRegistration = (props) => {
       let title;
       let scopeName;
       if (activeFilter.centerRegistration && centreName) {
-        title = `${centreName} Registrations ${year}`;
+        title = `${centreName} Registrations ${year} (Center Wise)`;
         scopeName = centreName;
       } else if (activeFilter.area && areaName) {
-        title = `${areaName} Registration ${year}`;
+        title = `${areaName} Registration ${year} (Area Wise)`;
         scopeName = areaName;
       } else if (activeFilter.district && districtSet.size === 1) {
-        title = `${districtName} Registration ${year}`;
+        title = `${districtName} Registration ${year} (District Wise)`;
         scopeName = districtName;
       } else {
         title = `All Registrations ${year}`;
