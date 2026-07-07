@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ArrowRight,
   Building2,
+  Globe,
   MapPinned,
   School,
   Users,
@@ -9,6 +10,15 @@ import {
 import "./style.css";
 import { getData } from "../../../backend/api";
 import { normalizeLandingSettings } from "./defaults";
+import { thafheem } from "../../project/brand";
+import { AppleLogo, PlayStoreLogo, StoreBadge } from "./storeBadges";
+
+const THAFHEEM_LINKS = {
+  banner: "https://app.thafheem.net/",
+  web: "https://thafheem.net/?lang=E",
+  appStore: "https://apps.apple.com/in/app/thafheemul-quran/id1292572556",
+  playStore: "https://play.google.com/store/apps/details?id=com.d4media.thafheem",
+};
 
 const defaultContent = {
   landingTitle: "Quran Study Centre Kerala",
@@ -163,6 +173,46 @@ function Hero() {
           <span>Admin note</span>
           <p>{landingSettings.copy.adminNote}</p>
         </aside> */}
+
+        <div className="landing-thafheem-eyebrow-row">
+          <span className="landing-eyebrow">Exam Reference</span>
+        </div>
+        <div className="landing-thafheem-card">
+          <a
+            href={THAFHEEM_LINKS.banner}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="landing-thafheem-logo-link"
+          >
+            <img src={thafheem} alt="Thafheem ul Quran" className="landing-thafheem-logo" />
+          </a>
+          <div className="landing-thafheem-copy">
+            <h3>This exam is entirely based on Thafheemul Quran</h3>
+            <p>
+              Prepare using the official Thafheem ul Quran app — refer to it for every topic covered in this exam.
+            </p>
+            <div className="landing-thafheem-actions">
+              <StoreBadge
+                href={THAFHEEM_LINKS.web}
+                icon={<Globe size={22} color="#3BA7FF" />}
+                eyebrow="Visit our"
+                title="Website"
+              />
+              <StoreBadge
+                href={THAFHEEM_LINKS.appStore}
+                icon={<AppleLogo size={22} />}
+                eyebrow="Download on the"
+                title="App Store"
+              />
+              <StoreBadge
+                href={THAFHEEM_LINKS.playStore}
+                icon={<PlayStoreLogo size={22} />}
+                eyebrow="GET IT ON"
+                title="Google Play"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="landing-visual-stack landing-qr-section">
           <div className="landing-story-card">

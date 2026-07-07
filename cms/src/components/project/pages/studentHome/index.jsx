@@ -5,10 +5,14 @@ import {
   BookOpen,
   ChevronRight,
   Download,
+  ExternalLink,
   FileBadge2,
   GraduationCap,
+  Globe,
   LayoutDashboard,
+  PlayCircle,
   ScrollText,
+  Smartphone,
   Sparkles,
   Ticket,
   Trophy,
@@ -18,6 +22,14 @@ import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
 import { getData, postData } from "../../../../backend/api";
 import { getStoredStudentProfile, resolveAssetUrl } from "../shared/studentSession";
+import { thafheem } from "../../brand";
+
+const THAFHEEM_LINKS = {
+  banner: "https://app.thafheem.net/",
+  web: "https://thafheem.net/?lang=E",
+  appStore: "https://apps.apple.com/in/app/thafheemul-quran/id1292572556",
+  playStore: "https://play.google.com/store/apps/details?id=com.d4media.thafheem",
+};
 
 const notificationToneClass = {
   success: "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -206,6 +218,69 @@ const StudentHome = (props) => {
   return (
     <Container className="noshadow">
       <div className="max-w-6xl mx-auto p-4 md:p-6 xl:p-8 space-y-6">
+        <section className="overflow-hidden rounded-[28px] border border-cyan-900/40 bg-gradient-to-r from-slate-950 via-blue-950 to-cyan-900 shadow-sm">
+          <div className="flex flex-col gap-5 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+            <div className="flex items-center gap-4 md:gap-5">
+              <img
+                src={thafheem}
+                alt="Thafheem ul Quran"
+                className="hidden h-16 w-auto shrink-0 rounded-2xl object-contain sm:block md:h-20"
+              />
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-100">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Exam Reference
+                </div>
+                <h2 className="text-lg font-semibold leading-snug text-white md:text-xl">
+                  This exam is entirely based on Thafheemul Quran
+                </h2>
+                <p className="max-w-xl text-sm leading-6 text-slate-200">
+                  Prepare using the official Thafheem ul Quran app — refer to it for every topic covered in this exam.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 md:shrink-0 md:justify-end">
+              <a
+                href={THAFHEEM_LINKS.web}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <Globe className="h-4 w-4" />
+                Website
+              </a>
+              <a
+                href={THAFHEEM_LINKS.appStore}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <Smartphone className="h-4 w-4" />
+                App Store
+              </a>
+              <a
+                href={THAFHEEM_LINKS.playStore}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                <PlayCircle className="h-4 w-4" />
+                Play Store
+              </a>
+              <a
+                href={THAFHEEM_LINKS.banner}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Thafheem App
+              </a>
+            </div>
+          </div>
+        </section>
+
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
           <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
             <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 text-white p-6 md:p-8 lg:p-10">

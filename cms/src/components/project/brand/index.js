@@ -1,3 +1,4 @@
 import calicut from "./images/calicut.jpeg"
 import malappuram from "./images/malappuram.jpeg"
-export { calicut, malappuram };
+import thafheem from "./images/thafheem.png"
+export { calicut, malappuram, thafheem };
