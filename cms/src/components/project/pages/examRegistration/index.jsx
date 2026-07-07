@@ -20,7 +20,7 @@ const ExamRegistration = (props) => {
   // gets a locked district filter — no dropdown, no other districts visible.
   // Matched on the districts field itself, not the role name, so it can't drift
   // out of sync with whatever the backend actually enforces.
-  const loggedInUser = useSelector((state) => state.login?.data) || {};
+  const loggedInUser = useSelector((state) => state.login?.data?.user) || {};
   const adminDistrictId = loggedInUser?.districts?._id || loggedInUser?.districts || "";
   const isDistrictAdmin = Boolean(adminDistrictId);
 

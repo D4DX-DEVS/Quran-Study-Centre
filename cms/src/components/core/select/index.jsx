@@ -634,7 +634,7 @@ function CustomSelect(props) {
             </div>
           )}
           <div className="relative">
-            <Select isClearable={props.clearable ?? true} value={selectedOption} onChange={handleSelect} styles={customStyles} placeholder={isLoading ? "Loading..." : props.placeholder} className="w-full" getOptionLabel={(option) => option.value} getOptionValue={(option) => option.id} options={options} isDisabled={isLoading} noOptionsMessage={() => <NoDataWithRefresh onRefresh={handleRefresh} isLoading={isLoading} />} />
+            <Select isClearable={(props.clearable ?? true) && !props.disabled} value={selectedOption} onChange={handleSelect} styles={customStyles} placeholder={isLoading ? "Loading..." : props.placeholder} className="w-full" getOptionLabel={(option) => option.value} getOptionValue={(option) => option.id} options={options} isDisabled={isLoading || props.disabled} noOptionsMessage={() => <NoDataWithRefresh onRefresh={handleRefresh} isLoading={isLoading} />} />
             {hasIcon && <div className={`z-10 absolute left-3 top-[18px] -translate-y-1/2 pointer-events-none ${hasFilter ? "pt-0" : "pt-1"}`}>{isLoading ? <Loader className="w-4 h-4 text-gray-500 animate-spin" aria-hidden="true" /> : <GetIcon icon={props.icon} className="w-4 h-4 text-gray-500" />}</div>}
           </div>
           <Footnote {...props} />
