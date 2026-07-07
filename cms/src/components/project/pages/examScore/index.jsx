@@ -88,11 +88,14 @@ const ExamScore = (props) => {
   const [selExam, setSelExam] = useState("");
   const [page, setPage] = useState(1);
 
-  // District / Area / Status filters
+  // District / Area / Exam Center / Gender / Status filters
   const [districts, setDistricts] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [centers, setCenters] = useState([]);
   const [selDistrict, setSelDistrict] = useState("");
   const [selArea, setSelArea] = useState("");
+  const [selCenter, setSelCenter] = useState("");
+  const [selGender, setSelGender] = useState("");
   const [selStatus, setSelStatus] = useState("");
 
   // Drawer / form state
@@ -125,6 +128,19 @@ const ExamScore = (props) => {
     })();
   }, [selDistrict]);
 
+  // Load exam centers whenever area changes
+  useEffect(() => {
+    if (!selArea) {
+      setCenters([]);
+      setSelCenter("");
+      return;
+    }
+    (async () => {
+      const r = await getData({ area: selArea }, "center-registration/area");
+      setCenters(r?.data?.response || r?.data || []);
+    })();
+  }, [selArea]);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -136,6 +152,8 @@ const ExamScore = (props) => {
       if (selExam) query.exam = selExam;
       if (selDistrict) query.district = selDistrict;
       if (selArea) query.area = selArea;
+      if (selCenter) query.centerRegistration = selCenter;
+      if (selGender) query.gender = selGender;
       if (selStatus) query.studentStatus = selStatus;
       const r = await getData(query, "exam-score");
       setRows(r?.data?.response || []);
@@ -155,7 +173,7 @@ const ExamScore = (props) => {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, selExam, selDistrict, selArea, selStatus]);
+  }, [page, selExam, selDistrict, selArea, selCenter, selGender, selStatus]);
 
   // Search debounced on Enter / button.
   const onSearchSubmit = () => {
@@ -248,9 +266,14 @@ const ExamScore = (props) => {
       const a = areas.find((x) => (x.id || x._id) === selArea);
       if (a) parts.push(a.value || a.area);
     }
+    if (selCenter) {
+      const c = centers.find((x) => (x.id || x._id) === selCenter);
+      if (c) parts.push(c.value || c.nameOfCenter);
+    }
+    if (selGender) parts.push(selGender);
     if (selStatus) parts.push(selStatus);
     return parts.length ? parts.join(" · ") : "All";
-  }, [selExam, examTypes, selDistrict, districts, selArea, areas, selStatus]);
+  }, [selExam, examTypes, selDistrict, districts, selArea, areas, selCenter, centers, selGender, selStatus]);
 
   const generatePdf = async (data, title) => {
     const fontB64 = await loadMalayalamFont();
@@ -333,6 +356,8 @@ const ExamScore = (props) => {
       if (selExam) query.exam = selExam;
       if (selDistrict) query.district = selDistrict;
       if (selArea) query.area = selArea;
+      if (selCenter) query.centerRegistration = selCenter;
+      if (selGender) query.gender = selGender;
       if (selStatus) query.studentStatus = selStatus;
       const r = await getData(query, "exam-score");
       const data = r?.data?.response || [];
@@ -477,6 +502,7 @@ const ExamScore = (props) => {
               onChange={(e) => {
                 setPage(1);
                 setSelArea(e.target.value);
+                setSelCenter("");
               }}
               className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
             >
@@ -488,6 +514,37 @@ const ExamScore = (props) => {
               ))}
             </select>
           )}
+
+          {selArea && (
+            <select
+              value={selCenter}
+              onChange={(e) => {
+                setPage(1);
+                setSelCenter(e.target.value);
+              }}
+              className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            >
+              <option value="">All exam centers</option>
+              {centers.map((c) => (
+                <option key={c.id || c._id} value={c.id || c._id}>
+                  {c.value || c.nameOfCenter}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <select
+            value={selGender}
+            onChange={(e) => {
+              setPage(1);
+              setSelGender(e.target.value);
+            }}
+            className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+          >
+            <option value="">All genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
 
           <select
             value={selStatus}

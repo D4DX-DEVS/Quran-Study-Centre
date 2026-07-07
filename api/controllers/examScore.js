@@ -166,6 +166,43 @@ exports.getExamScore = async (req, res) => {
       }
     }
 
+    // Exam Center filter — mirrors Registered Students' "Exam Center" filter. Admin UI
+    // sends `centerRegistration=<id>`; resolve to student ids via ExamRegistration and
+    // AND it into the score query the same way district/area do above.
+    if (req.filter && req.filter.centerRegistration) {
+      const idsByCenter = await examRegistration.find({ centerRegistration: req.filter.centerRegistration }).distinct("_id");
+
+      if (Array.isArray(query.$and)) {
+        query.$and.push({ student: { $in: idsByCenter } });
+      } else if (query.$or) {
+        query = { $and: [{ $or: query.$or }, { student: { $in: idsByCenter } }] };
+      } else if (query.student && query.student.$in) {
+        query.student.$in = query.student.$in.filter((id) => idsByCenter.some((x) => String(x) === String(id)));
+      } else {
+        query.student = { $in: idsByCenter };
+      }
+
+      delete query.centerRegistration;
+    }
+
+    // Gender filter — mirrors Registered Students' "Gender" filter. Admin UI sends
+    // `gender=Male|Female`; resolve to student ids via ExamRegistration and AND it in.
+    if (req.filter && (req.filter.gender === "Male" || req.filter.gender === "Female")) {
+      const idsByGender = await examRegistration.find({ gender: req.filter.gender }).distinct("_id");
+
+      if (Array.isArray(query.$and)) {
+        query.$and.push({ student: { $in: idsByGender } });
+      } else if (query.$or) {
+        query = { $and: [{ $or: query.$or }, { student: { $in: idsByGender } }] };
+      } else if (query.student && query.student.$in) {
+        query.student.$in = query.student.$in.filter((id) => idsByGender.some((x) => String(x) === String(id)));
+      } else {
+        query.student = { $in: idsByGender };
+      }
+
+      delete query.gender;
+    }
+
     // Phase 3 — Private/Regular filter. Admin UI sends `studentStatus=Private|Regular`;
     // we resolve it to student ids on ExamRegistration and AND it into the score query.
     if (req.filter && (req.filter.studentStatus === "Private" || req.filter.studentStatus === "Regular")) {
