@@ -135,7 +135,7 @@ const PageRouter = () => {
               <SubMenuOpen theme={themeColors}>{renderGroupedSubMenus()}</SubMenuOpen>
             </MobileSubMenu>
           ) : null}
-          <RowContainer className={`content ${selectedMenuItem.hideMenu && "hidemenu"}`}>
+          <RowContainer className={`content ${selectedMenuItem.hideMenu ? "hidemenu" : ""} ${selectedSubMenuItem?.submenus?.length > 0 && isMobile ? "has-menu" : ""}`}>
             <Container className="nopadding" theme={themeColors}>
               <Routes>
                 <Route key="login" path="/" element={<Switch page="login" />} />

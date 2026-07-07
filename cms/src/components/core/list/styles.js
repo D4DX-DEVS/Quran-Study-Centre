@@ -1021,6 +1021,11 @@ export const Filter = styled.button`
   &.filter-button {
     flex: none;
   }
+  @media (max-width: 768px) {
+    &.filter-button {
+      margin-top: 6px;
+    }
+  }
   .toolbar-theme-district & {
     border-radius: 12px;
     min-height: 42px;

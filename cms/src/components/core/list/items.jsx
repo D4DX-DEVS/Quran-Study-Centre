@@ -1886,6 +1886,17 @@ const ListItems = React.memo(
                       </Filter>
                     )}
                   </div>
+                  {/* Mobile View: keep additional buttons (e.g. Verification PDF) reachable inline, not just via the floating action menu */}
+                  {additionalButtons.length > 0 && (
+                    <div className="flex sm:hidden gap-2">
+                      {additionalButtons.map((btn) => (
+                        <AddButton key={btn.label} theme={themeColors} onClick={() => btn.onClick(referenceId)}>
+                          <GetIcon icon={btn.icon} />
+                          <span>{btn.label}</span>
+                        </AddButton>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>
