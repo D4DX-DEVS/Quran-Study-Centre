@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Container, HeaderMenu, Logo, Status, Title } from "./styels";
 import ProfileBar from "../profile";
-import { logo } from "../../../../images";
+import headerLogo from "../../../../components/project/brand/logo-header.png";
 import { GetIcon } from "../../../../icons";
 import { avathar } from "../../../../images";
 import SearchMenu from "./SearchMenu";
@@ -45,7 +45,7 @@ const Header = (props) => {
           <GetIcon icon={selectedMenuItem.icon} />
         </MNav> */}
         <Title>
-          <Logo src={logo} alt="logo" />
+          <Logo src={headerLogo} alt="logo" />
         </Title>
         <div className="flex-1 flex justify-end pr-4">
           <SearchMenu />

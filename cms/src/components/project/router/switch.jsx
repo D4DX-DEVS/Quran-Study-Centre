@@ -43,6 +43,7 @@ const TakeExam = lazy(() => import("../pages/takeExam/index.jsx"));
 const PracticeExam = lazy(() => import("../pages/practiceExam/index.jsx"));
 const ExamHistoryPage = lazy(() => import("../pages/examHistory/index.jsx"));
 const MasterData = lazy(() => import("../pages/masterData/index.jsx"));
+const ExamConsolidationReport = lazy(() => import("../pages/examConsolidationReport/index.jsx"));
 
 const RenderPage = (page, key, privileges) => {
   const renderComponent = (Component) => (
@@ -141,6 +142,8 @@ const RenderPage = (page, key, privileges) => {
       return renderComponent(OldQuestionPapers);
     case "master-data":
       return renderComponent(MasterData);
+    case "exam-consolidation-report":
+      return renderComponent(ExamConsolidationReport);
     default:
       return renderComponent(Page404);
   }
