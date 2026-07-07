@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import AutoForm from "../../core/form";
 import { getData, postData } from "../../../backend/api";
 import styled from "styled-components";
-import logo from "../../../components/project/brand/logo.png";
+import logo from "../../../components/project/brand/logo-header.png";
 import { FormContainer, formReg } from "./registrationForm";
 import VerifyRegistration from "./VerifyRegistration";
 // import { tr } from "date-fns/locale";

@@ -64,8 +64,8 @@
 }
 
 .landing-brand img {
-  width: 100px;
-  height: 56px;
+  width: 130px;
+  height: 64px;
   object-fit: contain;
 }
 
@@ -1069,8 +1069,8 @@
   }
 
   .landing-brand img {
-    width: 46px;
-    height: 46px;
+    width: 53px;
+    height: 53px;
   }
 
   .landing-brand-copy strong {
