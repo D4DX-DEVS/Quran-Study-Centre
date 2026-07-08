@@ -560,7 +560,7 @@ const FloatingMenuSettings = (props) => {
                 <ImageField
                   label="Landing Main Banner"
                   required={!aboutRecordId}
-                  hint="Hero image for the homepage. Recommended: 1920×1080 (16:9 ratio)."
+                  hint="Hero image for the homepage. Recommended: 1220×1420 (6:7 ratio)."
                   existingUrl={aboutForm.landingMainbanner ? `${CDN}${aboutForm.landingMainbanner}` : ""}
                   file={bannerFile}
                   onChange={setBannerFile}

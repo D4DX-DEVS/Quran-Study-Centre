@@ -344,7 +344,7 @@ const AboutUs = (props) => {
                 <ImageField
                   label="Landing Main Banner"
                   required={!recordId}
-                  hint="Hero image for the homepage. Recommended: 1920×1080 (16:9 ratio)."
+                  hint="Hero image for the homepage. Recommended: 1220×1420 (6:7 ratio)."
                   existingUrl={form.landingMainbanner ? `${CDN}${form.landingMainbanner}` : ""}
                   file={bannerFile}
                   onChange={setBannerFile}
