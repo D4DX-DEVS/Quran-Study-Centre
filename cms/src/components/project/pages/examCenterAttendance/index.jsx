@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import Layout from "../../../core/layout";
 import ListTable from "../../../core/list/list";
 import { Container } from "../../../core/layout/styels";
@@ -11,6 +12,12 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 const ExamCenterAttendance = (props) => {
+  // Any user scoped to a single district gets a locked district filter — no
+  // dropdown, no other districts visible. Same pattern as examRegistration/index.jsx.
+  const loggedInUser = useSelector((state) => state.login?.data?.user) || {};
+  const adminDistrictId = loggedInUser?.districts?._id || loggedInUser?.districts || "";
+  const isDistrictAdmin = Boolean(adminDistrictId);
+
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -552,6 +559,8 @@ const ExamCenterAttendance = (props) => {
       search: false,
       // The single district selector for this page (also drives the zip/PDF
       // export) — the old separate top-of-page picker was removed.
+      // District Admins get a locked, non-editable filter showing only their own district.
+      disabled: isDistrictAdmin,
     },
     {
       type: "select",
@@ -641,10 +650,12 @@ const ExamCenterAttendance = (props) => {
         <div className="flex w-full justify-between items-center mb-6">
           <h6 className="text-2xl font-bold">Exam Center Attendance</h6>
           <div className="flex items-center gap-4">
-            <button onClick={downloadDistrictWiseData} disabled={loading || !selectedDistrict} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              <Download size={16} />
-              {loading ? "Generating..." : "Download"}
-            </button>
+            {props.exportPrivilege && (
+              <button onClick={downloadDistrictWiseData} disabled={loading || !selectedDistrict} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Download size={16} />
+                {loading ? "Generating..." : "Download"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -657,6 +668,7 @@ const ExamCenterAttendance = (props) => {
           surfaceTheme={"district"}
           onFilterChange={handleFilterChange}
           attributes={attributes}
+          preFilter={isDistrictAdmin && adminDistrictId ? { district: adminDistrictId } : {}}
           {...props}
         />
       </div>
