@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Download, Filter, RotateCcw, Users } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Building2, ChevronLeft, ChevronRight, Download, Filter, MapPin, RotateCcw, Users } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import Layout from "../../../core/layout";
@@ -13,6 +13,25 @@ import { getData } from "../../../../backend/api";
 // Exam center choice (studyCentre) mirrors examRegistration's verification-PDF
 // logic: once scoped to a district/area, the centre a student registered at is
 // the meaningful one, not the exam-day venue they may later be reassigned to.
+// Grouping/summing happens server-side (exam-registration/consolidation-report)
+// so the table can page through 15 group-rows at a time instead of pulling
+// every registration into the browser.
+const PAGE_SIZE = 15;
+
+// Summary card shown above the table. Which cards appear depends on filter
+// level — see the `level === ...` guards where these are rendered.
+const SummaryCard = ({ icon: Icon, label, value }) => (
+  <div className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 bg-white">
+    <div className="p-2 rounded-md bg-blue-50 text-blue-600">
+      <Icon className="w-5 h-5" />
+    </div>
+    <div>
+      <p className="text-xs text-gray-500 m-0">{label}</p>
+      <p className="text-lg font-semibold m-0">{value}</p>
+    </div>
+  </div>
+);
+
 const ExamConsolidationReport = (props) => {
   useEffect(() => {
     document.title = `Exam Consolidation Report - QSC Automation`;
@@ -23,7 +42,11 @@ const ExamConsolidationReport = (props) => {
   const [selDistrict, setSelDistrict] = useState("");
   const [selArea, setSelArea] = useState("");
 
-  const [rows, setRows] = useState([]);
+  const [groupedRows, setGroupedRows] = useState([]);
+  const [totals, setTotals] = useState({ total: 0, private: 0, regular: 0, male: 0, female: 0 });
+  const [counts, setCounts] = useState({ districtCount: 0, areaCount: 0, centerCount: 0 });
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,67 +68,43 @@ const ExamConsolidationReport = (props) => {
     })();
   }, [selDistrict]);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const filter = selArea ? { area: selArea } : selDistrict ? { district: selDistrict } : {};
-        const r = await getData(filter, "exam-registration/registered-list");
-        setRows(r?.data?.response || []);
-      } catch (e) {
-        props.setMessage?.({
-          type: 1,
-          content: e?.response?.data?.message || e.message || "Failed to load consolidation data.",
-          proceed: "Okay",
-        });
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selDistrict, selArea]);
-
   const level = selArea ? "center" : selDistrict ? "area" : "district";
   const groupLabel = level === "district" ? "District" : level === "area" ? "Area" : "Exam Center";
   const groupField = level === "district" ? "district" : level === "area" ? "area" : "studyCentre";
 
-  const groupedRows = useMemo(() => {
-    const map = new Map();
-    for (const r of rows) {
-      const group = r[groupField] || "Unknown";
-      const examName = r.examType || "Unknown";
-      const key = `${group}||${examName}`;
-      if (!map.has(key)) {
-        map.set(key, { group, examName, total: 0, private: 0, regular: 0, male: 0, female: 0 });
-      }
-      const entry = map.get(key);
-      entry.total += 1;
-      if (r.status === "Private") entry.private += 1;
-      if (r.status === "Regular") entry.regular += 1;
-      if (r.gender === "Male") entry.male += 1;
-      if (r.gender === "Female") entry.female += 1;
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    try {
+      const filter = selArea ? { area: selArea } : selDistrict ? { district: selDistrict } : {};
+      const r = await getData(
+        { ...filter, level: groupField, skip: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
+        "exam-registration/consolidation-report"
+      );
+      setGroupedRows(r?.data?.response || []);
+      setTotalCount(r?.data?.totalCount || 0);
+      setTotals(r?.data?.totals || { total: 0, private: 0, regular: 0, male: 0, female: 0 });
+      setCounts(r?.data?.counts || { districtCount: 0, areaCount: 0, centerCount: 0 });
+    } catch (e) {
+      props.setMessage?.({
+        type: 1,
+        content: e?.response?.data?.message || e.message || "Failed to load consolidation data.",
+        proceed: "Okay",
+      });
+    } finally {
+      setLoading(false);
     }
-    return [...map.values()].sort((a, b) => {
-      const g = a.group.localeCompare(b.group);
-      if (g !== 0) return g;
-      return a.examName.localeCompare(b.examName);
-    });
-  }, [rows, groupField]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selDistrict, selArea, groupField, page]);
 
-  const totals = useMemo(
-    () =>
-      groupedRows.reduce(
-        (acc, r) => ({
-          total: acc.total + r.total,
-          private: acc.private + r.private,
-          regular: acc.regular + r.regular,
-          male: acc.male + r.male,
-          female: acc.female + r.female,
-        }),
-        { total: 0, private: 0, regular: 0, male: 0, female: 0 }
-      ),
-    [groupedRows]
-  );
+  useEffect(() => {
+    loadPage();
+  }, [loadPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selDistrict, selArea]);
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
 
   const scopeLabel = selArea
     ? areas.find((a) => (a.id || a._id) === selArea)?.value || areas.find((a) => (a.id || a._id) === selArea)?.area
@@ -113,46 +112,67 @@ const ExamConsolidationReport = (props) => {
     ? districts.find((d) => (d.id || d._id) === selDistrict)?.value || districts.find((d) => (d.id || d._id) === selDistrict)?.district
     : "All Kerala (State)";
 
-  const downloadPdf = () => {
-    if (!groupedRows.length) return;
-    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const today = new Date().toLocaleDateString("en-GB");
+  const [pdfLoading, setPdfLoading] = useState(false);
 
-    doc.setFontSize(14);
-    doc.text("Exam Consolidation Report", pageWidth / 2, 30, { align: "center" });
-    doc.setFontSize(11);
-    doc.text(`${scopeLabel}  |  Total: ${totals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
+  const downloadPdf = async () => {
+    if (!totalCount || pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      const filter = selArea ? { area: selArea } : selDistrict ? { district: selDistrict } : {};
+      // Export always covers the full report, not just the visible page —
+      // fetch every group in one shot (limit omitted -> server returns all).
+      const r = await getData({ ...filter, level: groupField }, "exam-registration/consolidation-report");
+      const allGroups = r?.data?.response || [];
+      const allTotals = r?.data?.totals || totals;
+      if (!allGroups.length) return;
 
-    doc.autoTable({
-      startY: 62,
-      head: [["#", groupLabel, "Exam Name", "Registered Students", "Private", "Regular", "Male", "Female"]],
-      body: [
-        ...groupedRows.map((r, i) => [i + 1, r.group, r.examName, r.total, r.private, r.regular, r.male, r.female]),
-        ["", "Total", "", totals.total, totals.private, totals.regular, totals.male, totals.female],
-      ],
-      styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0 },
-      headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
-      footStyles: { fontStyle: "bold" },
-      theme: "grid",
-      columnStyles: {
-        0: { halign: "center", cellWidth: 30 },
-        3: { halign: "center" },
-        4: { halign: "center" },
-        5: { halign: "center" },
-        6: { halign: "center" },
-        7: { halign: "center" },
-      },
-      didParseCell: (data) => {
-        if (data.row.index === groupedRows.length) data.cell.styles.fillColor = [245, 245, 245];
-      },
-      didDrawPage: (d) => {
-        doc.setFontSize(9);
-        doc.text(`Page ${d.pageNumber}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 12, { align: "right" });
-      },
-    });
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const today = new Date().toLocaleDateString("en-GB");
 
-    doc.save(`Exam Consolidation Report - ${scopeLabel} - ${today}.pdf`);
+      doc.setFontSize(14);
+      doc.text("Exam Consolidation Report", pageWidth / 2, 30, { align: "center" });
+      doc.setFontSize(11);
+      doc.text(`${scopeLabel}  |  Total: ${allTotals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
+
+      doc.autoTable({
+        startY: 62,
+        head: [["#", groupLabel, "Exam Name", "Registered Students", "Private", "Regular", "Male", "Female"]],
+        body: [
+          ...allGroups.map((r, i) => [i + 1, r.group, r.examName, r.total, r.private, r.regular, r.male, r.female]),
+          ["", "Total", "", allTotals.total, allTotals.private, allTotals.regular, allTotals.male, allTotals.female],
+        ],
+        styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0 },
+        headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+        footStyles: { fontStyle: "bold" },
+        theme: "grid",
+        columnStyles: {
+          0: { halign: "center", cellWidth: 30 },
+          3: { halign: "center" },
+          4: { halign: "center" },
+          5: { halign: "center" },
+          6: { halign: "center" },
+          7: { halign: "center" },
+        },
+        didParseCell: (data) => {
+          if (data.row.index === allGroups.length) data.cell.styles.fillColor = [245, 245, 245];
+        },
+        didDrawPage: (d) => {
+          doc.setFontSize(9);
+          doc.text(`Page ${d.pageNumber}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 12, { align: "right" });
+        },
+      });
+
+      doc.save(`Exam Consolidation Report - ${scopeLabel} - ${today}.pdf`);
+    } catch (e) {
+      props.setMessage?.({
+        type: 1,
+        content: e?.response?.data?.message || e.message || "Failed to export PDF.",
+        proceed: "Okay",
+      });
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   return (
@@ -171,10 +191,10 @@ const ExamConsolidationReport = (props) => {
             <button
               type="button"
               onClick={downloadPdf}
-              disabled={!groupedRows.length}
+              disabled={!totalCount || pdfLoading}
               className="flex items-center gap-1 text-sm px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-3.5 h-3.5" /> Export PDF
+              <Download className="w-3.5 h-3.5" /> {pdfLoading ? "Preparing…" : "Export PDF"}
             </button>
           </div>
         </div>
@@ -231,6 +251,17 @@ const ExamConsolidationReport = (props) => {
           )}
         </div>
 
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+          {level === "district" && (
+            <SummaryCard icon={MapPin} label="Total Districts" value={counts.districtCount} />
+          )}
+          {level === "area" && (
+            <SummaryCard icon={MapPin} label="Total Areas" value={counts.areaCount} />
+          )}
+          <SummaryCard icon={Building2} label="Total Exam Centers" value={counts.centerCount} />
+          <SummaryCard icon={Users} label="Total Registered Students" value={totals.total} />
+        </div>
+
         <div className="overflow-auto border border-gray-200 rounded-lg">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-gray-50">
@@ -263,7 +294,7 @@ const ExamConsolidationReport = (props) => {
               {!loading &&
                 groupedRows.map((r, i) => (
                   <tr key={`${r.group}-${r.examName}`} className="border-t border-gray-100">
-                    <td className="px-3 py-2">{i + 1}</td>
+                    <td className="px-3 py-2">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td className="px-3 py-2">{r.group}</td>
                     <td className="px-3 py-2">{r.examName}</td>
                     <td className="px-3 py-2 text-center">{r.total}</td>
@@ -278,7 +309,7 @@ const ExamConsolidationReport = (props) => {
               <tfoot>
                 <tr className="border-t-2 border-gray-300 font-semibold bg-gray-50">
                   <td className="px-3 py-2" colSpan={3}>
-                    Total
+                    Grand Total
                   </td>
                   <td className="px-3 py-2 text-center">{totals.total}</td>
                   <td className="px-3 py-2 text-center">{totals.private}</td>
@@ -290,6 +321,32 @@ const ExamConsolidationReport = (props) => {
             )}
           </table>
         </div>
+
+        {totalCount > PAGE_SIZE && (
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-sm text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="p-1.5 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="p-1.5 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </Container>
   );

@@ -1,6 +1,6 @@
 const router = require("express").Router();
 // controllers
-const { addExamRegistration, select, updateExamRegistration, deleteExamRegistration, getExamRegistration, getExamResult, downloadCertificate, getOutsideExamCenterByDistrict, getAttendanceSheet, getExamRegistrationList, getOutsideExamAttendanceSheet, getDistrictsExcludingOwn, getRegisteredStudentsList } = require("../controllers/examRegistration");
+const { addExamRegistration, select, updateExamRegistration, deleteExamRegistration, getExamRegistration, getExamResult, downloadCertificate, getOutsideExamCenterByDistrict, getAttendanceSheet, getExamRegistrationList, getOutsideExamAttendanceSheet, getDistrictsExcludingOwn, getRegisteredStudentsList, getConsolidationReport } = require("../controllers/examRegistration");
 const { selectAndExport, deduplicate } = require("../controllers/formexport");
 // middleware
 const { protect, authorize } = require("../middleware/auth");
@@ -16,6 +16,7 @@ router.get("/download-state-certificate", downloadCertificate);
 router.route("/district-center").get(reqFilter, getOutsideExamCenterByDistrict);
 router.get("/attendance-sheet", reqFilter, protect, getAttendanceSheet);
 router.get("/registered-list", reqFilter, protect, getRegisteredStudentsList);
+router.get("/consolidation-report", reqFilter, protect, getConsolidationReport);
 router.get("/list", getExamRegistrationList);
 router.get("/outside-center-list", reqFilter, getOutsideExamAttendanceSheet);
 router.get("/districts-excluding-own", getDistrictsExcludingOwn);

@@ -851,6 +851,177 @@ exports.getRegisteredStudentsList = async (req, res) => {
   }
 };
 
+// @desc     Consolidation report — grouped, paginated summary rows.
+// @route    GET /api/v1/exam-registration/consolidation-report
+// @access   protected (state admin sees all; district admin scoped)
+// Groups registrations by (level + examType) and sums Total/Private/Regular/
+// Male/Female per group, deduping by mobileNumber the same way
+// getRegisteredStudentsList does. `level` selects the grouping field:
+// "district" (state-wide), "area" (district selected) or "studyCentre"
+// (district + area selected). Pass skip/limit to page through the grouped
+// rows; omit limit (or pass 0) to get every group in one shot — used by the
+// PDF export, which needs the full report, not just the visible page.
+// `totals` in the response is always the grand total across ALL groups in
+// scope, independent of the page being returned.
+exports.getConsolidationReport = async (req, res) => {
+  try {
+    const { level } = req.query;
+    const skip = parseInt(req.query.skip) || 0;
+    const limit = parseInt(req.query.limit) || 0;
+    const groupField = ["district", "area", "studyCentre"].includes(level) ? level : "district";
+
+    const query = {
+      ...(req.filter || {}),
+      ...(req.user?.districts ? { district: req.user.districts } : {}),
+    };
+    // "level" is a grouping directive, not a data filter — reqFilter doesn't
+    // know that and leaves it in req.filter, which would otherwise make the
+    // $match look for a nonexistent "level" field and return zero rows.
+    delete query.level;
+    // aggregate() sends $match straight to MongoDB — unlike .find(), it does not
+    // auto-cast string ids to ObjectId, so district/area must be cast by hand.
+    const castObjectId = (val) =>
+      Array.isArray(val)
+        ? { $in: val.filter((v) => mongoose.Types.ObjectId.isValid(v)).map((v) => new mongoose.Types.ObjectId(String(v))) }
+        : mongoose.Types.ObjectId.isValid(val)
+        ? new mongoose.Types.ObjectId(String(val))
+        : val;
+    ["district", "area"].forEach((f) => {
+      if (query[f] !== undefined) query[f] = castObjectId(query[f]);
+    });
+
+    // Raw id field the current groupField maps to — used by the "counts"
+    // facet below to dedupe distinct districts/areas/centers without
+    // waiting for the name lookups the display grouping needs.
+    const groupIdField = groupField === "area" ? "$area" : groupField === "studyCentre" ? "$centerRegistration" : "$district";
+
+    const pipeline = [
+      { $match: query },
+      { $sort: { nameOfApplicant: 1 } },
+      {
+        $group: {
+          _id: { $ifNull: ["$mobileNumber", "$_id"] },
+          status: { $first: "$status" },
+          gender: { $first: "$gender" },
+          district: { $first: "$district" },
+          area: { $first: "$area" },
+          centerRegistration: { $first: "$centerRegistration" },
+          nameOfExamAppearingNow: { $first: "$nameOfExamAppearingNow" },
+        },
+      },
+      {
+        $facet: {
+          // Display rows: one per (group, exam), with lookups for names.
+          data: [
+            { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
+            { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "areas", localField: "area", foreignField: "_id", as: "areaDoc" } },
+            { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "centerregistrations", localField: "centerRegistration", foreignField: "_id", as: "centerDoc" } },
+            { $unwind: { path: "$centerDoc", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "examtypes", localField: "nameOfExamAppearingNow", foreignField: "_id", as: "examDoc" } },
+            { $unwind: { path: "$examDoc", preserveNullAndEmptyArrays: true } },
+            {
+              $addFields: {
+                groupVal: {
+                  $switch: {
+                    branches: [
+                      { case: { $eq: [groupField, "area"] }, then: "$areaDoc.area" },
+                      { case: { $eq: [groupField, "studyCentre"] }, then: "$centerDoc.nameOfCenter" },
+                    ],
+                    default: "$districtDoc.district",
+                  },
+                },
+                examName: {
+                  $trim: {
+                    input: { $arrayElemAt: [{ $split: [{ $ifNull: ["$examDoc.examType", ""] }, ":"] }, 0] },
+                  },
+                },
+              },
+            },
+            {
+              $group: {
+                _id: { group: { $ifNull: ["$groupVal", "Unknown"] }, examName: { $ifNull: ["$examName", "Unknown"] } },
+                total: { $sum: 1 },
+                private: { $sum: { $cond: [{ $eq: ["$status", "Private"] }, 1, 0] } },
+                regular: { $sum: { $cond: [{ $eq: ["$status", "Regular"] }, 1, 0] } },
+                male: { $sum: { $cond: [{ $eq: ["$gender", "Male"] }, 1, 0] } },
+                female: { $sum: { $cond: [{ $eq: ["$gender", "Female"] }, 1, 0] } },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                group: "$_id.group",
+                examName: "$_id.examName",
+                total: 1,
+                private: 1,
+                regular: 1,
+                male: 1,
+                female: 1,
+              },
+            },
+            { $sort: { group: 1, examName: 1 } },
+            ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
+          ],
+          // Group-row count, kept in sync with "data" but computed off raw
+          // ids (no lookups needed) since only the distinct-pair count matters.
+          totalCount: [
+            { $group: { _id: { group: groupIdField, examName: "$nameOfExamAppearingNow" } } },
+            { $count: "count" },
+          ],
+          // Grand totals across every group in scope, independent of paging.
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                private: { $sum: { $cond: [{ $eq: ["$status", "Private"] }, 1, 0] } },
+                regular: { $sum: { $cond: [{ $eq: ["$status", "Regular"] }, 1, 0] } },
+                male: { $sum: { $cond: [{ $eq: ["$gender", "Male"] }, 1, 0] } },
+                female: { $sum: { $cond: [{ $eq: ["$gender", "Female"] }, 1, 0] } },
+              },
+            },
+          ],
+          // Distinct district/area/exam-center counts in scope, for the
+          // summary cards above the table (cards shown depend on filter level).
+          counts: [
+            {
+              $group: {
+                _id: null,
+                districts: { $addToSet: "$district" },
+                areas: { $addToSet: "$area" },
+                centers: { $addToSet: "$centerRegistration" },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                districtCount: { $size: "$districts" },
+                areaCount: { $size: "$areas" },
+                centerCount: { $size: "$centers" },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    const [result] = await ExamRegistration.aggregate(pipeline);
+
+    return res.status(200).json({
+      success: true,
+      response: result.data,
+      totalCount: result.totalCount[0]?.count || 0,
+      totals: result.totals[0] || { total: 0, private: 0, regular: 0, male: 0, female: 0 },
+      counts: result.counts[0] || { districtCount: 0, areaCount: 0, centerCount: 0 },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 exports.getQuestionPackingList = async (req, res) => {
   try {
     const { examCenter } = req.query;
