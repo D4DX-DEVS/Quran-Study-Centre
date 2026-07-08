@@ -17,7 +17,7 @@ router.route("/district-center").get(reqFilter, getOutsideExamCenterByDistrict);
 router.get("/attendance-sheet", reqFilter, protect, getAttendanceSheet);
 router.get("/registered-list", reqFilter, protect, getRegisteredStudentsList);
 router.get("/consolidation-report", reqFilter, protect, getConsolidationReport);
-router.get("/list", getExamRegistrationList);
+router.get("/list", reqFilter, getExamRegistrationList);
 router.get("/outside-center-list", reqFilter, getOutsideExamAttendanceSheet);
 router.get("/districts-excluding-own", getDistrictsExcludingOwn);
 

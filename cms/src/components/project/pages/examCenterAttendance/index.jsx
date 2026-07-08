@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Layout from "../../../core/layout";
 import ListTable from "../../../core/list/list";
 import { Container } from "../../../core/layout/styels";
@@ -7,7 +7,6 @@ import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { getData } from "../../../../backend/api";
-import CustomSelect from "../../../core/select";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -15,7 +14,6 @@ const ExamCenterAttendance = (props) => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState("");
-  const [districts] = useState([]);
 
   useEffect(() => {
     document.title = `Exam Center Attendance - QSC Automation`;
@@ -44,15 +42,23 @@ const ExamCenterAttendance = (props) => {
     }
   };
 
-  const handleDistrictChange = (selectedOption) => {
-    const districtId = selectedOption?.id || "";
-    setSelectedDistrict(districtId);
-    if (districtId) {
-      fetchData(districtId);
+  // The separate top-of-page district picker was removed — the table's own
+  // District filter (below) is now the single source of truth. Whenever that
+  // filter's district changes, refresh the zip/PDF export dataset to match.
+  const currentFilterRef = useRef({});
+  const handleFilterChange = (filter) => {
+    currentFilterRef.current = filter || {};
+    setSelectedDistrict(filter?.district || "");
+  };
+
+  useEffect(() => {
+    if (selectedDistrict) {
+      fetchData(selectedDistrict);
     } else {
       setAttendanceData([]);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDistrict]);
 
   const groupDataByDistrictAndCenter = (data) => {
     const grouped = {};
@@ -483,43 +489,13 @@ const ExamCenterAttendance = (props) => {
     }
   };
 
+  // Column order mirrors the requested attendance-session layout: Reg No, Name,
+  // District, Area, Exam Center, Exam Name, Mode of Study. Row order (district ->
+  // area -> exam center -> exam name -> mode of study -> reg no -> name) is applied
+  // server-side in getExamRegistrationList, not by any of these `sort` flags.
+  // Filters mirror the Exam Registration ("registered students") page: gender, exam
+  // name, district, area, exam center, mode of study.
   const [attributes] = useState([
-    {
-      type: "text",
-      name: "district",
-      label: "District",
-      tag: true,
-      view: true,
-      search: false,
-      showItem: "district",
-    },
-    {
-      type: "text",
-      name: "examCenter",
-      label: "Exam Center",
-      tag: true,
-      view: true,
-      search: false,
-      showItem: "centerName",
-    },
-    {
-      type: "text",
-      name: "outsideExamCenter",
-      label: "Outside Exam Center",
-      tag: false,
-      view: true,
-      search: false,
-      showItem: "centerName",
-    },
-    {
-      type: "text",
-      name: "examDistrict",
-      label: "Exam District",
-      tag: false,
-      view: true,
-      search: false,
-      showItem: "district",
-    },
     {
       type: "text",
       name: "regno",
@@ -537,11 +513,54 @@ const ExamCenterAttendance = (props) => {
       search: false,
     },
     {
-      type: "text",
-      name: "gender",
-      label: "Gender",
-      tag: false,
+      type: "select",
+      apiType: "API",
+      selectApi: "district/select",
+      name: "district",
+      label: "District",
+      showItem: "district",
+      default: "",
+      tag: true,
       view: true,
+      filter: true,
+      search: false,
+      // The single district selector for this page (also drives the zip/PDF
+      // export) — the old separate top-of-page picker was removed.
+    },
+    {
+      type: "select",
+      apiType: "API",
+      selectApi: "area/get-area-by-district",
+      updateOn: "district",
+      name: "area",
+      label: "Area",
+      showItem: "area",
+      default: "",
+      tag: true,
+      view: true,
+      filter: true,
+      search: false,
+    },
+    {
+      type: "text",
+      name: "examCenterName",
+      label: "Exam Center",
+      tag: true,
+      view: true,
+      search: false,
+    },
+    {
+      type: "select",
+      apiType: "API",
+      selectApi: "center-registration/area",
+      updateOn: "area",
+      name: "centerRegistration",
+      label: "Exam Center",
+      showItem: "nameOfCenter",
+      default: "",
+      tag: false,
+      view: false,
+      filter: true,
       search: false,
     },
     {
@@ -552,11 +571,41 @@ const ExamCenterAttendance = (props) => {
       view: true,
     },
     {
-      type: "text",
-      name: "signature",
-      label: "Signature",
+      type: "select",
+      apiType: "API",
+      selectApi: "exam-type/select",
+      name: "nameOfExamAppearingNow",
+      label: "Exam Name",
+      showItem: "examType",
+      default: "",
       tag: false,
       view: false,
+      filter: true,
+      search: false,
+    },
+    {
+      type: "select",
+      apiType: "CSV",
+      selectApi: "Private,Regular",
+      name: "status",
+      label: "Mode of Study",
+      default: "",
+      tag: true,
+      view: true,
+      filter: true,
+      search: false,
+    },
+    {
+      type: "select",
+      apiType: "CSV",
+      selectApi: "Male,Female",
+      name: "gender",
+      label: "Gender",
+      default: "",
+      tag: false,
+      view: false,
+      filter: true,
+      search: false,
     },
   ]);
 
@@ -566,7 +615,6 @@ const ExamCenterAttendance = (props) => {
         <div className="flex w-full justify-between items-center mb-6">
           <h6 className="text-2xl font-bold">Exam Center Attendance</h6>
           <div className="flex items-center gap-4">
-            <CustomSelect options={districts} value={selectedDistrict} onChange={handleDistrictChange} placeholder="Select District" selectApi="district/select" apiType="API" showItem="value" onSelect={(selected) => handleDistrictChange(selected)} />
             <button onClick={downloadDistrictWiseData} disabled={loading || !selectedDistrict || attendanceData.length === 0} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
               <Download size={16} />
               {loading ? "Generating..." : "Download"}
@@ -574,7 +622,17 @@ const ExamCenterAttendance = (props) => {
           </div>
         </div>
 
-        {selectedDistrict && <ListTable api={`exam-registration/list?district=${selectedDistrict}`} itemTitle={{ name: "nameOfApplicant", type: "text" }} shortName="Exam Center Attendance" showTitle={false} formMode="double" surfaceTheme={"district"} attributes={attributes} {...props} />}
+        <ListTable
+          api={`exam-registration/list`}
+          itemTitle={{ name: "nameOfApplicant", type: "text" }}
+          shortName="Exam Center Attendance"
+          showTitle={false}
+          formMode="double"
+          surfaceTheme={"district"}
+          onFilterChange={handleFilterChange}
+          attributes={attributes}
+          {...props}
+        />
       </div>
     </Container>
   );

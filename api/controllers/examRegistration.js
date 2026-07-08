@@ -653,13 +653,15 @@ exports.getOutsideExamCenterByDistrict = async (req, res) => {
 // @access    public
 exports.getExamRegistrationList = async (req, res) => {
   try {
-    const { skip = 0, limit = 10, searchkey, district, examCenter } = req.query;
+    const { skip = 0, limit = 10, searchkey, district, examCenter, centerRegistration } = req.query;
 
     // Build base filter excluding fields that need special $or treatment so they
     // don't conflict when spread into the query.
     const baseFilter = { ...(req.filter || {}) };
     delete baseFilter.district;
     delete baseFilter.examCenter;
+    delete baseFilter.centerRegistration;
+    delete baseFilter.assignedExamCenter;
 
     // Collect $or groups; combine them via $and so they never overwrite each other.
     const andConditions = [];
@@ -674,13 +676,26 @@ exports.getExamRegistrationList = async (req, res) => {
       });
     }
 
-    // ExamCenter: match regular OR outside exam center
+    // ExamCenter: match regular OR outside exam center (legacy ExamCenterRegistration ref)
     const effectiveExamCenter = examCenter || req.filter?.examCenter;
     if (effectiveExamCenter && mongoose.Types.ObjectId.isValid(String(effectiveExamCenter))) {
       andConditions.push({
         $or: [
           { examCenter: new mongoose.Types.ObjectId(String(effectiveExamCenter)) },
           { outsideExamCenter: new mongoose.Types.ObjectId(String(effectiveExamCenter)) },
+        ],
+      });
+    }
+
+    // Exam Center filter (attendance session table) — a student's exam-day venue is
+    // `assignedExamCenter`, defaulting to their home study centre `centerRegistration`.
+    // Match either so the filter finds a student regardless of reassignment.
+    const effectiveCenterRegistration = centerRegistration || req.filter?.centerRegistration;
+    if (effectiveCenterRegistration && mongoose.Types.ObjectId.isValid(String(effectiveCenterRegistration))) {
+      andConditions.push({
+        $or: [
+          { centerRegistration: new mongoose.Types.ObjectId(String(effectiveCenterRegistration)) },
+          { assignedExamCenter: new mongoose.Types.ObjectId(String(effectiveCenterRegistration)) },
         ],
       });
     }
@@ -697,29 +712,68 @@ exports.getExamRegistrationList = async (req, res) => {
 
     const query = andConditions.length > 0 ? { ...baseFilter, $and: andConditions } : { ...baseFilter };
 
-    // Get registrations with selected fields
-    const registrations = await ExamRegistration.find(query).populate("district", "district").populate("examDistrict", "district").populate("examCenter", "centerName").populate("outsideExamCenter", "centerName").populate("nameOfExamAppearingNow", "examType").select("district examDistrict nameOfApplicant examCenter outsideExamCenter regno examName").skip(parseInt(skip)).limit(parseInt(limit)).sort({ _id: -1 });
+    // Get registrations with selected fields. The attendance-session table sorts by
+    // district -> area -> exam center -> exam name -> mode of study -> reg no -> name,
+    // which depends on populated display names — not sortable at the DB level with a
+    // simple .sort(), so every match is fetched, sorted in JS, then paginated.
+    const registrations = await ExamRegistration.find(query)
+      .populate("district", "district")
+      .populate("area", "area")
+      .populate("examDistrict", "district")
+      .populate("examCenter", "centerName")
+      .populate("outsideExamCenter", "centerName")
+      .populate("centerRegistration", "nameOfCenter")
+      .populate("assignedExamCenter", "nameOfCenter")
+      .populate("nameOfExamAppearingNow", "examType")
+      .select("district area examDistrict nameOfApplicant examCenter outsideExamCenter centerRegistration assignedExamCenter nameOfExamAppearingNow regno examName status gender");
 
     // Transform the response to flatten nested objects
     const transformedRegistrations = registrations.map((reg) => ({
       _id: reg._id,
       nameOfApplicant: reg.nameOfApplicant,
       regno: reg.regno,
-      examName: reg.examName,
+      // The stored `examName` field is only ever set when `nameOfExamAppearingNow`
+      // happens to already be a populated document at save time, which never
+      // happens on create/update, so it's blank for effectively every record.
+      // Derive it fresh from the populated exam type instead (same approach as
+      // getRegisteredStudentsList / getAttendanceSheet), falling back to the
+      // stored value for any legacy record that does have it set.
+      examName: reg.nameOfExamAppearingNow?.examType?.split(":")[0]?.trim() || reg.examName || "",
+      status: reg.status,
+      gender: reg.gender,
       district: reg.district,
+      area: reg.area,
       examDistrict: reg.examDistrict,
       examCenter: reg.examCenter,
       outsideExamCenter: reg.outsideExamCenter,
+      // Resolved exam-center display name for the attendance-session table's
+      // "Exam Center" column — assignedExamCenter (exam-day venue) first,
+      // falling back to the home study centre.
+      examCenterName: reg.assignedExamCenter?.nameOfCenter || reg.centerRegistration?.nameOfCenter || "",
     }));
 
-    // Get total count for pagination
-    const totalCount = await ExamRegistration.countDocuments(query);
+    const collator = new Intl.Collator("en", { sensitivity: "base" });
+    transformedRegistrations.sort(
+      (a, b) =>
+        collator.compare(a.district?.district || "", b.district?.district || "") ||
+        collator.compare(a.area?.area || "", b.area?.area || "") ||
+        collator.compare(a.examCenterName || "", b.examCenterName || "") ||
+        collator.compare(a.examName || "", b.examName || "") ||
+        collator.compare(a.status || "", b.status || "") ||
+        collator.compare(a.regno || "", b.regno || "") ||
+        collator.compare(a.nameOfApplicant || "", b.nameOfApplicant || "")
+    );
+
+    const totalCount = transformedRegistrations.length;
+    const skipNum = parseInt(skip) || 0;
+    const limitNum = parseInt(limit) || 0;
+    const pagedRegistrations = transformedRegistrations.slice(skipNum, limitNum > 0 ? skipNum + limitNum : totalCount);
 
     res.status(200).json({
       success: true,
       message: "Retrieved exam registration list",
-      response: transformedRegistrations,
-      count: transformedRegistrations.length,
+      response: pagedRegistrations,
+      count: pagedRegistrations.length,
       totalCount,
       filterCount: totalCount,
     });
