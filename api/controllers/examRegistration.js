@@ -713,9 +713,9 @@ exports.getExamRegistrationList = async (req, res) => {
     const query = andConditions.length > 0 ? { ...baseFilter, $and: andConditions } : { ...baseFilter };
 
     // Get registrations with selected fields. The attendance-session table sorts by
-    // district -> area -> exam center -> exam name -> mode of study -> reg no -> name,
-    // which depends on populated display names — not sortable at the DB level with a
-    // simple .sort(), so every match is fetched, sorted in JS, then paginated.
+    // district -> area -> exam center -> exam name -> gender -> mode of study -> reg no
+    // -> name, which depends on populated display names — not sortable at the DB level
+    // with a simple .sort(), so every match is fetched, sorted in JS, then paginated.
     const registrations = await ExamRegistration.find(query)
       .populate("district", "district")
       .populate("area", "area")
@@ -747,10 +747,15 @@ exports.getExamRegistrationList = async (req, res) => {
       examCenter: reg.examCenter,
       outsideExamCenter: reg.outsideExamCenter,
       // Resolved exam-center display name for the attendance-session table's
-      // "Exam Center" column — assignedExamCenter (exam-day venue) first,
-      // falling back to the home study centre.
-      examCenterName: reg.assignedExamCenter?.nameOfCenter || reg.centerRegistration?.nameOfCenter || "",
+      // "Exam Center" column — matches the Registered Students page:
+      // centerRegistration (student's own pick) first, falling back to
+      // assignedExamCenter for legacy records with no centerRegistration.
+      examCenterName: reg.centerRegistration?.nameOfCenter || reg.assignedExamCenter?.nameOfCenter || "",
     }));
+
+    // Male before Female (matches the fixed gender order used in the zip/PDF
+    // attendance sheet export), any other value sorts after both.
+    const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
 
     const collator = new Intl.Collator("en", { sensitivity: "base" });
     transformedRegistrations.sort(
@@ -759,6 +764,7 @@ exports.getExamRegistrationList = async (req, res) => {
         collator.compare(a.area?.area || "", b.area?.area || "") ||
         collator.compare(a.examCenterName || "", b.examCenterName || "") ||
         collator.compare(a.examName || "", b.examName || "") ||
+        (genderRank(a.gender) - genderRank(b.gender)) ||
         collator.compare(a.status || "", b.status || "") ||
         collator.compare(a.regno || "", b.regno || "") ||
         collator.compare(a.nameOfApplicant || "", b.nameOfApplicant || "")

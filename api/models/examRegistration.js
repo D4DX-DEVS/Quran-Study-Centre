@@ -6,10 +6,12 @@ const ExamRegistrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "District",
       set: handleEmptyString,
+      index: true,
     },
     area: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Area",
+      index: true,
     },
     nameOfApplicant: {
       type: String,
@@ -48,11 +50,13 @@ const ExamRegistrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "CenterRegistration",
       set: handleEmptyString,
+      index: true,
     },
     examCenter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ExamCenterRegistration",
       set: handleEmptyString,
+      index: true,
     },
     // The study centre (CenterRegistration) where this applicant will finally
     // write the exam. Defaults to their own study centre at submit time and is
@@ -63,6 +67,7 @@ const ExamRegistrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "CenterRegistration",
       set: handleEmptyString,
+      index: true,
     },
     // True when the student's home centre was merged into another centre.
     // `assignedExamCenter` will differ from `centerRegistration` in that case.
@@ -94,11 +99,13 @@ const ExamRegistrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "District",
       set: handleEmptyString,
+      index: true,
     },
     outsideExamCenter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ExamCenterRegistration",
       set: handleEmptyString,
+      index: true,
     },
     examName: {
       type: String,
