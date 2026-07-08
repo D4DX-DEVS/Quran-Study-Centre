@@ -848,8 +848,15 @@
 }
 
 .landing-footer-brand img {
-  width: 180px;
+  width: 130px;
+  height: 64px;
+  object-fit: contain;
   margin-bottom: 14px;
+}
+
+.landing-footer-brand .landing-footer-text {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .landing-footer-label {

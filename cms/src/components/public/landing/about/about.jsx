@@ -42,37 +42,21 @@ const ContainerBox = styled.div`
 `;
 
 const About = (props) => {
-  const [bannerImage, setBannerImage] = useState("");
-  const [image, setImage] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
     getData({}, "about-us").then((res) => {
-      setImage(res.data.response[0].image);
-      setBannerImage(res.data.response[0].landingMainbanner);
       setDescription(res.data.response[0].description);
     });
-  }, [image]);
+  }, []);
   return (
     <>
     <Header {...props} />
     <main className="landing-home">
       <div className="landing-page-shell">
-        <img
-          src={import.meta.env.VITE_APP_CDN + bannerImage}
-          style={{ width: "100%", height: "auto" }}
-          alt="GroupImage"
-        />
         <Title>Quran Study Centre Kerala</Title>
         <Description dangerouslySetInnerHTML={{ __html: description }}></Description>
         <ContainerBox>
-          <div className="mission">
-            <img
-              src={import.meta.env.VITE_APP_CDN + image}
-              style={{ width: "300px", height: "400px" }}
-              alt="GroupImage"
-            />
-          </div>
           <div className="mission-text">
             <div className="mission-title">Our Vision</div>
             <p>
