@@ -28,6 +28,7 @@ const ResultPublish = lazy(() => import("../pages/resultPublish/index.jsx"));
 const ExamScore = lazy(() => import("../pages/examScore/index.jsx"));
 const Syllabus = lazy(() => import("../pages/syllabus/index.jsx"));
 const ExamCenterAttendance = lazy(() => import("../pages/examCenterAttendance/index.jsx"));
+const MaterialAccess = lazy(() => import("../pages/materialAccess/index.jsx"));
 const QuestionPacking = lazy(() => import("../pages/questionPacking/index.jsx"));
 const CertificateManagement = lazy(() => import("../pages/certificateManagement/index.jsx"));
 const OutsideCenter = lazy(() => import("../pages/outSideCenter/index.jsx"));
@@ -110,6 +111,8 @@ const RenderPage = (page, key, privileges) => {
       return renderComponent(Syllabus);
     case "exam-center-attendance":
       return renderComponent(ExamCenterAttendance);
+    case "material-access":
+      return renderComponent(MaterialAccess);
     case "question-packing":
       return renderComponent(QuestionPacking);
     case "certificate-management":

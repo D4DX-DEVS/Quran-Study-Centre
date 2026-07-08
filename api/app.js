@@ -129,6 +129,7 @@ const examSettings = require("./routes/examSettings.js");
 const dataReset = require("./routes/dataReset.js");
 const onlineExam = require("./routes/onlineExam.js");
 const questionPool = require("./routes/questionPool.js");
+const materialAccess = require("./routes/materialAccess.js");
 
 app.use(logger("dev"));
 app.use(express.json());
@@ -176,6 +177,7 @@ app.use("/api/v1/exam-settings", examSettings);
 app.use("/api/v1/data-reset", dataReset);
 app.use("/api/v1/online-exam", onlineExam);
 app.use("/api/v1/question-pool", questionPool);
+app.use("/api/v1/material-access", materialAccess);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

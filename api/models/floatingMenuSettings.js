@@ -85,6 +85,10 @@ const FloatingSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    material: {
+      type: Boolean,
+      default: true,
+    },
     about: {
       type: Boolean,
       default: false,

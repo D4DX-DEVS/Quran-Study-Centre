@@ -10,6 +10,7 @@ import styled from "styled-components";
 import logo from "../../../components/project/brand/logo-header.png";
 import { FormContainer, formReg } from "./registrationForm";
 import VerifyRegistration from "./VerifyRegistration";
+import MaterialAccessGate from "./MaterialAccessGate";
 // import { tr } from "date-fns/locale";
 
 const RegisterBtn = styled.button`
@@ -57,6 +58,7 @@ function Header(props) {
   const [openAffiliation, setOpenAffiliation] = useState(false);
   const [openHallTicket, setOpenHallTicket] = useState(false);
   const [openVerifyRegistration, setOpenVerifyRegistration] = useState(false);
+  const [openMaterialAccess, setOpenMaterialAccess] = useState(false);
   const [showHelpPopup, setShowHelpPopup] = useState(false);
   const [isFloating, setIsFloating] = useState(window.matchMedia("(max-width: 600px)").matches);
 
@@ -86,6 +88,7 @@ function Header(props) {
     setOpenAffiliation(false);
     setOpenHallTicket(false);
     setOpenVerifyRegistration(false);
+    setOpenMaterialAccess(false);
     setShowHelpPopup(false);
 
     if (action === "examRegistration") setOpenMenuSetup(true);
@@ -93,6 +96,7 @@ function Header(props) {
     if (action === "hallTicket") setOpenHallTicket(true);
     if (action === "verifyRegistration") setOpenVerifyRegistration(true);
     if (action === "examInstructions") setShowHelpPopup(true);
+    if (action === "material") setOpenMaterialAccess(true);
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -284,6 +288,7 @@ function Header(props) {
     setOpenAffiliation(false);
     setOpenHallTicket(false);
     setOpenVerifyRegistration(false);
+    setOpenMaterialAccess(false);
   };
 
   const submitHallticket = async (post) => {
@@ -375,6 +380,7 @@ function Header(props) {
   const [showHallTicket, setHallTicket] = useState(false);
   const [showExamRegistration, setExamRegistration] = useState(false);
   const [showDownloads, setDownloads] = useState(false);
+  const [showMaterial, setMaterial] = useState(false);
   const [showAboutUs, setAboutUs] = useState(false);
   const [showResult, setResult] = useState(false);
   const [showExamInstructions, setExamInstructions] = useState(false);
@@ -391,6 +397,7 @@ function Header(props) {
       setHallTicket(!!settings.hallTicket);
       setExamRegistration(!!settings.examRegistration);
       setDownloads(!!settings.downloads);
+      setMaterial(settings.material !== false);
       setAboutUs(!!settings.about);
       setResult(!!settings.result);
       setExamInstructions(!!settings.examInstruction);
@@ -418,6 +425,7 @@ function Header(props) {
   const navLinks = [
     { label: "Home", href: "/" },
     showDownloads ? { label: "Downloads", href: "/question-papers" } : null,
+    showMaterial ? { label: "Material", action: "material" } : null,
     showAboutUs ? { label: "About QSC", href: "/about-us" } : null,
     showResult ? { label: "Result", href: "/result" } : null,
   ].filter(Boolean);
@@ -442,11 +450,22 @@ function Header(props) {
           </a>
 
           <div className="landing-navbar">
-            {navLinks.map((item) => (
-              <a key={item.label} href={item.href}>
-                {item.label}
-              </a>
-            ))}
+            {navLinks.map((item) =>
+              item.action ? (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="landing-nav-btn"
+                  onClick={() => openActionPanel(item.action)}
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <a key={item.label} href={item.href}>
+                  {item.label}
+                </a>
+              )
+            )}
             {showExamInstructions && (
               <button
                 type="button"
@@ -517,11 +536,22 @@ function Header(props) {
             transition={{ duration: 0.18 }}
             className="landing-mobile-nav"
           >
-            {navLinks.map((item) => (
-              <a key={item.label} href={item.href} onClick={() => setShowMenu(false)}>
-                {item.label}
-              </a>
-            ))}
+            {navLinks.map((item) =>
+              item.action ? (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="landing-nav-btn"
+                  onClick={() => openActionPanel(item.action)}
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <a key={item.label} href={item.href} onClick={() => setShowMenu(false)}>
+                  {item.label}
+                </a>
+              )
+            )}
             {showExamInstructions && (
               <button
                 type="button"
@@ -664,6 +694,9 @@ function Header(props) {
               setLoaderBox={props.setLoaderBox}
             />
           )}
+
+        {openMaterialAccess &&
+          renderModal(<MaterialAccessGate onClose={() => setOpenMaterialAccess(false)} />)}
 
         {showHelpPopup && (
           <div className="help-popup" onClick={toggleHelpPopup}>
