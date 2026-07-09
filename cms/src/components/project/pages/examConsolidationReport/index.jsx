@@ -110,7 +110,9 @@ const ExamConsolidationReport = (props) => {
     ? areas.find((a) => (a.id || a._id) === selArea)?.value || areas.find((a) => (a.id || a._id) === selArea)?.area
     : selDistrict
     ? districts.find((d) => (d.id || d._id) === selDistrict)?.value || districts.find((d) => (d.id || d._id) === selDistrict)?.district
-    : "All Kerala (State)";
+    : "All Kerala";
+
+  const wiseLabel = selArea ? "Area" : selDistrict ? "District" : "State";
 
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -133,7 +135,7 @@ const ExamConsolidationReport = (props) => {
       doc.setFontSize(14);
       doc.text("Exam Consolidation Report", pageWidth / 2, 30, { align: "center" });
       doc.setFontSize(11);
-      doc.text(`${scopeLabel}  |  Total: ${allTotals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
+      doc.text(`${scopeLabel} (${wiseLabel} Wise)  |  Total: ${allTotals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
 
       doc.autoTable({
         startY: 62,
