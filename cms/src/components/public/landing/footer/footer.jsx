@@ -59,7 +59,7 @@ const Footer = () => {
             Downloads
           </a>
           <a href="/about-us" className="landing-footer-link">
-            About QSC
+            About us
           </a>
           <a href="/result" className="landing-footer-link">
             Result

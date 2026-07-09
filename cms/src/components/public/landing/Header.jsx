@@ -426,7 +426,7 @@ function Header(props) {
     { label: "Home", href: "/" },
     showDownloads ? { label: "Downloads", href: "/question-papers" } : null,
     showMaterial ? { label: "Material", action: "material" } : null,
-    showAboutUs ? { label: "About QSC", href: "/about-us" } : null,
+    showAboutUs ? { label: "About us", href: "/about-us" } : null,
     showResult ? { label: "Result", href: "/result" } : null,
   ].filter(Boolean);
 
