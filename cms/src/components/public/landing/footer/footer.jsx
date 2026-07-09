@@ -58,6 +58,11 @@ const Footer = () => {
           <a href="/question-papers" className="landing-footer-link">
             Downloads
           </a>
+          {landingSettings.syllabus !== false && (
+            <a href="/syllabus" className="landing-footer-link">
+              Syllabus
+            </a>
+          )}
           <a href="/about-us" className="landing-footer-link">
             About us
           </a>

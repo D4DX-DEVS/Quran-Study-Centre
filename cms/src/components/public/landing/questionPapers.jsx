@@ -25,7 +25,8 @@ const Column = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 50%;
+  width: 100%;
+  max-width: 640px;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -126,9 +127,7 @@ const TabBox = styled.div`
 
 const QuestionPapersComponent = (props) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [syllabusActiveTab, setSyllabusActiveTab] = useState(0);
   const [tabs, setTabs] = useState([]);
-  const [syllabusTabs, setSyllabusTabs] = useState([]);
   useEffect(() => {
     // Fetch data from the backend when the component mounts
     getData({}, "old-question-papers")
@@ -149,43 +148,10 @@ const QuestionPapersComponent = (props) => {
       .catch((error) => {
         console.error("Error fetching data:", error);
       });
-    getData({}, "syllabus")
-      .then((res) => {
-        // Process the response and set the tabs state
-        if (res && res.data.response) {
-          console.log("REs;;;", res.data);
-          // Group items with the same title (year) together
-          const syllabusTabs = {};
-          res.data.response.forEach((item) => {
-            if (syllabusTabs[item.year]) {
-              // If a tab with this year already exists, push the item to its items array
-              syllabusTabs[item.year].items.push(item);
-            } else {
-              // Otherwise, create a new tab with this year and add the item to its items array
-              syllabusTabs[item.year] = {
-                year: item.year,
-                items: [item],
-              };
-            }
-          });
-          // Convert the syllabusTabs object into an array
-          const tabsArray = Object.values(syllabusTabs);
-          tabsArray.forEach((tab) => {
-            tab.items.sort((a, b) => String(a.syllabus).localeCompare(String(b.syllabus)));
-          });
-          setSyllabusTabs(tabsArray);
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
   }, []); // Run this effect only once when the component mounts
 
   const handleTabClick = (index) => {
     setActiveTab(index);
-  };
-  const handleSyllabusTabClick = (index) => {
-    setSyllabusActiveTab(index);
   };
 
   return (
@@ -218,28 +184,6 @@ const QuestionPapersComponent = (props) => {
                     </ListItem>
                   ))
                 )}
-              </ContentBox>
-            </Column>
-
-            <Column>
-              <Title>Download Syllabus Now!</Title>
-              <TabBox>
-                {syllabusTabs.map((tab, index) => (
-                  <StyledButton key={index} onClick={() => handleSyllabusTabClick(index)}>
-                    {tab.year}
-                  </StyledButton>
-                ))}
-              </TabBox>
-              <ContentBox>
-                {syllabusTabs.length > 0 &&
-                  syllabusTabs[syllabusActiveTab].items.map((item, index) => (
-                    <ListItem key={index}>
-                      <Arrow>&#11208;</Arrow>
-                      <a href={import.meta.env.VITE_APP_CDN + item.attachment} target="_blank" rel="noopener noreferrer" download={import.meta.env.VITE_APP_CDN + item.attachment} style={{ color: "#1a4993" }}>
-                        <p>{item.syllabus}</p>
-                      </a>
-                    </ListItem>
-                  ))}
               </ContentBox>
             </Column>
           </Main>

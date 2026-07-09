@@ -12,6 +12,7 @@ import {
   Globe2,
   ImagePlus,
   Info,
+  Library,
   Mail,
   Phone,
   RefreshCw,
@@ -57,6 +58,13 @@ const MENU_ITEMS = [
     description: "Shows question papers and other public files.",
     icon: Download,
     tone: "bg-sky-50 text-sky-600 ring-sky-100",
+  },
+  {
+    key: "syllabus",
+    label: "Syllabus",
+    description: "Shows the exam syllabus page from the landing page.",
+    icon: Library,
+    tone: "bg-cyan-50 text-cyan-600 ring-cyan-100",
   },
   {
     key: "material",

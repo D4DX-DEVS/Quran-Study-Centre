@@ -380,6 +380,7 @@ function Header(props) {
   const [showHallTicket, setHallTicket] = useState(false);
   const [showExamRegistration, setExamRegistration] = useState(false);
   const [showDownloads, setDownloads] = useState(false);
+  const [showSyllabus, setSyllabus] = useState(true);
   const [showMaterial, setMaterial] = useState(false);
   const [showAboutUs, setAboutUs] = useState(false);
   const [showResult, setResult] = useState(false);
@@ -397,6 +398,7 @@ function Header(props) {
       setHallTicket(!!settings.hallTicket);
       setExamRegistration(!!settings.examRegistration);
       setDownloads(!!settings.downloads);
+      setSyllabus(settings.syllabus !== false);
       setMaterial(settings.material !== false);
       setAboutUs(!!settings.about);
       setResult(!!settings.result);
@@ -425,6 +427,7 @@ function Header(props) {
   const navLinks = [
     { label: "Home", href: "/" },
     showDownloads ? { label: "Downloads", href: "/question-papers" } : null,
+    showSyllabus ? { label: "Syllabus", href: "/syllabus" } : null,
     showMaterial ? { label: "Material", action: "material" } : null,
     showAboutUs ? { label: "About us", href: "/about-us" } : null,
     showResult ? { label: "Result", href: "/result" } : null,
