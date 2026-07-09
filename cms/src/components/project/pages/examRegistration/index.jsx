@@ -459,7 +459,10 @@ const ExamRegistration = (props) => {
       // collection: "district",
       validation: "",
       showItem: "district",
-      default: "",
+      // District Admins get their own district pre-filled and locked so the
+      // add form isn't left blank with an editable dropdown (mirrors the
+      // preFilter/disabled scoping below).
+      default: isDistrictAdmin ? adminDistrictId : "",
       tag: true,
       label: "District",
       search: false,
