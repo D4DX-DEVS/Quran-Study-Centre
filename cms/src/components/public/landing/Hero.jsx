@@ -28,6 +28,7 @@ const defaultContent = {
     "A simpler public front door for students, study centres and administrators.",
   image: "",
   landingMainbanner: "",
+  landingStoryImage: "",
 };
 
 const resolveAssetUrl = (value) => {
@@ -103,7 +104,7 @@ function Hero() {
   );
 
   const bannerImage = resolveAssetUrl(content.landingMainbanner);
-  const profileImage = resolveAssetUrl(content.image);
+  const profileImage = resolveAssetUrl(content.landingStoryImage);
 
   return (
     <main className="landing-home">
@@ -220,6 +221,7 @@ function Hero() {
             <div className="landing-story-copy">
               {/* <span>{landingSettings.copy.heroStoryBadge}</span> */}
               <h3>{landingSettings.copy.heroStoryTitle}</h3>
+              <p>{landingSettings.copy.heroStoryDescription}</p>
             </div>
           </div>
         </div>

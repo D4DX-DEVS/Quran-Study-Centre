@@ -43,9 +43,24 @@ exports.getAboutUs = async (req, res) => {
 // @desc      UPDATE SPECIFIC AboutUs
 // @route     PUT /api/v1/about-us/:id
 // @access    protect
+const REMOVAL_FLAGS = {
+  removeImage: "image",
+  removeLandingMainbanner: "landingMainbanner",
+  removeLandingStoryImage: "landingStoryImage",
+};
+
 exports.updateAboutUs = async (req, res) => {
   try {
-    const aboutUs = await AboutUs.findByIdAndUpdate(req.body.id, req.body, {
+    const update = { ...req.body };
+    Object.entries(REMOVAL_FLAGS).forEach(([flag, field]) => {
+      const shouldRemove = update[flag] === true || update[flag] === "true";
+      delete update[flag];
+      if (shouldRemove && !update[field]) {
+        update[field] = "";
+      }
+    });
+
+    const aboutUs = await AboutUs.findByIdAndUpdate(update.id, update, {
       new: true,
     });
 

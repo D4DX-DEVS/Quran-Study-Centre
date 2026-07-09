@@ -20,6 +20,9 @@ const AboutUsSchema = new mongoose.Schema(
     landingMainbanner: {
       type: String,
     },
+    landingStoryImage: {
+      type: String,
+    },
     email: {
       type: String,
     },

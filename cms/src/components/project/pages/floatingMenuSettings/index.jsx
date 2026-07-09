@@ -108,6 +108,7 @@ const EMPTY_ABOUT_FORM = {
   footerText: "",
   image: "",
   landingMainbanner: "",
+  landingStoryImage: "",
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -122,6 +123,7 @@ const mapAboutForm = (row = {}) => ({
   footerText: row.footerText || "",
   image: row.image || "",
   landingMainbanner: row.landingMainbanner || "",
+  landingStoryImage: row.landingStoryImage || "",
 });
 
 const FloatingMenuSettings = (props) => {
@@ -140,6 +142,10 @@ const FloatingMenuSettings = (props) => {
   const [aboutInitial, setAboutInitial] = useState(EMPTY_ABOUT_FORM);
   const [imageFile, setImageFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
+  const [storyImageFile, setStoryImageFile] = useState(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [bannerRemoved, setBannerRemoved] = useState(false);
+  const [storyRemoved, setStoryRemoved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cleaning, setCleaning] = useState(false);
@@ -175,6 +181,10 @@ const FloatingMenuSettings = (props) => {
 
       setImageFile(null);
       setBannerFile(null);
+      setStoryImageFile(null);
+      setImageRemoved(false);
+      setBannerRemoved(false);
+      setStoryRemoved(false);
     } catch (error) {
       props.setMessage?.({
         type: 1,
@@ -230,11 +240,21 @@ const FloatingMenuSettings = (props) => {
   const duplicateCount = Math.max(0, aboutRecords.length - 1);
 
   const aboutDirty = useMemo(() => {
-    if (imageFile || bannerFile) return true;
+    if (imageFile || bannerFile || storyImageFile) return true;
+    if (imageRemoved || bannerRemoved || storyRemoved) return true;
     return Object.keys(EMPTY_ABOUT_FORM).some(
       (key) => (aboutForm[key] || "") !== (aboutInitial[key] || "")
     );
-  }, [aboutForm, aboutInitial, imageFile, bannerFile]);
+  }, [
+    aboutForm,
+    aboutInitial,
+    imageFile,
+    bannerFile,
+    storyImageFile,
+    imageRemoved,
+    bannerRemoved,
+    storyRemoved,
+  ]);
 
   const isDirty = useMemo(
     () =>
@@ -265,6 +285,10 @@ const FloatingMenuSettings = (props) => {
     setAboutForm(aboutInitial);
     setImageFile(null);
     setBannerFile(null);
+    setStoryImageFile(null);
+    setImageRemoved(false);
+    setBannerRemoved(false);
+    setStoryRemoved(false);
   };
 
   const validateAbout = () => {
@@ -335,7 +359,13 @@ const FloatingMenuSettings = (props) => {
         };
 
         if (imageFile) aboutPayload.image = imageFile;
+        else if (imageRemoved) aboutPayload.removeImage = true;
+
         if (bannerFile) aboutPayload.landingMainbanner = bannerFile;
+        else if (bannerRemoved) aboutPayload.removeLandingMainbanner = true;
+
+        if (storyImageFile) aboutPayload.landingStoryImage = storyImageFile;
+        else if (storyRemoved) aboutPayload.removeLandingStoryImage = true;
 
         const aboutResponse = aboutRecordId
           ? await putData({ id: aboutRecordId, ...aboutPayload }, "about-us")
@@ -538,7 +568,15 @@ const FloatingMenuSettings = (props) => {
                   hint="Shown above the public About page content. Recommended: square image (~1200×1200, 1:1 ratio)."
                   existingUrl={aboutForm.image ? `${CDN}${aboutForm.image}` : ""}
                   file={imageFile}
-                  onChange={setImageFile}
+                  onChange={(f) => {
+                    setImageFile(f);
+                    if (f) setImageRemoved(false);
+                  }}
+                  removed={imageRemoved}
+                  onRemove={() => {
+                    setImageRemoved(true);
+                    setImageFile(null);
+                  }}
                 />
               </div>
 
@@ -571,7 +609,15 @@ const FloatingMenuSettings = (props) => {
                   hint="Hero image for the homepage. Recommended: 1220×1420 (6:7 ratio)."
                   existingUrl={aboutForm.landingMainbanner ? `${CDN}${aboutForm.landingMainbanner}` : ""}
                   file={bannerFile}
-                  onChange={setBannerFile}
+                  onChange={(f) => {
+                    setBannerFile(f);
+                    if (f) setBannerRemoved(false);
+                  }}
+                  removed={bannerRemoved}
+                  onRemove={() => {
+                    setBannerRemoved(true);
+                    setBannerFile(null);
+                  }}
                 />
               </div>
 
@@ -584,6 +630,37 @@ const FloatingMenuSettings = (props) => {
                   className={textareaCls}
                 />
               </Field>
+
+              <div className="mt-6">
+                <ImageField
+                  label="Homepage Story Image"
+                  hint="Shown in the 'QSC overview' story section on the homepage — separate from the About page banner above."
+                  existingUrl={aboutForm.landingStoryImage ? `${CDN}${aboutForm.landingStoryImage}` : ""}
+                  file={storyImageFile}
+                  onChange={(f) => {
+                    setStoryImageFile(f);
+                    if (f) setStoryRemoved(false);
+                  }}
+                  removed={storyRemoved}
+                  onRemove={() => {
+                    setStoryRemoved(true);
+                    setStoryImageFile(null);
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <TextAreaField
+                  label="Homepage Story Title"
+                  value={values.copy.heroStoryTitle}
+                  onChange={(value) => updateCopy("heroStoryTitle", value)}
+                />
+                <TextAreaField
+                  label="Homepage Story Description"
+                  value={values.copy.heroStoryDescription}
+                  onChange={(value) => updateCopy("heroStoryDescription", value)}
+                />
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <Field label="Email" required icon={<Mail size={14} />}>
@@ -690,16 +767,6 @@ const FloatingMenuSettings = (props) => {
                   label="Story badge"
                   value={values.copy.heroStoryBadge}
                   onChange={(value) => updateCopy("heroStoryBadge", value)}
-                />
-                <TextAreaField
-                  label="Story title"
-                  value={values.copy.heroStoryTitle}
-                  onChange={(value) => updateCopy("heroStoryTitle", value)}
-                />
-                <TextAreaField
-                  label="Story description"
-                  value={values.copy.heroStoryDescription}
-                  onChange={(value) => updateCopy("heroStoryDescription", value)}
                 />
                 <TextField
                   label="Quick access kicker"
@@ -905,7 +972,8 @@ const FloatingMenuSettings = (props) => {
                   <div className="font-semibold text-slate-800">Public landing page</div>
                   <div className="text-xs text-slate-500 mt-1">
                     Uses Landing Title, Landing Description, Landing Main Banner,
-                    quick action toggles and the public snapshot cards from this screen.
+                    Homepage Story Image, quick action toggles and the public
+                    snapshot cards from this screen.
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
@@ -978,12 +1046,13 @@ const Field = ({ label, required, icon, className = "", children }) => (
   </div>
 );
 
-const ImageField = ({ label, required, hint, existingUrl, file, onChange }) => {
+const ImageField = ({ label, required, hint, existingUrl, file, onChange, removed, onRemove }) => {
   const inputRef = useRef(null);
   const previewUrl = useMemo(() => {
     if (file) return URL.createObjectURL(file);
+    if (removed) return "";
     return existingUrl || "";
-  }, [file, existingUrl]);
+  }, [file, existingUrl, removed]);
 
   useEffect(() => {
     return () => {
@@ -1031,6 +1100,16 @@ const ImageField = ({ label, required, hint, existingUrl, file, onChange }) => {
                 Remove new file
               </button>
             )}
+            {!file && !removed && existingUrl && (
+              <button
+                type="button"
+                onClick={() => onRemove?.()}
+                className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] rounded text-rose-600 hover:bg-rose-50"
+              >
+                <Trash2 size={12} />
+                Remove image
+              </button>
+            )}
             <input
               ref={inputRef}
               type="file"
@@ -1047,6 +1126,9 @@ const ImageField = ({ label, required, hint, existingUrl, file, onChange }) => {
             <p className="text-[11px] text-slate-500 truncate">
               Selected: <span className="font-medium">{file.name}</span>
             </p>
+          )}
+          {removed && !file && (
+            <p className="text-[11px] text-rose-500">Image will be removed on save.</p>
           )}
         </div>
       </div>

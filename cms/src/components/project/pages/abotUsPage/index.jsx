@@ -35,6 +35,7 @@ const EMPTY_FORM = {
   footerText: "",
   image: "",
   landingMainbanner: "",
+  landingStoryImage: "",
 };
 
 const AboutUs = (props) => {
@@ -48,6 +49,10 @@ const AboutUs = (props) => {
   const [initial, setInitial] = useState(EMPTY_FORM);
   const [imageFile, setImageFile] = useState(null); // about page banner
   const [bannerFile, setBannerFile] = useState(null); // landing main banner
+  const [storyImageFile, setStoryImageFile] = useState(null); // landing homepage story image
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [bannerRemoved, setBannerRemoved] = useState(false);
+  const [storyRemoved, setStoryRemoved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cleaning, setCleaning] = useState(false);
@@ -71,6 +76,7 @@ const AboutUs = (props) => {
           footerText: row.footerText || "",
           image: row.image || "",
           landingMainbanner: row.landingMainbanner || "",
+          landingStoryImage: row.landingStoryImage || "",
         };
         setRecordId(row._id || null);
         setForm(next);
@@ -82,6 +88,10 @@ const AboutUs = (props) => {
       }
       setImageFile(null);
       setBannerFile(null);
+      setStoryImageFile(null);
+      setImageRemoved(false);
+      setBannerRemoved(false);
+      setStoryRemoved(false);
     } catch (e) {
       props.setMessage?.({
         type: 1,
@@ -99,9 +109,10 @@ const AboutUs = (props) => {
 
   const duplicateCount = Math.max(0, records.length - 1);
   const isDirty = useMemo(() => {
-    if (imageFile || bannerFile) return true;
+    if (imageFile || bannerFile || storyImageFile) return true;
+    if (imageRemoved || bannerRemoved || storyRemoved) return true;
     return Object.keys(EMPTY_FORM).some((k) => (form[k] || "") !== (initial[k] || ""));
-  }, [form, initial, imageFile, bannerFile]);
+  }, [form, initial, imageFile, bannerFile, storyImageFile, imageRemoved, bannerRemoved, storyRemoved]);
 
   const handleChange = (key) => (e) => {
     const value = e?.target ? e.target.value : e;
@@ -143,7 +154,13 @@ const AboutUs = (props) => {
       footerText: form.footerText,
     };
     if (imageFile) payload.image = imageFile;
+    else if (imageRemoved) payload.removeImage = true;
+
     if (bannerFile) payload.landingMainbanner = bannerFile;
+    else if (bannerRemoved) payload.removeLandingMainbanner = true;
+
+    if (storyImageFile) payload.landingStoryImage = storyImageFile;
+    else if (storyRemoved) payload.removeLandingStoryImage = true;
 
     setSaving(true);
     try {
@@ -309,7 +326,15 @@ const AboutUs = (props) => {
                   hint="Shown above the About page content. Recommended: square image (~1200×1200, 1:1 ratio)."
                   existingUrl={form.image ? `${CDN}${form.image}` : ""}
                   file={imageFile}
-                  onChange={setImageFile}
+                  onChange={(f) => {
+                    setImageFile(f);
+                    if (f) setImageRemoved(false);
+                  }}
+                  removed={imageRemoved}
+                  onRemove={() => {
+                    setImageRemoved(true);
+                    setImageFile(null);
+                  }}
                 />
               </div>
               <Field label="About Description" required className="mt-4">
@@ -317,12 +342,13 @@ const AboutUs = (props) => {
                   value={form.description}
                   onChange={handleChange("description")}
                   rows={5}
-                  placeholder="Supports basic HTML. Explain what QSC is, its vision and mission."
+                  placeholder="Explain what QSC is, its vision and mission. Leave a blank line between paragraphs."
                   className={textareaCls}
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  HTML is allowed (e.g. <code>&lt;p&gt;</code>, <code>&lt;ul&gt;</code>,{" "}
-                  <code>&lt;li&gt;</code>).
+                  Leave a blank line between paragraphs — it will show as a paragraph break on the
+                  site. Basic HTML tags (e.g. <code>&lt;p&gt;</code>, <code>&lt;ul&gt;</code>,{" "}
+                  <code>&lt;li&gt;</code>) also work.
                 </p>
               </Field>
             </Section>
@@ -347,7 +373,15 @@ const AboutUs = (props) => {
                   hint="Hero image for the homepage. Recommended: 1220×1420 (6:7 ratio)."
                   existingUrl={form.landingMainbanner ? `${CDN}${form.landingMainbanner}` : ""}
                   file={bannerFile}
-                  onChange={setBannerFile}
+                  onChange={(f) => {
+                    setBannerFile(f);
+                    if (f) setBannerRemoved(false);
+                  }}
+                  removed={bannerRemoved}
+                  onRemove={() => {
+                    setBannerRemoved(true);
+                    setBannerFile(null);
+                  }}
                 />
               </div>
               <Field label="Landing Description" required className="mt-4">
@@ -359,6 +393,23 @@ const AboutUs = (props) => {
                   className={textareaCls}
                 />
               </Field>
+              <div className="mt-4">
+                <ImageField
+                  label="Homepage Story Image"
+                  hint="Shown in the 'QSC overview' story section on the homepage — separate from the About page banner."
+                  existingUrl={form.landingStoryImage ? `${CDN}${form.landingStoryImage}` : ""}
+                  file={storyImageFile}
+                  onChange={(f) => {
+                    setStoryImageFile(f);
+                    if (f) setStoryRemoved(false);
+                  }}
+                  removed={storyRemoved}
+                  onRemove={() => {
+                    setStoryRemoved(true);
+                    setStoryImageFile(null);
+                  }}
+                />
+              </div>
             </Section>
 
             <Section
@@ -445,12 +496,13 @@ const Field = ({ label, required, icon, className = "", children }) => (
   </div>
 );
 
-const ImageField = ({ label, required, hint, existingUrl, file, onChange }) => {
+const ImageField = ({ label, required, hint, existingUrl, file, onChange, removed, onRemove }) => {
   const inputRef = useRef(null);
   const previewUrl = useMemo(() => {
     if (file) return URL.createObjectURL(file);
+    if (removed) return "";
     return existingUrl || "";
-  }, [file, existingUrl]);
+  }, [file, existingUrl, removed]);
 
   useEffect(() => {
     // Revoke object URL when file changes to avoid leaks.
@@ -497,6 +549,16 @@ const ImageField = ({ label, required, hint, existingUrl, file, onChange }) => {
                 Remove new file
               </button>
             )}
+            {!file && !removed && existingUrl && (
+              <button
+                type="button"
+                onClick={() => onRemove?.()}
+                className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] rounded text-rose-600 hover:bg-rose-50"
+              >
+                <Trash2 size={12} />
+                Remove image
+              </button>
+            )}
             <input
               ref={inputRef}
               type="file"
@@ -513,6 +575,9 @@ const ImageField = ({ label, required, hint, existingUrl, file, onChange }) => {
             <p className="text-[11px] text-slate-500 truncate">
               Selected: <span className="font-medium">{file.name}</span>
             </p>
+          )}
+          {removed && !file && (
+            <p className="text-[11px] text-rose-500">Image will be removed on save.</p>
           )}
         </div>
       </div>

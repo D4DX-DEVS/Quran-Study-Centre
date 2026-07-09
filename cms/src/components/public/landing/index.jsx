@@ -9,7 +9,7 @@ import Footer from "./footer/footer";
 const Landing = (props) => {
   //to update the page title
   useEffect(() => {
-    document.title = `Quran Study Centre, Kerala`;
+    document.title = `ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള`;
   }, []);
 
   return (
