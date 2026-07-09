@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  FileText,
   Globe2,
   ImagePlus,
   Info,
@@ -56,6 +57,13 @@ const MENU_ITEMS = [
     description: "Shows question papers and other public files.",
     icon: Download,
     tone: "bg-sky-50 text-sky-600 ring-sky-100",
+  },
+  {
+    key: "material",
+    label: "Materials",
+    description: "Lets candidates unlock and view area study materials from the landing page.",
+    icon: FileText,
+    tone: "bg-orange-50 text-orange-600 ring-orange-100",
   },
   {
     key: "about",

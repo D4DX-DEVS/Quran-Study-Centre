@@ -3,6 +3,7 @@ export const LANDING_MENU_DEFAULTS = {
   hallTicket: false,
   examRegistration: false,
   downloads: true,
+  material: true,
   about: true,
   result: false,
   examInstruction: false,
