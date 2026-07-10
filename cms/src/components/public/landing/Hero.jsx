@@ -115,6 +115,12 @@ function Hero() {
   const bannerImage = resolveAssetUrl(content.landingMainbanner);
   const profileImage = resolveAssetUrl(content.landingStoryImage);
 
+  const hasLandingHero = Boolean(
+    content.landingTitle?.trim() ||
+      content.landingDescription?.trim() ||
+      bannerImage
+  );
+
   return (
     <main className="landing-home">
       {/* ── NEW welcome hero (image-1 layout): copy left, blue dummy image right ── */}
@@ -172,69 +178,70 @@ function Hero() {
       </section>
 
       {/* ── ORIGINAL landing hero: real poster banner + DB content ── */}
-      <section
-        id="landing-original"
-        className="landing-page-shell landing-hero-shell landing-section"
-      >
-        <div className="landing-hero-grid">
-          <div className="landing-hero-copy">
-            <span className="landing-eyebrow">
-              {landingSettings.copy.heroEyebrow}
-            </span>
-            <h1 className="landing-hero-title">{content.landingTitle}</h1>
-            <p className="landing-hero-description">{content.landingDescription}</p>
+      {hasLandingHero && (
+        <section
+          id="landing-original"
+          className="landing-page-shell landing-hero-shell landing-section"
+        >
+          <div className="landing-hero-grid">
+            <div className="landing-hero-copy">
+              <span className="landing-eyebrow">
+                {landingSettings.copy.heroEyebrow}
+              </span>
+              {content.landingTitle && (
+                <h1 className="landing-hero-title">{content.landingTitle}</h1>
+              )}
+              {content.landingDescription && (
+                <p className="landing-hero-description">{content.landingDescription}</p>
+              )}
 
-            <div className="landing-hero-actions">
-              {landingSettings.examRegistration && (
-                <button
-                  type="button"
-                  className="landing-chip-button primary"
-                  onClick={() => triggerLandingAction("examRegistration")}
-                >
-                  Open registration
-                </button>
-              )}
-              {landingSettings.verifyRegistration && (
-                <button
-                  type="button"
-                  className="landing-chip-button secondary"
-                  onClick={() => triggerLandingAction("verifyRegistration")}
-                >
-                  Verify Your Registration
-                </button>
-              )}
-              <a href="/admin" className="landing-chip-button secondary">
-                Admin panel
-              </a>
-              {landingSettings.downloads && (
-                <a href="/question-papers" className="landing-chip-button subtle">
-                  Downloads <ArrowRight size={16} />
+              <div className="landing-hero-actions">
+                {landingSettings.examRegistration && (
+                  <button
+                    type="button"
+                    className="landing-chip-button primary"
+                    onClick={() => triggerLandingAction("examRegistration")}
+                  >
+                    Open registration
+                  </button>
+                )}
+                {landingSettings.verifyRegistration && (
+                  <button
+                    type="button"
+                    className="landing-chip-button secondary"
+                    onClick={() => triggerLandingAction("verifyRegistration")}
+                  >
+                    Verify Your Registration
+                  </button>
+                )}
+                <a href="/admin" className="landing-chip-button secondary">
+                  Admin panel
                 </a>
-              )}
+                {landingSettings.downloads && (
+                  <a href="/question-papers" className="landing-chip-button subtle">
+                    Downloads <ArrowRight size={16} />
+                  </a>
+                )}
+              </div>
+
+              <div className="landing-stat-grid">
+                {heroStats.map((item, index) => (
+                  <article key={`${item.label}-${index}`} className="landing-stat-card">
+                    <span className="landing-stat-label">{item.label}</span>
+                    <strong className="landing-stat-value">{item.value}</strong>
+                  </article>
+                ))}
+              </div>
             </div>
 
-            <div className="landing-stat-grid">
-              {heroStats.map((item, index) => (
-                <article key={`${item.label}-${index}`} className="landing-stat-card">
-                  <span className="landing-stat-label">{item.label}</span>
-                  <strong className="landing-stat-value">{item.value}</strong>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="landing-banner-card">
-            {bannerImage ? (
-              <img src={bannerImage} alt="QSC public portal banner" />
-            ) : (
-              <div className="landing-banner-placeholder">
-                Public services, district coordination and admin workflows in
-                one simple page.
+            {bannerImage && (
+              <div className="landing-banner-card">
+                <img src={bannerImage} alt="QSC public portal banner" />
               </div>
             )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="landing-page-shell landing-section">
         {/* <aside className="landing-admin-note">

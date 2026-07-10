@@ -303,8 +303,6 @@ const FloatingMenuSettings = (props) => {
     const missing = [];
     if (!aboutForm.title?.trim()) missing.push("About Title");
     if (!aboutForm.description?.trim()) missing.push("About Description");
-    if (!aboutForm.landingTitle?.trim()) missing.push("Landing Title");
-    if (!aboutForm.landingDescription?.trim()) missing.push("Landing Description");
     if (!aboutForm.email?.trim()) missing.push("Email");
     if (!aboutForm.mobile?.trim()) missing.push("Mobile");
     if (!aboutForm.footerText?.trim()) missing.push("Footer Text");
@@ -602,7 +600,7 @@ const FloatingMenuSettings = (props) => {
               </Field>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                <Field label="Landing Title" required>
+                <Field label="Landing Title">
                   <input
                     type="text"
                     value={aboutForm.landingTitle}
@@ -629,7 +627,7 @@ const FloatingMenuSettings = (props) => {
                 />
               </div>
 
-              <Field label="Landing Description" required className="mt-4">
+              <Field label="Landing Description" className="mt-4">
                 <textarea
                   value={aboutForm.landingDescription}
                   onChange={handleAboutChange("landingDescription")}

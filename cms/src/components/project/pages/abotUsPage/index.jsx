@@ -123,8 +123,6 @@ const AboutUs = (props) => {
     const missing = [];
     if (!form.title?.trim()) missing.push("About Title");
     if (!form.description?.trim()) missing.push("About Description");
-    if (!form.landingTitle?.trim()) missing.push("Landing Title");
-    if (!form.landingDescription?.trim()) missing.push("Landing Description");
     if (!form.email?.trim()) missing.push("Email");
     if (!form.mobile?.trim()) missing.push("Mobile");
     if (!form.footerText?.trim()) missing.push("Footer Text");
@@ -358,7 +356,7 @@ const AboutUs = (props) => {
               subtitle="This is the hero banner visitors see first on the public homepage."
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Landing Title" required>
+                <Field label="Landing Title">
                   <input
                     type="text"
                     value={form.landingTitle}
@@ -384,7 +382,7 @@ const AboutUs = (props) => {
                   }}
                 />
               </div>
-              <Field label="Landing Description" required className="mt-4">
+              <Field label="Landing Description" className="mt-4">
                 <textarea
                   value={form.landingDescription}
                   onChange={handleChange("landingDescription")}
