@@ -35,6 +35,10 @@
   margin: 0 auto;
 }
 
+#landing-original.landing-page-shell {
+  width: min(1180px, calc(100% - 32px));
+}
+
 .landing-site-header {
   position: fixed;
   top: 0;
@@ -270,13 +274,21 @@
   flex-direction: column;
   gap: 18px;
   grid-column: 1;
-  /* Top-align the text to the image top; only the content moves, image stays put. */
-  justify-content: flex-start;
-  align-self: start;
+  grid-row: 1 / 3;
 }
 
 .landing-hero-grid > .landing-hero-visual {
   grid-column: 2;
+}
+
+.landing-hero-grid > .landing-banner-card {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.landing-hero-grid > .landing-visual-stack {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 /* ─── Hero feature row (Authentic / Qualified / Spiritual) ─── */
@@ -358,12 +370,8 @@
 
 /* bleed the hero + banner images past the centered shell to the right screen edge */
 @media (min-width: 1101px) {
-  .landing-hero-grid > .landing-hero-visual,
-  .landing-hero-grid > .landing-banner-card {
-    margin-right: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
-  }
-
   .landing-hero-grid > .landing-hero-visual {
+    margin-right: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
     align-self: center;
     /* fit the whole image on one screen: viewport height minus header/padding */
     height: min(calc(100vh - 150px), 520px);
@@ -373,11 +381,6 @@
   .landing-hero-grid > .landing-hero-visual img {
     object-fit: contain;
     object-position: right center;
-  }
-
-  /* flat on the screen edge, rounded toward the content */
-  .landing-hero-grid > .landing-banner-card {
-    border-radius: 24px 0 0 24px;
   }
 }
 
@@ -474,22 +477,12 @@
 .landing-summary-card,
 .landing-action-card,
 .landing-story-card,
-.landing-district-card,
-.landing-admin-note {
-  background: var(--landing-surface);
-  box-shadow: 0 18px 40px rgba(15, 39, 67, 0.08);
-}
-
-/* text cards keep border; image cards do not */
+.landing-banner-card,
 .landing-district-card,
 .landing-admin-note {
   border: 1px solid var(--landing-line);
-}
-
-/* hero + banner poster: flat full image, no frame */
-.landing-banner-card {
-  background: transparent;
-  box-shadow: none;
+  background: var(--landing-surface);
+  box-shadow: 0 18px 40px rgba(15, 39, 67, 0.08);
 }
 
 .landing-stat-card {
@@ -721,8 +714,8 @@
 }
 
 .landing-banner-card {
-  height: 100%;
-  border-radius: 24px;
+  height: 620px;
+  border-radius: 30px;
   overflow: hidden;
 }
 
@@ -1126,6 +1119,10 @@
     grid-template-columns: 1fr;
   }
 
+  .landing-hero-copy {
+    grid-row: auto;
+  }
+
   .landing-hero-grid > .landing-hero-visual {
     grid-column: auto;
     order: -1;
@@ -1134,6 +1131,7 @@
 
   .landing-hero-grid > .landing-banner-card {
     grid-column: auto;
+    grid-row: auto;
     order: -1;
     height: auto;
   }
