@@ -218,7 +218,7 @@ const StudentHome = (props) => {
   return (
     <Container className="noshadow">
       <div className="max-w-6xl mx-auto p-4 md:p-6 xl:p-8 space-y-6">
-        <section className="overflow-hidden rounded-[28px] border border-cyan-900/40 bg-gradient-to-r from-slate-950 via-blue-950 to-cyan-900 shadow-sm">
+        <section className="overflow-hidden rounded-[28px] bg-gradient-to-r from-slate-950 via-blue-950 to-cyan-900 shadow-sm">
           <div className="flex flex-col gap-5 p-5 md:flex-row md:items-center md:justify-between md:p-6">
             <div className="flex items-center gap-4 md:gap-5">
               <img
@@ -360,7 +360,7 @@ const StudentHome = (props) => {
 
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-6">
-            <section className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+            <section className="rounded-[28px] bg-white p-5 md:p-6 shadow-sm">
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900">Quick Actions</h2>
@@ -397,7 +397,7 @@ const StudentHome = (props) => {
             </section>
 
             {utilityActions.length > 0 ? (
-              <section className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+              <section className="rounded-[28px] bg-white p-5 md:p-6 shadow-sm">
                 <div className="mb-5">
                   <h2 className="text-xl font-semibold text-slate-900">Downloads</h2>
                   <p className="text-sm text-slate-500">Only documents that are currently available are shown here.</p>
@@ -433,7 +433,7 @@ const StudentHome = (props) => {
               </section>
             ) : null}
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+            <section className="rounded-[28px] bg-white p-5 md:p-6 shadow-sm">
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900">Recent Activity</h2>
@@ -483,7 +483,7 @@ const StudentHome = (props) => {
           </div>
 
           <aside className="space-y-6">
-            <section className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+            <section className="rounded-[28px] bg-white p-5 md:p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                   <Bell className="h-5 w-5" />
@@ -517,7 +517,7 @@ const StudentHome = (props) => {
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+            <section className="rounded-[28px] bg-white p-5 md:p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                   <GraduationCap className="h-5 w-5" />

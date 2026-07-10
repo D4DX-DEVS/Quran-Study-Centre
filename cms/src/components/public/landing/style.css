@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Sans+Malayalam:wght@400;600;700&display=swap");
 
 /* ─── Register Now pulse animation ─── */
 @keyframes landing-reg-pulse {
@@ -30,7 +31,7 @@
 }
 
 .landing-page-shell {
-  width: min(1180px, calc(100% - 32px));
+  width: min(1280px, calc(100% - 32px));
   margin: 0 auto;
 }
 
@@ -47,7 +48,7 @@
 }
 
 .landing-header-shell {
-  width: min(1180px, calc(100% - 32px));
+  width: min(1280px, calc(100% - 32px));
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -231,44 +232,25 @@
 .landing-home {
   min-height: 100vh;
   padding: 81px 0 0;
-  background:
-    radial-gradient(circle at top left, rgba(30, 58, 138, 0.16), transparent 34%),
-    radial-gradient(circle at top right, rgba(29, 78, 216, 0.14), transparent 30%),
-    linear-gradient(180deg, var(--landing-cream) 0%, #f4f8fd 52%, #e7f0fb 100%);
+  background: #ffffff;
+  overflow-x: clip;
 }
 
+/* Full-bleed hero: no card box, content sits open on the page with just the
+   page-shell side margins. */
 .landing-hero-shell {
   position: relative;
-  overflow: hidden;
-  padding: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 36px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: var(--landing-shadow);
+  padding: 24px 0;
+  background: radial-gradient(
+    circle at 82% 45%,
+    rgba(29, 78, 216, 0.16) 0%,
+    rgba(29, 78, 216, 0.07) 32%,
+    rgba(29, 78, 216, 0) 62%
+  );
 }
 
-.landing-hero-shell::before,
-.landing-hero-shell::after {
-  content: "";
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-}
-
-.landing-hero-shell::before {
-  width: 220px;
-  height: 220px;
-  right: -60px;
-  top: -80px;
-  background: rgba(29, 78, 216, 0.08);
-}
-
-.landing-hero-shell::after {
-  width: 180px;
-  height: 180px;
-  left: -40px;
-  bottom: -70px;
-  background: rgba(30, 58, 138, 0.08);
+.landing-hero-loading {
+  min-height: 60vh;
 }
 
 .landing-hero-grid {
@@ -288,17 +270,123 @@
   flex-direction: column;
   gap: 18px;
   grid-column: 1;
-  grid-row: 1 / 3;
+  /* Top-align the text to the image top; only the content moves, image stays put. */
+  justify-content: flex-start;
+  align-self: start;
 }
 
-.landing-hero-grid > .landing-banner-card {
+.landing-hero-grid > .landing-hero-visual {
   grid-column: 2;
-  grid-row: 1;
 }
 
-.landing-hero-grid > .landing-visual-stack {
-  grid-column: 2;
-  grid-row: 2;
+/* ─── Hero feature row (Authentic / Qualified / Spiritual) ─── */
+.landing-hero-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin: 6px 0 2px;
+}
+
+.landing-hero-feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-hero-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(29, 78, 216, 0.1);
+  color: var(--landing-blue);
+  flex-shrink: 0;
+}
+
+.landing-hero-feature-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.landing-hero-feature-text strong {
+  color: var(--landing-ink);
+  font-family: "Manrope", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.landing-hero-feature-text em {
+  color: var(--landing-muted);
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* ─── Welcome hero title (Quran Study / Centre Kerala) ─── */
+.landing-welcome-title {
+  margin: 0;
+  color: var(--landing-ink);
+  font-family: "Fraunces", serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.landing-welcome-title span {
+  display: block;
+  color: var(--landing-blue);
+}
+
+/* ─── Hero right visual: image matches the copy height ─── */
+.landing-hero-visual {
+  align-self: stretch;
+  min-height: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.landing-hero-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* bleed the hero + banner images past the centered shell to the right screen edge */
+@media (min-width: 1101px) {
+  .landing-hero-grid > .landing-hero-visual,
+  .landing-hero-grid > .landing-banner-card {
+    margin-right: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
+  }
+
+  .landing-hero-grid > .landing-hero-visual {
+    align-self: center;
+    /* fit the whole image on one screen: viewport height minus header/padding */
+    height: min(calc(100vh - 150px), 520px);
+  }
+
+  /* show the full image (no crop), hugged to the right screen edge */
+  .landing-hero-grid > .landing-hero-visual img {
+    object-fit: contain;
+    object-position: right center;
+  }
+
+  /* flat on the screen edge, rounded toward the content */
+  .landing-hero-grid > .landing-banner-card {
+    border-radius: 24px 0 0 24px;
+  }
+}
+
+.landing-hero-visual-dummy {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.18), transparent 45%),
+    linear-gradient(150deg, #1d4ed8 0%, #1e3a8a 55%, #0a2a6b 100%);
 }
 
 .landing-eyebrow,
@@ -386,12 +474,22 @@
 .landing-summary-card,
 .landing-action-card,
 .landing-story-card,
-.landing-banner-card,
+.landing-district-card,
+.landing-admin-note {
+  background: var(--landing-surface);
+  box-shadow: 0 18px 40px rgba(15, 39, 67, 0.08);
+}
+
+/* text cards keep border; image cards do not */
 .landing-district-card,
 .landing-admin-note {
   border: 1px solid var(--landing-line);
-  background: var(--landing-surface);
-  box-shadow: 0 18px 40px rgba(15, 39, 67, 0.08);
+}
+
+/* hero + banner poster: flat full image, no frame */
+.landing-banner-card {
+  background: transparent;
+  box-shadow: none;
 }
 
 .landing-stat-card {
@@ -435,7 +533,10 @@
   text-align: center;
   gap: 16px;
   padding: 0 0 32px;
-  border-radius: 28px;
+  border-radius: 0;
+  /* full-bleed: cancel the centered shell margins on both sides */
+  margin-left: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
+  margin-right: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
   background: linear-gradient(135deg, #0a2a6b 0%, #123a8f 55%, #1d4ed8 100%);
   box-shadow: 0 24px 60px rgba(10, 42, 107, 0.32);
 }
@@ -620,8 +721,8 @@
 }
 
 .landing-banner-card {
-  height: 570px;
-  border-radius: 30px;
+  height: 100%;
+  border-radius: 24px;
   overflow: hidden;
 }
 
@@ -630,6 +731,23 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.landing-quran-banner {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  /* dissolve the photo's own edges so it blends into the white page
+     instead of sitting on it as a hard rectangle */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, black 34%),
+    linear-gradient(to bottom, transparent 0%, black 10%, black 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent 0%, black 34%),
+    linear-gradient(to bottom, transparent 0%, black 10%, black 88%, transparent 100%);
+  mask-composite: intersect;
 }
 
 .landing-banner-placeholder {
@@ -1008,13 +1126,14 @@
     grid-template-columns: 1fr;
   }
 
-  .landing-hero-copy {
-    grid-row: auto;
+  .landing-hero-grid > .landing-hero-visual {
+    grid-column: auto;
+    order: -1;
+    height: 320px;
   }
 
   .landing-hero-grid > .landing-banner-card {
     grid-column: auto;
-    grid-row: auto;
     order: -1;
     height: auto;
   }
@@ -1049,8 +1168,7 @@
   }
 
   .landing-hero-shell {
-    padding: 22px;
-    border-radius: 28px;
+    padding: 18px 0;
   }
 
   .landing-stat-grid,

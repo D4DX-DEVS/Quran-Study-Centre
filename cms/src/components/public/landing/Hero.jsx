@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
   ArrowRight,
+  BookOpen,
   Building2,
   Globe,
   MapPinned,
   School,
+  User,
   Users,
 } from "lucide-react";
 import "./style.css";
@@ -12,6 +14,7 @@ import { getData } from "../../../backend/api";
 import { normalizeLandingSettings } from "./defaults";
 import { thafheem } from "../../project/brand";
 import { AppleLogo, PlayStoreLogo, StoreBadge } from "./storeBadges";
+import quranHeroPhoto from "./assets/home.png.avif";
 
 const THAFHEEM_LINKS = {
   banner: "https://app.thafheem.net/",
@@ -38,6 +41,12 @@ const resolveAssetUrl = (value) => {
 };
 
 const SUMMARY_ICONS = [MapPinned, Building2, School, Users];
+
+const HERO_FEATURES = [
+  { icon: BookOpen, title: "Authentic", subtitle: "Quranic Education" },
+  { icon: User, title: "Qualified", subtitle: "Teachers" },
+  { icon: Users, title: "Spiritual", subtitle: "Community" },
+];
 
 function Hero() {
   const [content, setContent] = useState(defaultContent);
@@ -108,7 +117,65 @@ function Hero() {
 
   return (
     <main className="landing-home">
+      {/* ── NEW welcome hero (image-1 layout): copy left, blue dummy image right ── */}
       <section className="landing-page-shell landing-hero-shell">
+        <div className="landing-hero-grid">
+          <div className="landing-hero-copy">
+            <span className="landing-eyebrow">Welcome to</span>
+            <h1 className="landing-welcome-title">
+              Quran Study <span>Centre Kerala</span>
+            </h1>
+            <p className="landing-hero-description">
+              A dedicated platform for learning, understanding and living by the
+              Quran. Join our mission to spread Quranic knowledge and build a
+              community of learners.
+            </p>
+
+            <div className="landing-hero-features">
+              {HERO_FEATURES.map(({ icon: Icon, title, subtitle }) => (
+                <div key={title} className="landing-hero-feature">
+                  <span className="landing-hero-feature-icon">
+                    <Icon size={20} />
+                  </span>
+                  <span className="landing-hero-feature-text">
+                    <strong>{title}</strong>
+                    <em>{subtitle}</em>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="landing-hero-actions">
+              {landingSettings.verifyRegistration && (
+                <button
+                  type="button"
+                  className="landing-chip-button primary"
+                  onClick={() => triggerLandingAction("verifyRegistration")}
+                >
+                  Verify Your Registration
+                </button>
+              )}
+              <a href="/about-us" className="landing-chip-button secondary">
+                Learn More <ArrowRight size={16} />
+              </a>
+            </div>
+          </div>
+
+          <div className="landing-hero-visual">
+            <img
+              src={quranHeroPhoto}
+              alt="Illuminated Holy Quran"
+              className="landing-quran-banner"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── ORIGINAL landing hero: real poster banner + DB content ── */}
+      <section
+        id="landing-original"
+        className="landing-page-shell landing-hero-shell landing-section"
+      >
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
             <span className="landing-eyebrow">
