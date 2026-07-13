@@ -11,6 +11,7 @@ const CertificateManagement = require("../models/certificateManagement");
 
 const ExamSettings = require("../models/examSettings");
 const { recomputeAllocation } = require("./examAllocation");
+const { resolveExamCenterName, genderRank, modeRank, examSortOrder } = require("../utils/studentSort");
 
 const s3 = new S3Client({
   endpoint: `https://${process.env.DO_SPACES_ENDPOINT}`,
@@ -724,7 +725,7 @@ exports.getExamRegistrationList = async (req, res) => {
       .populate("outsideExamCenter", "centerName")
       .populate("centerRegistration", "nameOfCenter")
       .populate("assignedExamCenter", "nameOfCenter")
-      .populate("nameOfExamAppearingNow", "examType")
+      .populate("nameOfExamAppearingNow", "examType sortOrder")
       .select("district area examDistrict nameOfApplicant examCenter outsideExamCenter centerRegistration assignedExamCenter nameOfExamAppearingNow regno examName status gender");
 
     // Transform the response to flatten nested objects
@@ -739,6 +740,9 @@ exports.getExamRegistrationList = async (req, res) => {
       // getRegisteredStudentsList / getAttendanceSheet), falling back to the
       // stored value for any legacy record that does have it set.
       examName: reg.nameOfExamAppearingNow?.examType?.split(":")[0]?.trim() || reg.examName || "",
+      // Curriculum-stage rank (Preliminary I..VI, Secondary I..III, ...) — see
+      // utils/examLevelOrder.js — used to sort instead of the display text.
+      examTypeSortOrder: examSortOrder(reg.nameOfExamAppearingNow),
       status: reg.status,
       gender: reg.gender,
       district: reg.district,
@@ -746,26 +750,25 @@ exports.getExamRegistrationList = async (req, res) => {
       examDistrict: reg.examDistrict,
       examCenter: reg.examCenter,
       outsideExamCenter: reg.outsideExamCenter,
-      // Resolved exam-center display name for the attendance-session table's
-      // "Exam Center" column — matches the Registered Students page:
-      // centerRegistration (student's own pick) first, falling back to
-      // assignedExamCenter for legacy records with no centerRegistration.
-      examCenterName: reg.centerRegistration?.nameOfCenter || reg.assignedExamCenter?.nameOfCenter || "",
+      // Resolved exam-center display name — same precedence used everywhere
+      // else this is shown (registered-students page, registration-number
+      // generation): the student's own study centre first, falling back to
+      // the clubbing-resolved `assignedExamCenter` only when that's missing.
+      examCenterName: resolveExamCenterName(reg),
     }));
 
-    // Male before Female (matches the fixed gender order used in the zip/PDF
-    // attendance sheet export), any other value sorts after both.
-    const genderRank = (g) => (g === "Male" ? 0 : g === "Female" ? 1 : 2);
-
+    // Matches the predefined student order (see utils/studentSort.js) so this
+    // table's row order lines up with the sequence registration numbers were
+    // assigned in — same district/area/centre/exam-stage/gender/mode order.
     const collator = new Intl.Collator("en", { sensitivity: "base" });
     transformedRegistrations.sort(
       (a, b) =>
         collator.compare(a.district?.district || "", b.district?.district || "") ||
         collator.compare(a.area?.area || "", b.area?.area || "") ||
         collator.compare(a.examCenterName || "", b.examCenterName || "") ||
-        collator.compare(a.examName || "", b.examName || "") ||
+        (a.examTypeSortOrder - b.examTypeSortOrder) ||
         (genderRank(a.gender) - genderRank(b.gender)) ||
-        collator.compare(a.status || "", b.status || "") ||
+        (modeRank(a.status) - modeRank(b.status)) ||
         collator.compare(a.regno || "", b.regno || "") ||
         collator.compare(a.nameOfApplicant || "", b.nameOfApplicant || "")
     );
