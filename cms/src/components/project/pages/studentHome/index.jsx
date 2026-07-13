@@ -26,7 +26,7 @@ import { thafheem } from "../../brand";
 
 const THAFHEEM_LINKS = {
   banner: "https://app.thafheem.net/",
-  web: "https://thafheem.net/?lang=E",
+  web: "https://thafheem.net/?lang=mal",
   appStore: "https://apps.apple.com/in/app/thafheemul-quran/id1292572556",
   playStore: "https://play.google.com/store/apps/details?id=com.d4media.thafheem",
 };
