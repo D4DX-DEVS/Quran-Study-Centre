@@ -46,6 +46,8 @@ const ExamConsolidationReport = (props) => {
   const [totals, setTotals] = useState({ total: 0, private: 0, regular: 0, male: 0, female: 0 });
   const [counts, setCounts] = useState({ districtCount: 0, areaCount: 0, centerCount: 0 });
   const [top, setTop] = useState({ name: "-", total: 0 });
+  const [topArea, setTopArea] = useState({ name: "-", district: "-", total: 0 });
+  const [topCenter, setTopCenter] = useState({ name: "-", district: "-", area: "-", total: 0 });
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -86,6 +88,8 @@ const ExamConsolidationReport = (props) => {
       setTotals(r?.data?.totals || { total: 0, private: 0, regular: 0, male: 0, female: 0 });
       setCounts(r?.data?.counts || { districtCount: 0, areaCount: 0, centerCount: 0 });
       setTop(r?.data?.top || { name: "-", total: 0 });
+      setTopArea(r?.data?.topArea || { name: "-", district: "-", total: 0 });
+      setTopCenter(r?.data?.topCenter || { name: "-", district: "-", area: "-", total: 0 });
     } catch (e) {
       props.setMessage?.({
         type: 1,
@@ -275,6 +279,26 @@ const ExamConsolidationReport = (props) => {
             }
             value={top.total ? `${top.name} (${top.total})` : "-"}
           />
+          {level === "district" && (
+            <SummaryCard
+              icon={MapPin}
+              label="Top Registration Area"
+              value={topArea.total ? `${topArea.name}, ${topArea.district} (${topArea.total})` : "-"}
+            />
+          )}
+          {level !== "center" && (
+            <SummaryCard
+              icon={Building2}
+              label="Top Registration Exam Center"
+              value={
+                topCenter.total
+                  ? selDistrict
+                    ? `${topCenter.name}, ${topCenter.area} (${topCenter.total})`
+                    : `${topCenter.name}, ${topCenter.district} / ${topCenter.area} (${topCenter.total})`
+                  : "-"
+              }
+            />
+          )}
         </div>
 
         <div className="overflow-auto border border-gray-200 rounded-lg">

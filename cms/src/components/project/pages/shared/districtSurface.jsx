@@ -70,12 +70,14 @@ const OverviewGrid = styled.div`
 
 const OverviewCard = styled.div`
   background: #fff;
-  border: 1px solid #e6ebf3;
+  border: 1px solid ${(props) => (props.$active ? "#1a4993" : "#e6ebf3")};
   border-radius: 18px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  cursor: ${(props) => (props.$clickable ? "pointer" : "default")};
+  ${(props) => (props.$active ? "box-shadow: 0 0 0 1px #1a4993;" : "")}
 `;
 
 const OverviewTop = styled.div`
@@ -190,7 +192,7 @@ export const DistrictPageHeader = ({ title, description, actions = null }) => (
 export const DistrictOverviewCards = ({ cards = [] }) => (
   <OverviewGrid>
     {cards.map((card) => (
-      <OverviewCard key={card.key || card.label}>
+      <OverviewCard key={card.key || card.label} $clickable={Boolean(card.onClick)} $active={Boolean(card.active)} onClick={card.onClick}>
         <OverviewTop>
           <span>{card.label}</span>
           {card.icon}

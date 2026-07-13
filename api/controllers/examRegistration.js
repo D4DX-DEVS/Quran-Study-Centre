@@ -1084,6 +1084,50 @@ exports.getConsolidationReport = async (req, res) => {
             { $unwind: { path: "$doc", preserveNullAndEmptyArrays: true } },
             { $project: { _id: 0, name: { $ifNull: [`$doc.${topNameField}`, "Unknown"] }, total: 1 } },
           ],
+          // Top area by registrations, with its district — independent of
+          // groupField so it stays meaningful regardless of the current
+          // grouping level. Frontend hides this card once a district is
+          // already selected (redundant with "top" at the "area" level).
+          topArea: [
+            { $group: { _id: "$area", district: { $first: "$district" }, total: { $sum: 1 } } },
+            { $sort: { total: -1 } },
+            { $limit: 1 },
+            { $lookup: { from: "areas", localField: "_id", foreignField: "_id", as: "areaDoc" } },
+            { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
+            { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                name: { $ifNull: ["$areaDoc.area", "Unknown"] },
+                district: { $ifNull: ["$districtDoc.district", "Unknown"] },
+                total: 1,
+              },
+            },
+          ],
+          // Top exam center by registrations, with its district + area —
+          // independent of groupField. Frontend hides this card once an area
+          // is already selected (redundant with "top" at the "studyCentre" level).
+          topCenter: [
+            { $group: { _id: "$centerRegistration", district: { $first: "$district" }, area: { $first: "$area" }, total: { $sum: 1 } } },
+            { $sort: { total: -1 } },
+            { $limit: 1 },
+            { $lookup: { from: "centerregistrations", localField: "_id", foreignField: "_id", as: "centerDoc" } },
+            { $unwind: { path: "$centerDoc", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
+            { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "areas", localField: "area", foreignField: "_id", as: "areaDoc" } },
+            { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                name: { $ifNull: ["$centerDoc.nameOfCenter", "Unknown"] },
+                district: { $ifNull: ["$districtDoc.district", "Unknown"] },
+                area: { $ifNull: ["$areaDoc.area", "Unknown"] },
+                total: 1,
+              },
+            },
+          ],
         },
       },
     ];
@@ -1097,6 +1141,8 @@ exports.getConsolidationReport = async (req, res) => {
       totals: result.totals[0] || { total: 0, private: 0, regular: 0, male: 0, female: 0 },
       counts: result.counts[0] || { districtCount: 0, areaCount: 0, centerCount: 0 },
       top: result.top[0] || { name: "-", total: 0 },
+      topArea: result.topArea[0] || { name: "-", district: "-", total: 0 },
+      topCenter: result.topCenter[0] || { name: "-", district: "-", area: "-", total: 0 },
     });
   } catch (err) {
     console.error(err);
