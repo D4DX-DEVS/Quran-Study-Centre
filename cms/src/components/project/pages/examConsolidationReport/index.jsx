@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Building2, ChevronLeft, ChevronRight, Download, Filter, MapPin, RotateCcw, Users } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Download, Filter, MapPin, RotateCcw, Trophy, Users } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import Layout from "../../../core/layout";
@@ -45,6 +45,7 @@ const ExamConsolidationReport = (props) => {
   const [groupedRows, setGroupedRows] = useState([]);
   const [totals, setTotals] = useState({ total: 0, private: 0, regular: 0, male: 0, female: 0 });
   const [counts, setCounts] = useState({ districtCount: 0, areaCount: 0, centerCount: 0 });
+  const [top, setTop] = useState({ name: "-", total: 0 });
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -84,6 +85,7 @@ const ExamConsolidationReport = (props) => {
       setTotalCount(r?.data?.totalCount || 0);
       setTotals(r?.data?.totals || { total: 0, private: 0, regular: 0, male: 0, female: 0 });
       setCounts(r?.data?.counts || { districtCount: 0, areaCount: 0, centerCount: 0 });
+      setTop(r?.data?.top || { name: "-", total: 0 });
     } catch (e) {
       props.setMessage?.({
         type: 1,
@@ -262,6 +264,17 @@ const ExamConsolidationReport = (props) => {
           )}
           <SummaryCard icon={Building2} label="Total Exam Centers" value={counts.centerCount} />
           <SummaryCard icon={Users} label="Total Registered Students" value={totals.total} />
+          <SummaryCard
+            icon={Trophy}
+            label={
+              level === "district"
+                ? "Top District (Most Registered)"
+                : level === "area"
+                ? "Top Area (Most Registered)"
+                : "Top Exam Center (Most Registered)"
+            }
+            value={top.total ? `${top.name} (${top.total})` : "-"}
+          />
         </div>
 
         <div className="overflow-auto border border-gray-200 rounded-lg">

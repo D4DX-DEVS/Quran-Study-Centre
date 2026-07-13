@@ -955,6 +955,11 @@ exports.getConsolidationReport = async (req, res) => {
     // waiting for the name lookups the display grouping needs.
     const groupIdField = groupField === "area" ? "$area" : groupField === "studyCentre" ? "$centerRegistration" : "$district";
 
+    // Collection/field the "top" facet looks up the winning group's display
+    // name from — mirrors groupIdField's district/area/studyCentre switch.
+    const topLookupFrom = groupField === "area" ? "areas" : groupField === "studyCentre" ? "centerregistrations" : "districts";
+    const topNameField = groupField === "area" ? "area" : groupField === "studyCentre" ? "nameOfCenter" : "district";
+
     const pipeline = [
       { $match: query },
       { $sort: { nameOfApplicant: 1 } },
@@ -1063,6 +1068,19 @@ exports.getConsolidationReport = async (req, res) => {
               },
             },
           ],
+          // Winning group at the CURRENT level — most registered students,
+          // summed across exams (unlike "data", which stays split by exam).
+          // "district" level -> top district; "area" level (district
+          // selected) -> top area in that district; "studyCentre" level
+          // (district+area selected) -> top exam center in that area.
+          top: [
+            { $group: { _id: groupIdField, total: { $sum: 1 } } },
+            { $sort: { total: -1 } },
+            { $limit: 1 },
+            { $lookup: { from: topLookupFrom, localField: "_id", foreignField: "_id", as: "doc" } },
+            { $unwind: { path: "$doc", preserveNullAndEmptyArrays: true } },
+            { $project: { _id: 0, name: { $ifNull: [`$doc.${topNameField}`, "Unknown"] }, total: 1 } },
+          ],
         },
       },
     ];
@@ -1075,6 +1093,7 @@ exports.getConsolidationReport = async (req, res) => {
       totalCount: result.totalCount[0]?.count || 0,
       totals: result.totals[0] || { total: 0, private: 0, regular: 0, male: 0, female: 0 },
       counts: result.counts[0] || { districtCount: 0, areaCount: 0, centerCount: 0 },
+      top: result.top[0] || { name: "-", total: 0 },
     });
   } catch (err) {
     console.error(err);
