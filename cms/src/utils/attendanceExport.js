@@ -64,9 +64,9 @@ export const groupDataByDistrictAreaCenter = (data) => {
           })
           .map((row, idx) => ({
             "S.No": idx + 1,
-            "Exam Name": row.examName,
-            "Reg No": row.regno,
+            "Register number of the student": row.regno,
             "Name Of Applicant": row.nameOfApplicant,
+            "Exam Name": row.examName,
             Gender: row.gender,
             "P/R": row.status ? row.status.charAt(0).toUpperCase() : "", // Phase 2.5
             Signature: " ",
@@ -78,17 +78,14 @@ export const groupDataByDistrictAreaCenter = (data) => {
   return grouped;
 };
 
-// Row order within an exam+gender group: mode of study (Private/Regular)
-// first, then reg no. Mirrors the exam center attendance list's sort:
-// exam name -> gender -> mode of study -> reg no -> name.
+// Row order within an exam+gender group: reg no only, matching the exam
+// center attendance list's sort (exam name -> gender -> reg no -> name).
 export const sortByStatusThenRegno = (arr) =>
   [...arr].sort((a, b) => {
-    const statusCompare = (a["P/R"] || "").localeCompare(b["P/R"] || "");
-    if (statusCompare !== 0) return statusCompare;
-    const numA = parseInt((a["Reg No"] || "").replace(/\D/g, ""), 10);
-    const numB = parseInt((b["Reg No"] || "").replace(/\D/g, ""), 10);
+    const numA = parseInt((a["Register number of the student"] || "").replace(/\D/g, ""), 10);
+    const numB = parseInt((b["Register number of the student"] || "").replace(/\D/g, ""), 10);
     if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-    return (a["Reg No"] || "").localeCompare(b["Reg No"] || "");
+    return (a["Register number of the student"] || "").localeCompare(b["Register number of the student"] || "");
   });
 
 export const generateExcelFile = (data, examCenter) => {
@@ -242,7 +239,7 @@ export const generatePdfFile = (data, examCenter) => {
     if (examData["Male"] && examData["Male"].length > 0) {
       maleCount = examData["Male"].length;
       sortByStatusThenRegno(examData["Male"]).forEach((item, index) => {
-        allTableData.push([allTableData.length + 1, item["Name Of Applicant"], item["Reg No"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
+        allTableData.push([allTableData.length + 1, item["Register number of the student"], item["Name Of Applicant"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
       });
     }
 
@@ -250,7 +247,7 @@ export const generatePdfFile = (data, examCenter) => {
     if (examData["Female"] && examData["Female"].length > 0) {
       femaleCount = examData["Female"].length;
       sortByStatusThenRegno(examData["Female"]).forEach((item, index) => {
-        allTableData.push([allTableData.length + 1, item["Name Of Applicant"], item["Reg No"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
+        allTableData.push([allTableData.length + 1, item["Register number of the student"], item["Name Of Applicant"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
       });
     }
 
@@ -258,7 +255,7 @@ export const generatePdfFile = (data, examCenter) => {
     Object.keys(examData).forEach((gender) => {
       if (gender !== "Male" && gender !== "Female" && examData[gender].length > 0) {
         sortByStatusThenRegno(examData[gender]).forEach((item, index) => {
-          allTableData.push([allTableData.length + 1, item["Name Of Applicant"], item["Reg No"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
+          allTableData.push([allTableData.length + 1, item["Register number of the student"], item["Name Of Applicant"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
         });
       }
     });
@@ -266,7 +263,7 @@ export const generatePdfFile = (data, examCenter) => {
     if (allTableData.length > 0) {
       doc.autoTable({
         startY: currentY + 5,
-        head: [["Sl No", "Name", "Register Number", "Name of Examination", "Gender", "P/R", "Signature", "Remarks"]],
+        head: [["Sl No", "Register number of the student", "Name", "Name of Examination", "Gender", "P/R", "Signature", "Remarks"]],
         body: allTableData,
         styles: {
           fontSize: 10,
