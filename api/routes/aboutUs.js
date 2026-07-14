@@ -9,9 +9,9 @@ const getUploadMiddleware = require("../middleware/upload");
 
 router
   .route("/")
-  .post(protect, getUploadMiddleware("uploads/about", ["image", "landingMainbanner", "landingStoryImage"]), getS3Middleware(["image", "landingMainbanner", "landingStoryImage"]), createAboutUs)
+  .post(protect, getUploadMiddleware("uploads/about", ["image", "landingMainbanner", "landingStoryImage", "welcomeImage"]), getS3Middleware(["image", "landingMainbanner", "landingStoryImage", "welcomeImage"]), createAboutUs)
   .get(reqFilter, getAboutUs)
-  .put(protect, getUploadMiddleware("uploads/about", ["image", "landingMainbanner", "landingStoryImage"]), getS3Middleware(["image", "landingMainbanner", "landingStoryImage"]), updateAboutUs)
+  .put(protect, getUploadMiddleware("uploads/about", ["image", "landingMainbanner", "landingStoryImage", "welcomeImage"]), getS3Middleware(["image", "landingMainbanner", "landingStoryImage", "welcomeImage"]), updateAboutUs)
   .delete(protect, deleteAboutUs);
 
 router.get("/select", reqFilter, protect, select);

@@ -117,6 +117,11 @@ const EMPTY_ABOUT_FORM = {
   image: "",
   landingMainbanner: "",
   landingStoryImage: "",
+  welcomeEyebrow: "",
+  welcomeTitleLine1: "",
+  welcomeTitleHighlight: "",
+  welcomeDescription: "",
+  welcomeImage: "",
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -132,6 +137,11 @@ const mapAboutForm = (row = {}) => ({
   image: row.image || "",
   landingMainbanner: row.landingMainbanner || "",
   landingStoryImage: row.landingStoryImage || "",
+  welcomeEyebrow: row.welcomeEyebrow || "",
+  welcomeTitleLine1: row.welcomeTitleLine1 || "",
+  welcomeTitleHighlight: row.welcomeTitleHighlight || "",
+  welcomeDescription: row.welcomeDescription || "",
+  welcomeImage: row.welcomeImage || "",
 });
 
 const FloatingMenuSettings = (props) => {
@@ -151,9 +161,11 @@ const FloatingMenuSettings = (props) => {
   const [imageFile, setImageFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
   const [storyImageFile, setStoryImageFile] = useState(null);
+  const [welcomeImageFile, setWelcomeImageFile] = useState(null);
   const [imageRemoved, setImageRemoved] = useState(false);
   const [bannerRemoved, setBannerRemoved] = useState(false);
   const [storyRemoved, setStoryRemoved] = useState(false);
+  const [welcomeImageRemoved, setWelcomeImageRemoved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cleaning, setCleaning] = useState(false);
@@ -190,9 +202,11 @@ const FloatingMenuSettings = (props) => {
       setImageFile(null);
       setBannerFile(null);
       setStoryImageFile(null);
+      setWelcomeImageFile(null);
       setImageRemoved(false);
       setBannerRemoved(false);
       setStoryRemoved(false);
+      setWelcomeImageRemoved(false);
     } catch (error) {
       props.setMessage?.({
         type: 1,
@@ -248,8 +262,8 @@ const FloatingMenuSettings = (props) => {
   const duplicateCount = Math.max(0, aboutRecords.length - 1);
 
   const aboutDirty = useMemo(() => {
-    if (imageFile || bannerFile || storyImageFile) return true;
-    if (imageRemoved || bannerRemoved || storyRemoved) return true;
+    if (imageFile || bannerFile || storyImageFile || welcomeImageFile) return true;
+    if (imageRemoved || bannerRemoved || storyRemoved || welcomeImageRemoved) return true;
     return Object.keys(EMPTY_ABOUT_FORM).some(
       (key) => (aboutForm[key] || "") !== (aboutInitial[key] || "")
     );
@@ -259,9 +273,11 @@ const FloatingMenuSettings = (props) => {
     imageFile,
     bannerFile,
     storyImageFile,
+    welcomeImageFile,
     imageRemoved,
     bannerRemoved,
     storyRemoved,
+    welcomeImageRemoved,
   ]);
 
   const isDirty = useMemo(
@@ -294,9 +310,11 @@ const FloatingMenuSettings = (props) => {
     setImageFile(null);
     setBannerFile(null);
     setStoryImageFile(null);
+    setWelcomeImageFile(null);
     setImageRemoved(false);
     setBannerRemoved(false);
     setStoryRemoved(false);
+    setWelcomeImageRemoved(false);
   };
 
   const validateAbout = () => {
@@ -362,6 +380,10 @@ const FloatingMenuSettings = (props) => {
           email: aboutForm.email,
           mobile: aboutForm.mobile,
           footerText: aboutForm.footerText,
+          welcomeEyebrow: aboutForm.welcomeEyebrow,
+          welcomeTitleLine1: aboutForm.welcomeTitleLine1,
+          welcomeTitleHighlight: aboutForm.welcomeTitleHighlight,
+          welcomeDescription: aboutForm.welcomeDescription,
         };
 
         if (imageFile) aboutPayload.image = imageFile;
@@ -372,6 +394,9 @@ const FloatingMenuSettings = (props) => {
 
         if (storyImageFile) aboutPayload.landingStoryImage = storyImageFile;
         else if (storyRemoved) aboutPayload.removeLandingStoryImage = true;
+
+        if (welcomeImageFile) aboutPayload.welcomeImage = welcomeImageFile;
+        else if (welcomeImageRemoved) aboutPayload.removeWelcomeImage = true;
 
         const aboutResponse = aboutRecordId
           ? await putData({ id: aboutRecordId, ...aboutPayload }, "about-us")
@@ -553,6 +578,70 @@ const FloatingMenuSettings = (props) => {
                 </button>
               </div>
             )}
+
+            <SectionCard
+              title="Welcome hero (top of homepage)"
+              description="The very first section visitors see. Fully admin-controlled: eyebrow text, headline, description and image."
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Eyebrow text">
+                  <input
+                    type="text"
+                    value={aboutForm.welcomeEyebrow}
+                    onChange={handleAboutChange("welcomeEyebrow")}
+                    placeholder="e.g. Welcome to"
+                    className={inputCls}
+                  />
+                </Field>
+                <div />
+                <Field label="Title (line 1)">
+                  <input
+                    type="text"
+                    value={aboutForm.welcomeTitleLine1}
+                    onChange={handleAboutChange("welcomeTitleLine1")}
+                    placeholder="e.g. Quran Study"
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="Title (highlighted)">
+                  <input
+                    type="text"
+                    value={aboutForm.welcomeTitleHighlight}
+                    onChange={handleAboutChange("welcomeTitleHighlight")}
+                    placeholder="e.g. Centre Kerala"
+                    className={inputCls}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Description" className="mt-4">
+                <textarea
+                  value={aboutForm.welcomeDescription}
+                  onChange={handleAboutChange("welcomeDescription")}
+                  rows={3}
+                  placeholder="Short intro line shown under the headline."
+                  className={textareaCls}
+                />
+              </Field>
+
+              <div className="mt-4">
+                <ImageField
+                  label="Hero Image"
+                  hint="Shown on the right side of the welcome hero. Recommended: tall portrait image."
+                  existingUrl={aboutForm.welcomeImage ? `${CDN}${aboutForm.welcomeImage}` : ""}
+                  file={welcomeImageFile}
+                  onChange={(f) => {
+                    setWelcomeImageFile(f);
+                    if (f) setWelcomeImageRemoved(false);
+                  }}
+                  removed={welcomeImageRemoved}
+                  onRemove={() => {
+                    setWelcomeImageRemoved(true);
+                    setWelcomeImageFile(null);
+                  }}
+                />
+              </div>
+            </SectionCard>
 
             <SectionCard
               title="About page and landing banners"
@@ -977,9 +1066,10 @@ const FloatingMenuSettings = (props) => {
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="font-semibold text-slate-800">Public landing page</div>
                   <div className="text-xs text-slate-500 mt-1">
-                    Uses Landing Title, Landing Description, Landing Main Banner,
-                    Homepage Story Image, quick action toggles and the public
-                    snapshot cards from this screen.
+                    Uses the Welcome hero fields, Landing Title, Landing
+                    Description, Landing Main Banner, Homepage Story Image,
+                    quick action toggles and the public snapshot cards from
+                    this screen.
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">

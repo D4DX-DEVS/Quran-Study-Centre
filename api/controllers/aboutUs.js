@@ -47,6 +47,7 @@ const REMOVAL_FLAGS = {
   removeImage: "image",
   removeLandingMainbanner: "landingMainbanner",
   removeLandingStoryImage: "landingStoryImage",
+  removeWelcomeImage: "welcomeImage",
 };
 
 exports.updateAboutUs = async (req, res) => {

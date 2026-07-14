@@ -32,6 +32,12 @@ const defaultContent = {
   image: "",
   landingMainbanner: "",
   landingStoryImage: "",
+  welcomeEyebrow: "Welcome to",
+  welcomeTitleLine1: "Quran Study",
+  welcomeTitleHighlight: "Centre Kerala",
+  welcomeDescription:
+    "A dedicated platform for learning, understanding and living by the Quran. Join our mission to spread Quranic knowledge and build a community of learners.",
+  welcomeImage: "",
 };
 
 const resolveAssetUrl = (value) => {
@@ -114,6 +120,8 @@ function Hero() {
 
   const bannerImage = resolveAssetUrl(content.landingMainbanner);
   const profileImage = resolveAssetUrl(content.landingStoryImage);
+  const welcomeImage =
+    resolveAssetUrl(content.welcomeImage) || quranHeroPhoto;
 
   const hasLandingHero = Boolean(
     content.landingTitle?.trim() ||
@@ -127,14 +135,13 @@ function Hero() {
       <section className="landing-page-shell landing-hero-shell">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
-            <span className="landing-eyebrow">Welcome to</span>
+            <span className="landing-eyebrow">{content.welcomeEyebrow}</span>
             <h1 className="landing-welcome-title">
-              Quran Study <span>Centre Kerala</span>
+              {content.welcomeTitleLine1}{" "}
+              <span>{content.welcomeTitleHighlight}</span>
             </h1>
             <p className="landing-hero-description">
-              A dedicated platform for learning, understanding and living by the
-              Quran. Join our mission to spread Quranic knowledge and build a
-              community of learners.
+              {content.welcomeDescription}
             </p>
 
             <div className="landing-hero-features">
@@ -169,7 +176,7 @@ function Hero() {
 
           <div className="landing-hero-visual">
             <img
-              src={quranHeroPhoto}
+              src={welcomeImage}
               alt="Illuminated Holy Quran"
               className="landing-quran-banner"
             />
