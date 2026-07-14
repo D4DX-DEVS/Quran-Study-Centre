@@ -82,11 +82,6 @@ const Description = styled.div`
   }
 `;
 
-const ContainerBox = styled.div`
-  margin-top: 32px;
-  text-align: left;
-`;
-
 const CDN = import.meta.env.VITE_APP_CDN || "";
 
 const About = (props) => {
@@ -128,39 +123,6 @@ const About = (props) => {
             <CardBody>
               <Title>{title}</Title>
               <Description dangerouslySetInnerHTML={{ __html: description }}></Description>
-              <ContainerBox>
-                <div className="mission-text">
-                  <div className="mission-title">Our Vision</div>
-                  <p>
-                    The vision of the Quran Study Centre in Kerala is rooted in
-                    fostering a profound understanding and appreciation of the Quran's
-                    teachings within the community.
-                  </p>
-
-                  <div className="mission-title">Our Mission</div>
-                  <ul className="blog-details-list mt-30">
-                    <li>
-                      It envisions a society where the values of tolerance, respect,
-                      and solidarity are deeply ingrained, fostering harmonious
-                      coexistence and mutual understanding among people of diverse
-                      backgrounds.
-                    </li>
-                    <li>
-                      To create empowered and sensitized generation who could peer
-                      into the keyhole of tomorrow to build a brave new world for
-                      humanity with abiding Islamic ethos, justice and values.
-                    </li>
-                    <li>
-                      To produce empowered men and women with firm faith in God,
-                      capable of discharging their responsibilities rhythmically.
-                    </li>
-                    <li>
-                      To contribute to the creation of a truly vibrant ideal
-                      society.
-                    </li>
-                  </ul>
-                </div>
-              </ContainerBox>
             </CardBody>
               </>
             )}
