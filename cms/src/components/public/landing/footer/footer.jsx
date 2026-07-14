@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from "react";
+import { Facebook, Instagram, Youtube } from "lucide-react";
 import "../style.css";
 import logo from "../../../../components/project/brand/logo.png";
 import { getData } from "../../../../backend/api";
 import { normalizeLandingSettings } from "../defaults";
+
+// TODO: replace "#" with the real QSC Kerala social profile URLs.
+const SOCIAL_LINKS = [
+  { icon: Facebook, href: "#", label: "Facebook" },
+  { icon: Youtube, href: "#", label: "YouTube" },
+  { icon: Instagram, href: "#", label: "Instagram" },
+];
 
 const defaultFooter = {
   email: "qsconline@gmail.com",
@@ -51,6 +59,20 @@ const Footer = () => {
         <div className="landing-footer-brand">
           <img src={logo} alt="QSC logo" />
           <p className="landing-footer-text">{footerContent.footerText}</p>
+          <div className="landing-footer-social">
+            {SOCIAL_LINKS.map(({ icon: Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="landing-footer-social-link"
+              >
+                <Icon size={16} />
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="landing-footer-block">

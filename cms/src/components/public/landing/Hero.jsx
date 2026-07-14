@@ -1,20 +1,12 @@
 import React, { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  BookOpen,
-  Building2,
-  Globe,
-  MapPinned,
-  School,
-  User,
-  Users,
-} from "lucide-react";
+import { Globe, Play } from "lucide-react";
 import "./style.css";
 import { getData } from "../../../backend/api";
 import { normalizeLandingSettings } from "./defaults";
 import { thafheem } from "../../project/brand";
 import { AppleLogo, PlayStoreLogo, StoreBadge } from "./storeBadges";
 import quranHeroPhoto from "./assets/home.png.avif";
+import qscLogo from "./assets/qsc-icon-mark.png";
 
 const THAFHEEM_LINKS = {
   banner: "https://app.thafheem.net/",
@@ -24,9 +16,9 @@ const THAFHEEM_LINKS = {
 };
 
 const defaultContent = {
-  landingTitle: "Quran Study Centre Kerala",
+  landingTitle: "ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള",
   landingDescription:
-    "Registrations, hall tickets, question papers, results and public information in one clean portal.",
+    "വിശുദ്ധ ഖുർആനെ ആഴത്തിൽ പഠിക്കാം... ജീവിതത്തെ ഖുർആനിന്റെ പ്രകാശത്തിൽ രൂപപ്പെടുത്താം...\n\nകേരളത്തിൽ ഖുർആൻ പഠനരംഗത്ത് കാൽനൂറ്റാണ്ടിലേറെയായി സജീവമായി പ്രവർത്തിച്ചുവരുന്ന പഠനവേദിയാണ് ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള (QSC Kerala).",
   footerText:
     "A simpler public front door for students, study centres and administrators.",
   image: "",
@@ -46,20 +38,13 @@ const resolveAssetUrl = (value) => {
   return `${import.meta.env.VITE_APP_CDN}${value}`;
 };
 
-const SUMMARY_ICONS = [MapPinned, Building2, School, Users];
-
-const HERO_FEATURES = [
-  { icon: BookOpen, title: "Authentic", subtitle: "Quranic Education" },
-  { icon: User, title: "Qualified", subtitle: "Teachers" },
-  { icon: Users, title: "Spiritual", subtitle: "Community" },
-];
-
 function Hero() {
   const [content, setContent] = useState(defaultContent);
   const [landingSettings, setLandingSettings] = useState(
     normalizeLandingSettings()
   );
   const [loading, setLoading] = useState(true);
+  const [introImageFailed, setIntroImageFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,12 +77,6 @@ function Hero() {
     };
   }, []);
 
-  const triggerLandingAction = (action) => {
-    window.dispatchEvent(
-      new CustomEvent("qsc:landing-action", { detail: action })
-    );
-  };
-
   // Don't render the hero copy (English placeholders) until the real content
   // (Malayalam, from the DB) has arrived — otherwise the English defaults
   // flash on screen for a moment before this effect's setContent/setLandingSettings
@@ -110,28 +89,20 @@ function Hero() {
     );
   }
 
-  const heroStats = landingSettings.heroStats.filter(
-    (item) => item?.label || item?.value
-  );
-
-  const summaryCards = landingSettings.snapshotCards.filter(
-    (item) => item?.label || item?.value || item?.description
-  );
-
-  const bannerImage = resolveAssetUrl(content.landingMainbanner);
-  const profileImage = resolveAssetUrl(content.landingStoryImage);
   const welcomeImage =
     resolveAssetUrl(content.welcomeImage) || quranHeroPhoto;
 
-  const hasLandingHero = Boolean(
-    content.landingTitle?.trim() ||
-      content.landingDescription?.trim() ||
-      bannerImage
+  const hasIntroSection = Boolean(
+    content.landingTitle?.trim() || content.landingDescription?.trim()
   );
+
+  const introBannerUrl = resolveAssetUrl(content.landingMainbanner);
+  const showIntroBanner = Boolean(introBannerUrl) && !introImageFailed;
+  const introMarkSrc = showIntroBanner ? introBannerUrl : qscLogo;
 
   return (
     <main className="landing-home">
-      {/* ── NEW welcome hero (image-1 layout): copy left, blue dummy image right ── */}
+      {/* ── Welcome hero: copy + Quran photo right ── */}
       <section className="landing-page-shell landing-hero-shell">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
@@ -143,35 +114,6 @@ function Hero() {
             <p className="landing-hero-description">
               {content.welcomeDescription}
             </p>
-
-            <div className="landing-hero-features">
-              {HERO_FEATURES.map(({ icon: Icon, title, subtitle }) => (
-                <div key={title} className="landing-hero-feature">
-                  <span className="landing-hero-feature-icon">
-                    <Icon size={20} />
-                  </span>
-                  <span className="landing-hero-feature-text">
-                    <strong>{title}</strong>
-                    <em>{subtitle}</em>
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="landing-hero-actions">
-              {landingSettings.verifyRegistration && (
-                <button
-                  type="button"
-                  className="landing-chip-button primary"
-                  onClick={() => triggerLandingAction("verifyRegistration")}
-                >
-                  Verify Your Registration
-                </button>
-              )}
-              <a href="/about-us" className="landing-chip-button secondary">
-                Learn More <ArrowRight size={16} />
-              </a>
-            </div>
           </div>
 
           <div className="landing-hero-visual">
@@ -184,90 +126,55 @@ function Hero() {
         </div>
       </section>
 
-      {/* ── ORIGINAL landing hero: real poster banner + DB content ── */}
-      {hasLandingHero && (
-        <section
-          id="landing-original"
-          className="landing-page-shell landing-hero-shell landing-section"
-        >
-          <div className="landing-hero-grid">
-            <div className="landing-hero-copy">
-              <span className="landing-eyebrow">
-                {landingSettings.copy.heroEyebrow}
-              </span>
-              {content.landingTitle && (
-                <h1 className="landing-hero-title">{content.landingTitle}</h1>
-              )}
-              {content.landingDescription && (
-                <p className="landing-hero-description">{content.landingDescription}</p>
-              )}
-
-              <div className="landing-hero-actions">
-                {landingSettings.examRegistration && (
-                  <button
-                    type="button"
-                    className="landing-chip-button primary"
-                    onClick={() => triggerLandingAction("examRegistration")}
-                  >
-                    Open registration
-                  </button>
+      {/* ── QSC intro: heading + copy + Read More, logo mark right ── */}
+      {hasIntroSection && (
+        <section className="landing-page-shell landing-section landing-intro-shell">
+          <div className="landing-intro-card">
+            <div className="landing-intro-grid">
+              <div className="landing-intro-copy">
+                {content.landingTitle && (
+                  <h2 className="landing-hero-title">{content.landingTitle}</h2>
                 )}
-                {landingSettings.verifyRegistration && (
-                  <button
-                    type="button"
-                    className="landing-chip-button secondary"
-                    onClick={() => triggerLandingAction("verifyRegistration")}
-                  >
-                    Verify Your Registration
-                  </button>
-                )}
-                <a href="/admin" className="landing-chip-button secondary">
-                  Admin panel
-                </a>
-                {landingSettings.downloads && (
-                  <a href="/question-papers" className="landing-chip-button subtle">
-                    Downloads <ArrowRight size={16} />
+                {content.landingDescription &&
+                  content.landingDescription.split("\n\n").map((para, index) => (
+                    <p className="landing-hero-description" key={index}>
+                      {para}
+                    </p>
+                  ))}
+                <div className="landing-hero-actions">
+                  <a href="/about-us" className="landing-chip-button primary">
+                    Read More
                   </a>
-                )}
+                </div>
               </div>
-
-              <div className="landing-stat-grid">
-                {heroStats.map((item, index) => (
-                  <article key={`${item.label}-${index}`} className="landing-stat-card">
-                    <span className="landing-stat-label">{item.label}</span>
-                    <strong className="landing-stat-value">{item.value}</strong>
-                  </article>
-                ))}
+              <div
+                className={`landing-intro-mark${
+                  showIntroBanner ? " landing-intro-mark-photo" : ""
+                }`}
+              >
+                <img
+                  src={introMarkSrc}
+                  alt="Quran Study Centre Kerala"
+                  onError={() => setIntroImageFailed(true)}
+                />
               </div>
             </div>
-
-            {bannerImage && (
-              <div className="landing-banner-card">
-                <img src={bannerImage} alt="QSC public portal banner" />
-              </div>
-            )}
           </div>
         </section>
       )}
 
+      {/* ── App promo: ready-made Thafheem banner (phone mockups, logo, QR codes) ── */}
       <section className="landing-page-shell landing-section">
-        {/* <aside className="landing-admin-note">
-          <span>Admin note</span>
-          <p>{landingSettings.copy.adminNote}</p>
-        </aside> */}
+        <a
+          href={THAFHEEM_LINKS.banner}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="landing-app-banner"
+        >
+          <img src={thafheem} alt="Thafheem ul Quran — samagramaya Quran app" />
+        </a>
 
-        <div className="landing-thafheem-eyebrow-row">
-          <span className="landing-eyebrow">Exam Reference</span>
-        </div>
         <div className="landing-thafheem-card">
-          <a
-            href={THAFHEEM_LINKS.banner}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="landing-thafheem-logo-link"
-          >
-            <img src={thafheem} alt="Thafheem ul Quran" className="landing-thafheem-logo" />
-          </a>
           <div className="landing-thafheem-copy">
             <h3>This exam is entirely based on Thafheemul Quran</h3>
             <p>
@@ -295,52 +202,26 @@ function Hero() {
             </div>
           </div>
         </div>
-
-        <div className="landing-visual-stack landing-qr-section">
-          <div className="landing-story-card">
-            {profileImage && <img src={profileImage} alt="QSC overview" />}
-            <div className="landing-story-copy">
-              {/* <span>{landingSettings.copy.heroStoryBadge}</span> */}
-              <h3>{landingSettings.copy.heroStoryTitle}</h3>
-              <p>{landingSettings.copy.heroStoryDescription}</p>
-            </div>
-          </div>
-        </div>
       </section>
 
-      {landingSettings.showPublicSnapshot && summaryCards.length > 0 && (
-        <section className="landing-page-shell landing-section landing-section-tight">
-          <div className="landing-section-head compact">
-            <span className="landing-section-kicker">
-              {landingSettings.copy.snapshotKicker}
-            </span>
-            <h2 className="landing-section-title">
-              {landingSettings.copy.snapshotTitle}
-            </h2>
-            <p className="landing-section-text">
-              {loading
-                ? "Loading public snapshot..."
-                : landingSettings.copy.snapshotDescription}
-            </p>
-          </div>
-
-          <div className="landing-summary-grid">
-            {summaryCards.map((card, index) => {
-              const Icon = SUMMARY_ICONS[index % SUMMARY_ICONS.length];
-              return (
-                <article key={`${card.label}-${index}`} className="landing-summary-card">
-                  <span className="landing-action-icon small">
-                    <Icon size={18} />
-                  </span>
-                  <strong>{card.value}</strong>
-                  <h3>{card.label}</h3>
-                  <p>{card.description}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {/* ── Aayath Darse Quran videos ── */}
+      <section className="landing-page-shell landing-section landing-section-tight">
+        <div className="landing-video-head">
+          <h2 className="landing-section-title">Aayath Darse Quran</h2>
+          <a href="#aayath-darse-quran" className="landing-chip-button secondary">
+            More Videos
+          </a>
+        </div>
+        <div className="landing-video-grid">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="landing-video-card">
+              <span className="landing-video-play">
+                <Play size={22} fill="currentColor" />
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
