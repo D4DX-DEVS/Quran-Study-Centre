@@ -46,6 +46,8 @@ function Hero() {
   );
   const [loading, setLoading] = useState(true);
   const [introImageFailed, setIntroImageFailed] = useState(false);
+  const [videos, setVideos] = useState([]);
+  const [playingVideoId, setPlayingVideoId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +73,14 @@ function Hero() {
       }
     };
 
+    const loadVideos = async () => {
+      const videoResponse = await getData({ limit: 3 }, "youtube-videos");
+      if (cancelled) return;
+      setVideos(videoResponse?.data?.response || []);
+    };
+
     loadLandingData();
+    loadVideos();
 
     return () => {
       cancelled = true;
@@ -212,18 +221,47 @@ function Hero() {
             <img src={aayathLogo} alt="Aayath Darse Quran" className="landing-video-logo" />
             <h2 className="landing-section-title">Aayath Darse Quran</h2>
           </div>
-          <a href="#aayath-darse-quran" className="landing-chip-button secondary">
+          <a href="/videos" className="landing-chip-button secondary">
             More Videos
           </a>
         </div>
         <div className="landing-video-grid">
-          {[0, 1, 2].map((index) => (
-            <div key={index} className="landing-video-card">
-              <span className="landing-video-play">
-                <Play size={22} fill="currentColor" />
-              </span>
-            </div>
-          ))}
+          {(videos.length ? videos : [0, 1, 2]).map((video, index) =>
+            video?.videoId ? (
+              <div key={video.videoId}>
+                {playingVideoId === video.videoId ? (
+                  <div className="landing-video-card landing-video-card-playing">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1`}
+                      title={video.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      frameBorder="0"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPlayingVideoId(video.videoId)}
+                    className="landing-video-card"
+                    title={video.title}
+                  >
+                    <img src={video.thumbnail} alt={video.title} loading="lazy" />
+                    <span className="landing-video-play">
+                      <Play size={22} fill="currentColor" />
+                    </span>
+                  </button>
+                )}
+                <p className="landing-video-title">{video.title}</p>
+              </div>
+            ) : (
+              <div key={index} className="landing-video-card">
+                <span className="landing-video-play">
+                  <Play size={22} fill="currentColor" />
+                </span>
+              </div>
+            )
+          )}
         </div>
       </section>
     </main>

@@ -962,12 +962,61 @@
 
 .landing-video-card {
   position: relative;
-  aspect-ratio: 16 / 10;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  background: linear-gradient(160deg, #93a0b4, #7c8aa0);
+  background: linear-gradient(160deg, #1c2733, #101822);
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(15, 39, 67, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button.landing-video-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(15, 39, 67, 0.22);
+}
+
+.landing-video-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+button.landing-video-card {
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.landing-video-card-playing {
+  background: #000;
+  cursor: default;
+}
+
+.landing-video-card iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.landing-video-title {
+  margin: 12px 2px 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1a2733;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
