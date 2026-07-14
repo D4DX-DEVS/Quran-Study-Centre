@@ -941,6 +941,19 @@
   margin: 0;
 }
 
+.landing-video-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-video-logo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 .landing-video-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

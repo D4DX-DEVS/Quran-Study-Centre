@@ -7,6 +7,7 @@ import { thafheem } from "../../project/brand";
 import { AppleLogo, PlayStoreLogo, StoreBadge } from "./storeBadges";
 import quranHeroPhoto from "./assets/home.png.avif";
 import qscLogo from "./assets/qsc-icon-mark.png";
+import aayathLogo from "./assets/aayath-logo.png";
 
 const THAFHEEM_LINKS = {
   banner: "https://app.thafheem.net/",
@@ -207,7 +208,10 @@ function Hero() {
       {/* ── Aayath Darse Quran videos ── */}
       <section className="landing-page-shell landing-section landing-section-tight">
         <div className="landing-video-head">
-          <h2 className="landing-section-title">Aayath Darse Quran</h2>
+          <div className="landing-video-title-group">
+            <img src={aayathLogo} alt="Aayath Darse Quran" className="landing-video-logo" />
+            <h2 className="landing-section-title">Aayath Darse Quran</h2>
+          </div>
           <a href="#aayath-darse-quran" className="landing-chip-button secondary">
             More Videos
           </a>
