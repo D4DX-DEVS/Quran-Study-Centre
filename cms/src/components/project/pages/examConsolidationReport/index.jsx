@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Building2, ChevronLeft, ChevronRight, Download, Filter, MapPin, RotateCcw, Trophy, Users } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, MapPin, RotateCcw, Trophy, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import Layout from "../../../core/layout";
@@ -33,6 +34,8 @@ const SummaryCard = ({ icon: Icon, label, value }) => (
 );
 
 const ExamConsolidationReport = (props) => {
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.title = `Exam Consolidation Report - QSC Automation`;
   }, []);
@@ -192,6 +195,13 @@ const ExamConsolidationReport = (props) => {
             <p className="text-sm text-gray-500 m-0">{scopeLabel}</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/exam-consolidation-by-centre")}
+              className="flex items-center gap-1 text-sm px-3 py-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> Exam Consolidation
+            </button>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Users className="w-4 h-4" />
               <span>Total: {totals.total}</span>

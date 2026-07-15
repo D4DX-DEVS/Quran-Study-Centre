@@ -1150,6 +1150,93 @@ exports.getConsolidationReport = async (req, res) => {
   }
 };
 
+// @desc     Exam Consolidation — every exam in scope, with how many distinct
+//           exam centres offer it and how many students registered for it.
+// @route    GET /api/v1/exam-registration/centre-consolidation-report
+// @access   protected (state admin sees all; district admin scoped)
+// Groups registrations by exam (not by centre), respecting whatever
+// district/area filters are set. Same dedupe-by-mobileNumber approach so a
+// student is counted once per exam. Sorted alphabetically by exam name.
+exports.getExamCentreConsolidation = async (req, res) => {
+  try {
+    const query = {
+      ...(req.filter || {}),
+      ...(req.user?.districts ? { district: req.user.districts } : {}),
+    };
+
+    const castObjectId = (val) =>
+      Array.isArray(val)
+        ? { $in: val.filter((v) => mongoose.Types.ObjectId.isValid(v)).map((v) => new mongoose.Types.ObjectId(String(v))) }
+        : mongoose.Types.ObjectId.isValid(val)
+        ? new mongoose.Types.ObjectId(String(val))
+        : val;
+    ["district", "area"].forEach((f) => {
+      if (query[f] !== undefined) query[f] = castObjectId(query[f]);
+    });
+
+    const pipeline = [
+      { $match: query },
+      { $sort: { nameOfApplicant: 1 } },
+      {
+        $group: {
+          _id: { $ifNull: ["$mobileNumber", "$_id"] },
+          centerRegistration: { $first: "$centerRegistration" },
+          nameOfExamAppearingNow: { $first: "$nameOfExamAppearingNow" },
+        },
+      },
+      {
+        $facet: {
+          exams: [
+            { $lookup: { from: "examtypes", localField: "nameOfExamAppearingNow", foreignField: "_id", as: "examDoc" } },
+            { $unwind: { path: "$examDoc", preserveNullAndEmptyArrays: true } },
+            {
+              $addFields: {
+                examName: {
+                  $trim: {
+                    input: { $arrayElemAt: [{ $split: [{ $ifNull: ["$examDoc.examType", ""] }, ":"] }, 0] },
+                  },
+                },
+              },
+            },
+            {
+              $group: {
+                _id: "$nameOfExamAppearingNow",
+                exam_name: { $first: { $ifNull: ["$examName", "Unknown"] } },
+                centres: { $addToSet: "$centerRegistration" },
+                students: { $sum: 1 },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                exam_id: "$_id",
+                exam_name: 1,
+                centres_count: { $size: "$centres" },
+                students: 1,
+              },
+            },
+            { $sort: { exam_name: 1 } },
+          ],
+          totalCentres: [{ $group: { _id: "$centerRegistration" } }, { $count: "count" }],
+          totalStudents: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const [result] = await ExamRegistration.aggregate(pipeline);
+
+    return res.status(200).json({
+      success: true,
+      total_centres: result.totalCentres[0]?.count || 0,
+      total_students: result.totalStudents[0]?.count || 0,
+      exams: result.exams,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 exports.getQuestionPackingList = async (req, res) => {
   try {
     const { examCenter } = req.query;

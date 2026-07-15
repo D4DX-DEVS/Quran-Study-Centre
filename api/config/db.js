@@ -1,4 +1,11 @@
 const mongoose = require("mongoose");
+const dns = require("dns");
+
+// Windows sometimes hands Node's c-ares resolver an IPv6 link-local DNS
+// server (fe80::...), which breaks the SRV lookup mongodb+srv:// needs
+// (ECONNREFUSED on querySrv) even though the OS resolver works fine.
+// Forcing public DNS servers here avoids that failure mode.
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 // Connect to MongoDB with automatic retry. We intentionally do NOT call
 // process.exit() on failure: doing so kills the container on any transient
