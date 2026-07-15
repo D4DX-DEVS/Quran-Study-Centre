@@ -153,16 +153,30 @@ exports.getExamRegistration = async (req, res) => {
     // De-duplicate by mobileNumber (keeping the most recently added record) before
     // paginating/counting, since the registration form doesn't collect a distinguishing
     // year field and the same mobile number can end up registered more than once.
-    const dedupedFiltered = await ExamRegistration.aggregate([
+    // Dedupe, sort, pagination and gender counts all happen inside Mongo via $facet so only
+    // the requested page's ids (plus two tiny count aggregates) ever cross into Node — the
+    // previous version pulled every matched-and-deduped doc into Node and sorted it in JS on
+    // every request.
+    const skipNum = parseInt(skip) || 0;
+    const limitNum = parseInt(limit) || 0;
+
+    const [pageResult] = await ExamRegistration.aggregate([
       { $match: matchQuery },
       { $sort: { _id: -1 } },
       // Records without a mobileNumber fall back to grouping by their own _id so they are
       // never merged with unrelated records.
       { $group: { _id: { $ifNull: ["$mobileNumber", "$_id"] }, docId: { $first: "$_id" }, gender: { $first: "$gender" } } },
+      { $sort: { docId: -1 } },
+      {
+        $facet: {
+          page: [{ $skip: skipNum }, ...(limitNum > 0 ? [{ $limit: limitNum }] : []), { $project: { _id: 0, docId: 1 } }],
+          filterCount: [{ $count: "count" }],
+          genderCounts: [{ $group: { _id: "$gender", count: { $sum: 1 } } }],
+        },
+      },
     ]);
-    dedupedFiltered.sort((a, b) => (a.docId < b.docId ? 1 : -1));
 
-    const pageIds = dedupedFiltered.slice(parseInt(skip) || 0, (parseInt(skip) || 0) + (parseInt(limit) || dedupedFiltered.length)).map((d) => d.docId);
+    const pageIds = pageResult.page.map((d) => d.docId);
 
     const [totalCount, data] = await Promise.all([
       parseInt(skip) === 0 &&
@@ -181,18 +195,17 @@ exports.getExamRegistration = async (req, res) => {
     const dataById = new Map(data.map((d) => [String(d._id), d]));
     const orderedData = pageIds.map((id) => dataById.get(String(id))).filter(Boolean);
 
-    const filterCount = shouldCalculateCounts ? dedupedFiltered.length : undefined;
-    const genderCounts = shouldCalculateCounts
-      ? [dedupedFiltered.filter((d) => d.gender === "Male").length, dedupedFiltered.filter((d) => d.gender === "Female").length]
-      : undefined;
+    const filterCount = shouldCalculateCounts ? pageResult.filterCount[0]?.count || 0 : undefined;
+    const maleCount = pageResult.genderCounts.find((g) => g._id === "Male")?.count || 0;
+    const femaleCount = pageResult.genderCounts.find((g) => g._id === "Female")?.count || 0;
 
     const counts = shouldCalculateCounts
       ? {
           "Male Students": {
-            count: genderCounts?.[0] || 0,
+            count: maleCount,
           },
           "Female Students": {
-            count: genderCounts?.[1] || 0,
+            count: femaleCount,
           },
           "Total Students": {
             count: filterCount || 0,

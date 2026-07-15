@@ -27,6 +27,7 @@ const ExamRegistrationSchema = new mongoose.Schema(
     },
     mobileNumber: {
       type: Number,
+      index: true,
     },
     email: {
       type: String,
