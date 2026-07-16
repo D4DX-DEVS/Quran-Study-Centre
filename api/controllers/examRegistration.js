@@ -1015,9 +1015,14 @@ exports.getConsolidationReport = async (req, res) => {
       // Total headcount per exam center across ALL exams (not just the exam
       // on a given row) — computed here, before the per-exam breakdown below
       // collapses rows, so every doc still carries its center's full total.
+      // Partitioned by (district, area, centerRegistration) — not center
+      // alone — so a center whose registrants carry mismatched area/district
+      // values (data-entry error) doesn't leak its full headcount into every
+      // area group it happens to show up in; each row's total stays scoped
+      // to the same (district, area, center) tuple the row itself groups by.
       {
         $setWindowFields: {
-          partitionBy: "$centerRegistration",
+          partitionBy: { district: "$district", area: "$area", centerRegistration: "$centerRegistration" },
           output: { centerTotal: { $sum: 1 } },
         },
       },
