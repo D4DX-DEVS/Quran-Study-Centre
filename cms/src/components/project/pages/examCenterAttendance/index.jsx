@@ -152,6 +152,10 @@ const ExamCenterAttendance = (props) => {
   // is applied server-side in getExamRegistrationList, not by any of these `sort` flags.
   // Filters mirror the Exam Registration ("registered students") page: gender, exam
   // name, district, area, exam center, mode of study.
+  // Table display only — uppercases the rendered cell text without touching
+  // the underlying stored value (so filters/exports keep original casing).
+  const upper = (value) => (value ?? "").toString().toUpperCase();
+
   const [attributes] = useState([
     {
       type: "text",
@@ -160,6 +164,7 @@ const ExamCenterAttendance = (props) => {
       tag: true,
       view: true,
       search: false,
+      render: upper,
     },
     {
       type: "text",
@@ -168,6 +173,7 @@ const ExamCenterAttendance = (props) => {
       tag: true,
       view: true,
       search: false,
+      render: upper,
     },
     {
       type: "select",
@@ -185,6 +191,7 @@ const ExamCenterAttendance = (props) => {
       // export) — the old separate top-of-page picker was removed.
       // District Admins get a locked, non-editable filter showing only their own district.
       disabled: isDistrictAdmin,
+      render: upper,
     },
     {
       type: "select",
@@ -199,6 +206,7 @@ const ExamCenterAttendance = (props) => {
       view: true,
       filter: true,
       search: false,
+      render: upper,
     },
     {
       type: "text",
@@ -207,6 +215,7 @@ const ExamCenterAttendance = (props) => {
       tag: true,
       view: true,
       search: false,
+      render: upper,
     },
     {
       type: "select",
@@ -228,6 +237,7 @@ const ExamCenterAttendance = (props) => {
       label: "Exam Name",
       tag: true,
       view: true,
+      render: upper,
     },
     {
       type: "select",
@@ -253,6 +263,7 @@ const ExamCenterAttendance = (props) => {
       view: true,
       filter: true,
       search: false,
+      render: upper,
     },
     {
       type: "select",

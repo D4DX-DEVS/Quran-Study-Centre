@@ -194,7 +194,15 @@ export const generateExcelFile = (data, examCenter) => {
         });
       });
 
-    const ws = XLSX.utils.json_to_sheet(sortedData);
+    const upperCased = sortedData.map((row) => {
+      const out = {};
+      Object.keys(row).forEach((key) => {
+        out[key] = typeof row[key] === "string" ? row[key].toUpperCase() : row[key];
+      });
+      return out;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(upperCased);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(examCenter || "Attendance"));
     return XLSX.write(wb, { type: "array", bookType: "xlsx" });
@@ -235,28 +243,26 @@ export const generatePdfFile = (data, examCenter) => {
     let maleCount = 0;
     let femaleCount = 0;
 
+    const up = (v) => (typeof v === "string" ? v.toUpperCase() : v);
+    const pushRow = (item) =>
+      allTableData.push([allTableData.length + 1, up(item["Register number of the student"]), up(item["Name Of Applicant"]), up(item["Exam Name"]), up(item["Gender"]), up(item["P/R"]) || "", "", ""]);
+
     // Add male students first
     if (examData["Male"] && examData["Male"].length > 0) {
       maleCount = examData["Male"].length;
-      sortByStatusThenRegno(examData["Male"]).forEach((item, index) => {
-        allTableData.push([allTableData.length + 1, item["Register number of the student"], item["Name Of Applicant"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
-      });
+      sortByStatusThenRegno(examData["Male"]).forEach((item) => pushRow(item));
     }
 
     // Add female students second
     if (examData["Female"] && examData["Female"].length > 0) {
       femaleCount = examData["Female"].length;
-      sortByStatusThenRegno(examData["Female"]).forEach((item, index) => {
-        allTableData.push([allTableData.length + 1, item["Register number of the student"], item["Name Of Applicant"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
-      });
+      sortByStatusThenRegno(examData["Female"]).forEach((item) => pushRow(item));
     }
 
     // Add other gender students if any
     Object.keys(examData).forEach((gender) => {
       if (gender !== "Male" && gender !== "Female" && examData[gender].length > 0) {
-        sortByStatusThenRegno(examData[gender]).forEach((item, index) => {
-          allTableData.push([allTableData.length + 1, item["Register number of the student"], item["Name Of Applicant"], item["Exam Name"], item["Gender"], item["P/R"] || "", "", ""]);
-        });
+        sortByStatusThenRegno(examData[gender]).forEach((item) => pushRow(item));
       }
     });
 

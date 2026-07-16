@@ -11,6 +11,7 @@ const CertificateManagement = require("../models/certificateManagement");
 
 const ExamSettings = require("../models/examSettings");
 const { recomputeAllocation } = require("./examAllocation");
+const { nextRegistrationNumberForNewStudent } = require("./registrationNumber");
 const { resolveExamCenterName, genderRank, modeRank, examSortOrder } = require("../utils/studentSort");
 
 const s3 = new S3Client({
@@ -69,6 +70,18 @@ exports.addExamRegistration = async (req, res) => {
     // Clubbing / ≥threshold rule runs asynchronously after save (see below).
     if (payload.centerRegistration && !payload.assignedExamCenter) {
       payload.assignedExamCenter = payload.centerRegistration;
+    }
+
+    // Auto-generate the regno now (area+centre initials, letter "O" skipped,
+    // exam-stage digit, next available sequence) unless one was explicitly
+    // supplied in the request.
+    if (!payload.regno) {
+      payload.regno = await nextRegistrationNumberForNewStudent({
+        areaId: payload.area,
+        centerRegistrationId: payload.centerRegistration,
+        assignedExamCenterId: payload.assignedExamCenter,
+        examTypeId: payload.nameOfExamAppearingNow,
+      });
     }
 
     const response = await ExamRegistration.create(payload);

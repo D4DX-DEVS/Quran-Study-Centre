@@ -14,16 +14,25 @@ const ExamRegistration = require("../models/examRegistration");
 // Required so Mongoose has these schemas registered for the .populate() calls
 // below even when this module is loaded standalone (e.g. from a script).
 require("../models/district");
-require("../models/area");
-require("../models/centerRegistration");
-require("../models/examtype");
+const Area = require("../models/area");
+const CenterRegistration = require("../models/centerRegistration");
+const ExamType = require("../models/examtype");
+const Counter = require("../models/counter");
 const { resolveExamCenterName, examSortOrder, compareBySpec } = require("../utils/studentSort");
 
 const SEQUENCE_DIGITS = 3;
 const MAX_SEQUENCE = 10 ** SEQUENCE_DIGITS - 1;
 
+// Letter "O" looks like digit "0" inside a regno, so skip it and use the
+// next letter found instead (falls back to "O" only if nothing else exists).
 function initialOf(name) {
-  const match = String(name || "").match(/[A-Za-z]/);
+  const str = String(name || "");
+  for (const ch of str) {
+    if (/[A-Za-z]/.test(ch) && ch.toUpperCase() !== "O") {
+      return ch.toUpperCase();
+    }
+  }
+  const match = str.match(/[A-Za-z]/);
   return match ? match[0].toUpperCase() : "X";
 }
 
@@ -40,6 +49,43 @@ function examCenterInitial(centerName) {
 
 function buildPrefix(areaName, centerName) {
   return `${initialOf(areaName)}${examCenterInitial(centerName)}`;
+}
+
+// Regno key = prefix (area+centre initials) + exam-stage digit, e.g. "KC1".
+function regnoKey(prefix, digit) {
+  return `${prefix}${digit}`;
+}
+
+// Real-time regno assignment for a single new registration (used at signup,
+// not during the full recompute). Atomically takes the next sequence number
+// for this student's (area+centre+exam-stage) key via the Counter collection
+// — safe under concurrent signups, unlike the in-memory counting the batch
+// generator/backfill script use.
+//
+// IMPORTANT: the Counter collection must be kept in sync with whatever the
+// highest regno actually in use is. Run scripts/seed-registration-number-counters.js
+// any time generateRegistrationNumbers() (full recompute) is run afterward,
+// since that recompute renumbers everyone from scratch without touching Counters.
+async function nextRegistrationNumberForNewStudent({ areaId, centerRegistrationId, assignedExamCenterId, examTypeId }) {
+  const [area, center, assignedCenter, examType] = await Promise.all([
+    areaId ? Area.findById(areaId).select("area").lean() : null,
+    centerRegistrationId ? CenterRegistration.findById(centerRegistrationId).select("nameOfCenter").lean() : null,
+    assignedExamCenterId ? CenterRegistration.findById(assignedExamCenterId).select("nameOfCenter").lean() : null,
+    examTypeId ? ExamType.findById(examTypeId).select("stageDigit").lean() : null,
+  ]);
+
+  const areaName = area?.area || "";
+  const centerName = center?.nameOfCenter || assignedCenter?.nameOfCenter || "";
+  const prefix = buildPrefix(areaName, centerName);
+  const digit = examType?.stageDigit ?? 0;
+  const key = regnoKey(prefix, digit);
+
+  const seq = await Counter.nextSeq(key);
+  if (seq > MAX_SEQUENCE) {
+    throw new Error(`Prefix "${key}" exceeds ${MAX_SEQUENCE} registrations — the ${SEQUENCE_DIGITS}-digit sequence has overflowed.`);
+  }
+
+  return `${key}${String(seq).padStart(SEQUENCE_DIGITS, "0")}`;
 }
 
 async function loadSortedStudents() {
@@ -138,4 +184,5 @@ exports.generate = async (req, res) => {
 };
 
 exports.generateRegistrationNumbers = generateRegistrationNumbers;
-exports._internal = { buildPrefix, examCenterInitial, initialOf, compareBySpec };
+exports.nextRegistrationNumberForNewStudent = nextRegistrationNumberForNewStudent;
+exports._internal = { buildPrefix, examCenterInitial, initialOf, compareBySpec, regnoKey };
