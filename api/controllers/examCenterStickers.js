@@ -143,20 +143,22 @@ const groupByExamCentre = (rows) => {
 // @access   protected (state admin: all; district admin: own district only)
 exports.getFilterOptions = async (req, res) => {
   try {
-    const districtId = req.user?.districts
-      ? String(req.user.districts)
-      : req.query.district && toObjectId(req.query.district)
-      ? req.query.district
-      : null;
+    // District Admin is pinned to their own district everywhere. State Admin's
+    // district dropdown must always list every district — it should not
+    // collapse to whatever is currently selected, only Area/Exam Center cascade
+    // off that selection.
+    const adminDistrictId = req.user?.districts ? String(req.user.districts) : null;
+    const selectedDistrictId = req.query.district && toObjectId(req.query.district) ? req.query.district : null;
+    const scopeDistrictId = adminDistrictId || selectedDistrictId;
 
-    const districts = districtId
-      ? await District.find({ _id: districtId }).select("_id district").lean()
+    const districts = adminDistrictId
+      ? await District.find({ _id: adminDistrictId }).select("_id district").lean()
       : await District.find({}).select("_id district").lean();
 
-    const areas = districtId ? await Area.find({ district: districtId }).select("_id area").lean() : [];
+    const areas = scopeDistrictId ? await Area.find({ district: scopeDistrictId }).select("_id area").lean() : [];
 
     let examCenters = [];
-    if (districtId) {
+    if (scopeDistrictId) {
       const rows = await fetchScopedRegistrations(req);
       const seen = new Map();
       rows.forEach((d) => {

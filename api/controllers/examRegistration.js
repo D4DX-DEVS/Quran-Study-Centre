@@ -943,30 +943,39 @@ exports.getRegisteredStudentsList = async (req, res) => {
 // @desc     Consolidation report — grouped, paginated summary rows.
 // @route    GET /api/v1/exam-registration/consolidation-report
 // @access   protected (state admin sees all; district admin scoped)
-// Groups registrations by (level + examType) and sums Total/Private/Regular/
-// Male/Female per group, deduping by mobileNumber the same way
-// getRegisteredStudentsList does. `level` selects the grouping field:
-// "district" (state-wide), "area" (district selected) or "studyCentre"
-// (district + area selected). Pass skip/limit to page through the grouped
-// rows; omit limit (or pass 0) to get every group in one shot — used by the
-// PDF export, which needs the full report, not just the visible page.
-// `totals` in the response is always the grand total across ALL groups in
-// scope, independent of the page being returned.
+// Table rows always break down to District + Area + Exam Center + Exam
+// (finest granularity) regardless of which district/area filter is active —
+// `level` still selects the grouping field for the "top ..." summary-card
+// facets only ("district"/"area"/"studyCentre"), same as before. Rows sum
+// Total/Private/Regular/Male/Female per (district, area, center, exam),
+// deduping by mobileNumber the same way getRegisteredStudentsList does.
+// Each row also carries `centerTotal` — the count of ALL students registered
+// at that exam center across every exam, not just the exam on that row —
+// computed via $setWindowFields before the per-exam breakdown collapses rows.
+// Pass lowStudents=true to keep only rows whose exam center has fewer than 5
+// students total (checked BEFORE the per-exam split, so it reflects centre
+// headcount, not the row's own exam-scoped total). Pass skip/limit to page
+// through the grouped rows; omit limit (or pass 0) to get every group in one
+// shot — used by the PDF export, which needs the full report, not just the
+// visible page. `totals` in the response is always the grand total across
+// ALL groups in scope, independent of the page being returned.
 exports.getConsolidationReport = async (req, res) => {
   try {
     const { level } = req.query;
     const skip = parseInt(req.query.skip) || 0;
     const limit = parseInt(req.query.limit) || 0;
+    const lowStudents = req.query.lowStudents === "true" || req.query.lowStudents === true;
     const groupField = ["district", "area", "studyCentre"].includes(level) ? level : "district";
 
     const query = {
       ...(req.filter || {}),
       ...(req.user?.districts ? { district: req.user.districts } : {}),
     };
-    // "level" is a grouping directive, not a data filter — reqFilter doesn't
-    // know that and leaves it in req.filter, which would otherwise make the
-    // $match look for a nonexistent "level" field and return zero rows.
+    // "level"/"lowStudents" are directives, not data filters — reqFilter
+    // doesn't know that and leaves them in req.filter, which would otherwise
+    // make the $match look for nonexistent fields and return zero rows.
     delete query.level;
+    delete query.lowStudents;
     // aggregate() sends $match straight to MongoDB — unlike .find(), it does not
     // auto-cast string ids to ObjectId, so district/area must be cast by hand.
     const castObjectId = (val) =>
@@ -1003,9 +1012,24 @@ exports.getConsolidationReport = async (req, res) => {
           nameOfExamAppearingNow: { $first: "$nameOfExamAppearingNow" },
         },
       },
+      // Total headcount per exam center across ALL exams (not just the exam
+      // on a given row) — computed here, before the per-exam breakdown below
+      // collapses rows, so every doc still carries its center's full total.
+      {
+        $setWindowFields: {
+          partitionBy: "$centerRegistration",
+          output: { centerTotal: { $sum: 1 } },
+        },
+      },
+      // lowStudents=true keeps only students whose exam center has fewer
+      // than 5 registrants overall — applied here so it scopes every facet
+      // below (table rows, totals, counts, top cards) consistently.
+      ...(lowStudents ? [{ $match: { centerTotal: { $lt: 5 } } }] : []),
       {
         $facet: {
-          // Display rows: one per (group, exam), with lookups for names.
+          // Display rows: one per (district, area, exam center, exam), with
+          // lookups for names. Always broken down to this finest grain,
+          // regardless of the district/area filter or `level` in scope.
           data: [
             { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
             { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
@@ -1017,15 +1041,6 @@ exports.getConsolidationReport = async (req, res) => {
             { $unwind: { path: "$examDoc", preserveNullAndEmptyArrays: true } },
             {
               $addFields: {
-                groupVal: {
-                  $switch: {
-                    branches: [
-                      { case: { $eq: [groupField, "area"] }, then: "$areaDoc.area" },
-                      { case: { $eq: [groupField, "studyCentre"] }, then: "$centerDoc.nameOfCenter" },
-                    ],
-                    default: "$districtDoc.district",
-                  },
-                },
                 examName: {
                   $trim: {
                     input: { $arrayElemAt: [{ $split: [{ $ifNull: ["$examDoc.examType", ""] }, ":"] }, 0] },
@@ -1035,33 +1050,42 @@ exports.getConsolidationReport = async (req, res) => {
             },
             {
               $group: {
-                _id: { group: { $ifNull: ["$groupVal", "Unknown"] }, examName: { $ifNull: ["$examName", "Unknown"] } },
+                _id: {
+                  district: { $ifNull: ["$districtDoc.district", "Unknown"] },
+                  area: { $ifNull: ["$areaDoc.area", "Unknown"] },
+                  center: { $ifNull: ["$centerDoc.nameOfCenter", "Unknown"] },
+                  examName: { $ifNull: ["$examName", "Unknown"] },
+                },
                 total: { $sum: 1 },
                 private: { $sum: { $cond: [{ $eq: ["$status", "Private"] }, 1, 0] } },
                 regular: { $sum: { $cond: [{ $eq: ["$status", "Regular"] }, 1, 0] } },
                 male: { $sum: { $cond: [{ $eq: ["$gender", "Male"] }, 1, 0] } },
                 female: { $sum: { $cond: [{ $eq: ["$gender", "Female"] }, 1, 0] } },
+                centerTotal: { $first: "$centerTotal" },
               },
             },
             {
               $project: {
                 _id: 0,
-                group: "$_id.group",
+                district: "$_id.district",
+                area: "$_id.area",
+                center: "$_id.center",
                 examName: "$_id.examName",
                 total: 1,
                 private: 1,
                 regular: 1,
                 male: 1,
                 female: 1,
+                centerTotal: 1,
               },
             },
-            { $sort: { group: 1, examName: 1 } },
+            { $sort: { district: 1, area: 1, center: 1, examName: 1 } },
             ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
           ],
-          // Group-row count, kept in sync with "data" but computed off raw
-          // ids (no lookups needed) since only the distinct-pair count matters.
+          // Group-row count, kept in sync with "data" (always center+exam,
+          // computed off raw ids — no lookups needed, distinct-pair count only).
           totalCount: [
-            { $group: { _id: { group: groupIdField, examName: "$nameOfExamAppearingNow" } } },
+            { $group: { _id: { center: "$centerRegistration", examName: "$nameOfExamAppearingNow" } } },
             { $count: "count" },
           ],
           // Grand totals across every group in scope, independent of paging.

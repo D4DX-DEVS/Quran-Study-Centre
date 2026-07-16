@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
@@ -28,8 +28,11 @@ const ExamCenterStickers = (props) => {
     document.title = "Exam Center Stickers - QSC Automation";
   }, []);
 
+  const fetchRequestIdRef = useRef(0);
+
   const fetchStickers = useCallback(
     async (activeFilters) => {
+      const requestId = ++fetchRequestIdRef.current;
       setLoading(true);
       try {
         const query = {
@@ -38,16 +41,18 @@ const ExamCenterStickers = (props) => {
           ...(activeFilters.examCenter ? { examCenter: activeFilters.examCenter } : {}),
         };
         const res = await getData(query, "exam-center-stickers/list");
+        if (requestId !== fetchRequestIdRef.current) return; // stale response from a superseded filter change
         if (res?.data?.success) {
           setStickers(res.data.response || []);
         } else {
           setStickers([]);
         }
       } catch (e) {
+        if (requestId !== fetchRequestIdRef.current) return;
         setStickers([]);
         props.setMessage?.({ type: 1, content: "Failed to load exam center stickers.", proceed: "Okay" });
       } finally {
-        setLoading(false);
+        if (requestId === fetchRequestIdRef.current) setLoading(false);
       }
     },
     [props]

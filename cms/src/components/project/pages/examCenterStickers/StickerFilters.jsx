@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getData } from "../../../../backend/api";
 
 // District -> Area -> Exam Center cascading filters. State Admin sees all
@@ -8,18 +8,21 @@ import { getData } from "../../../../backend/api";
 const StickerFilters = ({ isDistrictAdmin, filters, onChange }) => {
   const [options, setOptions] = useState({ districts: [], areas: [], examCenters: [] });
   const [loading, setLoading] = useState(false);
+  const requestIdRef = useRef(0);
 
   const hasDistrictContext = isDistrictAdmin || Boolean(filters.district);
 
   const loadOptions = useCallback(async (district, area) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const res = await getData({ ...(district ? { district } : {}), ...(area ? { area } : {}) }, "exam-center-stickers/select");
+      if (requestId !== requestIdRef.current) return; // stale response from a superseded filter change
       if (res?.data?.success) setOptions(res.data.response);
     } catch (e) {
       // ignore — filters just stay empty
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, []);
 

@@ -8,15 +8,17 @@ import { Container } from "../../../core/layout/styels";
 import { getData } from "../../../../backend/api";
 
 // Consolidation report — Student Exam section.
-// No filter selected  -> one row per District + Exam (state-wide).
-// District selected   -> one row per Area + Exam within that district.
-// District + Area sel -> one row per Exam Center + Exam within that area.
-// Exam center choice (studyCentre) mirrors examRegistration's verification-PDF
-// logic: once scoped to a district/area, the centre a student registered at is
-// the meaningful one, not the exam-day venue they may later be reassigned to.
-// Grouping/summing happens server-side (exam-registration/consolidation-report)
-// so the table can page through 15 group-rows at a time instead of pulling
-// every registration into the browser.
+// Rows always break down to District + Area + Exam Center + Exam (finest
+// grain), regardless of which district/area filter is active. The District
+// dropdown narrows scope; `level` (district/area/studyCentre) still drives
+// which "top ..." summary card is shown, mirroring examRegistration's
+// verification-PDF logic where the centre a student registered at is the
+// meaningful one, not the exam-day venue they may later be reassigned to.
+// `centerTotal` on each row is the exam center's headcount across ALL exams,
+// not just the row's own exam — used for the "No. of Students" column and
+// the "fewer than 5 students" filter. Grouping/summing happens server-side
+// (exam-registration/consolidation-report) so the table can page through 15
+// group-rows at a time instead of pulling every registration into the browser.
 const PAGE_SIZE = 15;
 
 // Summary card shown above the table. Which cards appear depends on filter
@@ -44,6 +46,7 @@ const ExamConsolidationReport = (props) => {
   const [areas, setAreas] = useState([]);
   const [selDistrict, setSelDistrict] = useState("");
   const [selArea, setSelArea] = useState("");
+  const [lowStudents, setLowStudents] = useState(false);
 
   const [groupedRows, setGroupedRows] = useState([]);
   const [totals, setTotals] = useState({ total: 0, private: 0, regular: 0, male: 0, female: 0 });
@@ -75,7 +78,6 @@ const ExamConsolidationReport = (props) => {
   }, [selDistrict]);
 
   const level = selArea ? "center" : selDistrict ? "area" : "district";
-  const groupLabel = level === "district" ? "District" : level === "area" ? "Area" : "Exam Center";
   const groupField = level === "district" ? "district" : level === "area" ? "area" : "studyCentre";
 
   const loadPage = useCallback(async () => {
@@ -83,7 +85,7 @@ const ExamConsolidationReport = (props) => {
     try {
       const filter = selArea ? { area: selArea } : selDistrict ? { district: selDistrict } : {};
       const r = await getData(
-        { ...filter, level: groupField, skip: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
+        { ...filter, level: groupField, lowStudents, skip: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
         "exam-registration/consolidation-report"
       );
       setGroupedRows(r?.data?.response || []);
@@ -103,7 +105,7 @@ const ExamConsolidationReport = (props) => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selDistrict, selArea, groupField, page]);
+  }, [selDistrict, selArea, groupField, lowStudents, page]);
 
   useEffect(() => {
     loadPage();
@@ -111,7 +113,7 @@ const ExamConsolidationReport = (props) => {
 
   useEffect(() => {
     setPage(1);
-  }, [selDistrict, selArea]);
+  }, [selDistrict, selArea, lowStudents]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
 
@@ -132,7 +134,7 @@ const ExamConsolidationReport = (props) => {
       const filter = selArea ? { area: selArea } : selDistrict ? { district: selDistrict } : {};
       // Export always covers the full report, not just the visible page —
       // fetch every group in one shot (limit omitted -> server returns all).
-      const r = await getData({ ...filter, level: groupField }, "exam-registration/consolidation-report");
+      const r = await getData({ ...filter, level: groupField, lowStudents }, "exam-registration/consolidation-report");
       const allGroups = r?.data?.response || [];
       const allTotals = r?.data?.totals || totals;
       if (!allGroups.length) return;
@@ -146,24 +148,52 @@ const ExamConsolidationReport = (props) => {
       doc.setFontSize(11);
       doc.text(`${scopeLabel} (${wiseLabel} Wise)  |  Total: ${allTotals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
 
+      // Cells covered by a rowSpan from a prior row must be omitted from
+      // this row's array entirely (jspdf-autotable shifts columns using the
+      // earlier row's rowSpan) — mirrors the merged District/Area/Center/
+      // Total-Students cells in the on-screen table.
+      const groupRows = allGroups.map((r, i) => {
+        const prev = allGroups[i - 1];
+        const isGroupStart = !prev || prev.district !== r.district || prev.area !== r.area || prev.center !== r.center;
+        let groupSpan = 0;
+        if (isGroupStart) {
+          groupSpan = 1;
+          for (let j = i + 1; j < allGroups.length; j++) {
+            const n = allGroups[j];
+            if (n.district === r.district && n.area === r.area && n.center === r.center) groupSpan++;
+            else break;
+          }
+        }
+        const examCells = [r.examName, r.total, r.private, r.regular, r.male, r.female];
+        return isGroupStart
+          ? [
+              { content: r.district, rowSpan: groupSpan },
+              { content: r.area, rowSpan: groupSpan },
+              { content: r.center, rowSpan: groupSpan },
+              { content: r.centerTotal, rowSpan: groupSpan, styles: { halign: "center" } },
+              ...examCells,
+            ]
+          : examCells;
+      });
+
       doc.autoTable({
         startY: 62,
-        head: [["#", groupLabel, "Exam Name", "Registered Students", "Private", "Regular", "Male", "Female"]],
+        head: [["District", "Area", "Center Name", "Total Students", "Exam Name", "Registered Students", "Private", "Regular", "Male", "Female"]],
         body: [
-          ...allGroups.map((r, i) => [i + 1, r.group, r.examName, r.total, r.private, r.regular, r.male, r.female]),
-          ["", "Total", "", allTotals.total, allTotals.private, allTotals.regular, allTotals.male, allTotals.female],
+          ...groupRows,
+          ["Total", "", "", "", "", allTotals.total, allTotals.private, allTotals.regular, allTotals.male, allTotals.female],
         ],
-        styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0 },
+        styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0, valign: "top" },
         headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
         footStyles: { fontStyle: "bold" },
         theme: "grid",
         columnStyles: {
-          0: { halign: "center", cellWidth: 30 },
           3: { halign: "center" },
-          4: { halign: "center" },
           5: { halign: "center" },
           6: { halign: "center" },
           7: { halign: "center" },
+          8: { halign: "center" },
+          9: { halign: "center" },
         },
         didParseCell: (data) => {
           if (data.row.index === allGroups.length) data.cell.styles.fillColor = [245, 245, 245];
@@ -255,12 +285,22 @@ const ExamConsolidationReport = (props) => {
             </select>
           </div>
 
-          {(selDistrict || selArea) && (
+          <label className="flex items-center gap-2 text-sm text-gray-600 px-3 py-2 border border-gray-300 rounded-md cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={lowStudents}
+              onChange={(e) => setLowStudents(e.target.checked)}
+            />
+            Exam centers with fewer than 5 students
+          </label>
+
+          {(selDistrict || selArea || lowStudents) && (
             <button
               type="button"
               onClick={() => {
                 setSelDistrict("");
                 setSelArea("");
+                setLowStudents(false);
               }}
               className="flex items-center gap-1 text-sm px-3 py-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
             >
@@ -315,8 +355,10 @@ const ExamConsolidationReport = (props) => {
           <table className="w-full border-collapse text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold border-b border-gray-200">#</th>
-                <th className="px-3 py-2 text-left font-semibold border-b border-gray-200">{groupLabel}</th>
+                <th className="px-3 py-2 text-left font-semibold border-b border-gray-200">District</th>
+                <th className="px-3 py-2 text-left font-semibold border-b border-gray-200">Area</th>
+                <th className="px-3 py-2 text-left font-semibold border-b border-gray-200">Center Name</th>
+                <th className="px-3 py-2 text-center font-semibold border-b border-gray-200">Total Students</th>
                 <th className="px-3 py-2 text-left font-semibold border-b border-gray-200">Exam Name</th>
                 <th className="px-3 py-2 text-center font-semibold border-b border-gray-200">Registered Students</th>
                 <th className="px-3 py-2 text-center font-semibold border-b border-gray-200">Private</th>
@@ -328,36 +370,68 @@ const ExamConsolidationReport = (props) => {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={10} className="px-3 py-6 text-center text-gray-400">
                     Loading…
                   </td>
                 </tr>
               )}
               {!loading && groupedRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={10} className="px-3 py-6 text-center text-gray-400">
                     No registrations found.
                   </td>
                 </tr>
               )}
               {!loading &&
-                groupedRows.map((r, i) => (
-                  <tr key={`${r.group}-${r.examName}`} className="border-t border-gray-100">
-                    <td className="px-3 py-2">{(page - 1) * PAGE_SIZE + i + 1}</td>
-                    <td className="px-3 py-2">{r.group}</td>
-                    <td className="px-3 py-2">{r.examName}</td>
-                    <td className="px-3 py-2 text-center">{r.total}</td>
-                    <td className="px-3 py-2 text-center">{r.private}</td>
-                    <td className="px-3 py-2 text-center">{r.regular}</td>
-                    <td className="px-3 py-2 text-center">{r.male}</td>
-                    <td className="px-3 py-2 text-center">{r.female}</td>
-                  </tr>
-                ))}
+                groupedRows.map((r, i) => {
+                  // Rows for the same exam center are adjacent (server sorts
+                  // by district/area/center/exam) — merge their District/
+                  // Area/Center/Total-Students cells into one spanning cell,
+                  // like a paper consolidation sheet, instead of repeating
+                  // the same center info on every exam row.
+                  const prev = groupedRows[i - 1];
+                  const isGroupStart = !prev || prev.district !== r.district || prev.area !== r.area || prev.center !== r.center;
+                  let groupSpan = 0;
+                  if (isGroupStart) {
+                    groupSpan = 1;
+                    for (let j = i + 1; j < groupedRows.length; j++) {
+                      const n = groupedRows[j];
+                      if (n.district === r.district && n.area === r.area && n.center === r.center) groupSpan++;
+                      else break;
+                    }
+                  }
+                  return (
+                    <tr key={`${r.district}-${r.area}-${r.center}-${r.examName}`} className="border-t border-gray-100">
+                      {isGroupStart && (
+                        <>
+                          <td className="px-3 py-2 align-top" rowSpan={groupSpan}>
+                            {r.district}
+                          </td>
+                          <td className="px-3 py-2 align-top" rowSpan={groupSpan}>
+                            {r.area}
+                          </td>
+                          <td className="px-3 py-2 align-top" rowSpan={groupSpan}>
+                            {r.center}
+                          </td>
+                          <td className="px-3 py-2 text-center align-top" rowSpan={groupSpan}>
+                            {r.centerTotal}
+                          </td>
+                        </>
+                      )}
+                      <td className="px-3 py-2">{r.examName}</td>
+                      <td className="px-3 py-2 text-center">{r.total}</td>
+                      <td className="px-3 py-2 text-center">{r.private}</td>
+                      <td className="px-3 py-2 text-center">{r.regular}</td>
+                      <td className="px-3 py-2 text-center">{r.male}</td>
+                      <td className="px-3 py-2 text-center">{r.female}</td>
+                    </tr>
+                  );
+                })}
             </tbody>
             {!loading && groupedRows.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-gray-300 font-semibold bg-gray-50">
-                  <td className="px-3 py-2" colSpan={3}>
+                  <td className="px-3 py-2" colSpan={5}>
                     Grand Total
                   </td>
                   <td className="px-3 py-2 text-center">{totals.total}</td>
