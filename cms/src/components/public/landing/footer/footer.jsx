@@ -88,6 +88,11 @@ const Footer = () => {
           <a href="/about-us" className="landing-footer-link">
             About us
           </a>
+          {landingSettings.leadership !== false && (
+            <a href="/leadership" className="landing-footer-link">
+              Leadership
+            </a>
+          )}
           <a href="/result" className="landing-footer-link">
             Result
           </a>

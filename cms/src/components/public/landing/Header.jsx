@@ -11,6 +11,7 @@ import logo from "../../../components/project/brand/logo-header.png";
 import { FormContainer, formReg } from "./registrationForm";
 import VerifyRegistration from "./VerifyRegistration";
 import MaterialAccessGate from "./MaterialAccessGate";
+import NavDropdown from "./NavDropdown";
 // import { tr } from "date-fns/locale";
 
 const RegisterBtn = styled.button`
@@ -55,6 +56,7 @@ const onChange1 = (nameOfCenter, updateValue) => {
 function Header(props) {
   const [openMenuSetup, setOpenMenuSetup] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(null);
   const [openAffiliation, setOpenAffiliation] = useState(false);
   const [openHallTicket, setOpenHallTicket] = useState(false);
   const [openVerifyRegistration, setOpenVerifyRegistration] = useState(false);
@@ -383,6 +385,7 @@ function Header(props) {
   const [showSyllabus, setSyllabus] = useState(true);
   const [showMaterial, setMaterial] = useState(false);
   const [showAboutUs, setAboutUs] = useState(false);
+  const [showLeadership, setLeadership] = useState(true);
   const [showResult, setResult] = useState(false);
   const [showExamInstructions, setExamInstructions] = useState(false);
   const [showVerifyRegistration, setShowVerifyRegistration] = useState(true);
@@ -401,6 +404,7 @@ function Header(props) {
       setSyllabus(settings.syllabus !== false);
       setMaterial(settings.material !== false);
       setAboutUs(!!settings.about);
+      setLeadership(settings.leadership !== false);
       setResult(!!settings.result);
       setExamInstructions(!!settings.examInstruction);
       setShowVerifyRegistration(settings.verifyRegistration !== false);
@@ -426,10 +430,20 @@ function Header(props) {
 
   const navLinks = [
     { label: "Home", href: "/" },
+    showAboutUs
+      ? showLeadership
+        ? {
+            label: "About Us",
+            dropdown: [
+              { label: "About Us", href: "/about-us" },
+              { label: "Leadership", href: "/leadership" },
+            ],
+          }
+        : { label: "About Us", href: "/about-us" }
+      : null,
     showDownloads ? { label: "Downloads", href: "/question-papers" } : null,
     showSyllabus ? { label: "Syllabus", href: "/syllabus" } : null,
     showMaterial ? { label: "Material", action: "material" } : null,
-    showAboutUs ? { label: "About us", href: "/about-us" } : null,
     showResult ? { label: "Result", href: "/result" } : null,
   ].filter(Boolean);
 
@@ -454,7 +468,9 @@ function Header(props) {
 
           <div className="landing-navbar">
             {navLinks.map((item) =>
-              item.action ? (
+              item.dropdown ? (
+                <NavDropdown key={item.label} label={item.label} items={item.dropdown} />
+              ) : item.action ? (
                 <button
                   key={item.label}
                   type="button"
@@ -540,7 +556,43 @@ function Header(props) {
             className="landing-mobile-nav"
           >
             {navLinks.map((item) =>
-              item.action ? (
+              item.dropdown ? (
+                <div key={item.label} className="landing-mobile-nav-group">
+                  <button
+                    type="button"
+                    className="landing-mobile-nav-group-trigger"
+                    onClick={() =>
+                      setMobileDropdownOpen((prev) => (prev === item.label ? null : item.label))
+                    }
+                    aria-expanded={mobileDropdownOpen === item.label}
+                  >
+                    {item.label}
+                    <span
+                      className={`landing-nav-dropdown-caret${
+                        mobileDropdownOpen === item.label ? " open" : ""
+                      }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+                  {mobileDropdownOpen === item.label && (
+                    <div className="landing-mobile-nav-subitems">
+                      {item.dropdown.map((subItem) => (
+                        <a
+                          key={subItem.label}
+                          href={subItem.href}
+                          onClick={() => {
+                            setShowMenu(false);
+                            setMobileDropdownOpen(null);
+                          }}
+                        >
+                          {subItem.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : item.action ? (
                 <button
                   key={item.label}
                   type="button"

@@ -6,6 +6,7 @@ export const LANDING_MENU_DEFAULTS = {
   syllabus: true,
   material: true,
   about: true,
+  leadership: true,
   result: false,
   examInstruction: false,
   verifyRegistration: true,

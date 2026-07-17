@@ -133,6 +133,7 @@ const questionPool = require("./routes/questionPool.js");
 const materialAccess = require("./routes/materialAccess.js");
 const examCenterStickers = require("./routes/examCenterStickers.js");
 const youtubeVideos = require("./routes/youtubeVideos.js");
+const leadership = require("./routes/leadership.js");
 
 app.use(logger("dev"));
 app.use(express.json());
@@ -184,6 +185,7 @@ app.use("/api/v1/question-pool", questionPool);
 app.use("/api/v1/material-access", materialAccess);
 app.use("/api/v1/exam-center-stickers", examCenterStickers);
 app.use("/api/v1/youtube-videos", youtubeVideos);
+app.use("/api/v1/leadership", leadership);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
