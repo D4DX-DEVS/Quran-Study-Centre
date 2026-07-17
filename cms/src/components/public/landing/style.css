@@ -461,7 +461,7 @@
 
 .landing-hero-title {
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: 34px;
+  font-size: 30px;
 }
 
 .landing-section-title {
@@ -473,7 +473,7 @@
   margin: 0;
   color: var(--landing-muted);
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: 18px;
+  font-size: 10x;
   line-height: 1.65;
   overflow-wrap: anywhere;
   text-align: left;
