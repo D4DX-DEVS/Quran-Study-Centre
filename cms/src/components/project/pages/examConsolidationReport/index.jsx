@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Building2, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, MapPin, RotateCcw, Trophy, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import Layout from "../../../core/layout";
@@ -42,9 +43,15 @@ const ExamConsolidationReport = (props) => {
     document.title = `Exam Consolidation Report - QSC Automation`;
   }, []);
 
+  // Any user scoped to a single district gets a locked district filter — no
+  // other districts selectable. Same pattern as examCenterAttendance/index.jsx.
+  const loggedInUser = useSelector((state) => state.login?.data?.user) || {};
+  const adminDistrictId = loggedInUser?.districts?._id || loggedInUser?.districts || "";
+  const isDistrictAdmin = Boolean(adminDistrictId);
+
   const [districts, setDistricts] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [selDistrict, setSelDistrict] = useState("");
+  const [selDistrict, setSelDistrict] = useState(adminDistrictId);
   const [selArea, setSelArea] = useState("");
   const [lowStudents, setLowStudents] = useState(false);
 
@@ -253,9 +260,10 @@ const ExamConsolidationReport = (props) => {
               <Filter className="w-3 h-3" /> District
             </label>
             <select
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm min-w-[220px]"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm min-w-[220px] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               value={selDistrict}
               onChange={(e) => setSelDistrict(e.target.value)}
+              disabled={isDistrictAdmin}
             >
               <option value="">All Districts</option>
               {districts.map((d) => (
@@ -294,11 +302,11 @@ const ExamConsolidationReport = (props) => {
             Exam centers with fewer than 5 students
           </label>
 
-          {(selDistrict || selArea || lowStudents) && (
+          {((selDistrict && !isDistrictAdmin) || selArea || lowStudents) && (
             <button
               type="button"
               onClick={() => {
-                setSelDistrict("");
+                setSelDistrict(isDistrictAdmin ? adminDistrictId : "");
                 setSelArea("");
                 setLowStudents(false);
               }}
