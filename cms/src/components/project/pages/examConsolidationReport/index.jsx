@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import ExcelJS from "exceljs";
 import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
 import { getData } from "../../../../backend/api";
@@ -132,94 +133,213 @@ const ExamConsolidationReport = (props) => {
 
   const wiseLabel = selArea ? "Area" : selDistrict ? "District" : "State";
 
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
-  const downloadPdf = async () => {
-    if (!totalCount || pdfLoading) return;
-    setPdfLoading(true);
+  const HEAD_ROW = ["District", "Area", "Center Name", "Total Students", "Exam Name", "Registered Students", "Private", "Regular", "Male", "Female"];
+
+  // Group-start detection shared by both PDF and Excel export — rows for the
+  // same exam center are adjacent (server sorts by district/area/center/exam).
+  const groupStarts = (allGroups) =>
+    allGroups.map((r, i) => {
+      const prev = allGroups[i - 1];
+      const isGroupStart = !prev || prev.district !== r.district || prev.area !== r.area || prev.center !== r.center;
+      let groupSpan = 0;
+      if (isGroupStart) {
+        groupSpan = 1;
+        for (let j = i + 1; j < allGroups.length; j++) {
+          const n = allGroups[j];
+          if (n.district === r.district && n.area === r.area && n.center === r.center) groupSpan++;
+          else break;
+        }
+      }
+      return { row: r, isGroupStart, groupSpan };
+    });
+
+  const buildPdf = (allGroups, allTotals, today) => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(14);
+    doc.text("Exam Consolidation Report", pageWidth / 2, 30, { align: "center" });
+    doc.setFontSize(11);
+    doc.text(`${scopeLabel} (${wiseLabel} Wise)  |  Total: ${allTotals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
+
+    // Cells covered by a rowSpan from a prior row must be omitted from
+    // this row's array entirely (jspdf-autotable shifts columns using the
+    // earlier row's rowSpan) — mirrors the merged District/Area/Center/
+    // Total-Students cells in the on-screen table.
+    const groupRows = groupStarts(allGroups).map(({ row: r, isGroupStart, groupSpan }) => {
+      const examCells = [r.examName, r.total, r.private, r.regular, r.male, r.female];
+      return isGroupStart
+        ? [
+            { content: r.district, rowSpan: groupSpan },
+            { content: r.area, rowSpan: groupSpan },
+            { content: r.center, rowSpan: groupSpan },
+            { content: r.centerTotal, rowSpan: groupSpan, styles: { halign: "center" } },
+            ...examCells,
+          ]
+        : examCells;
+    });
+
+    doc.autoTable({
+      startY: 62,
+      head: [HEAD_ROW],
+      body: [
+        ...groupRows,
+        ["Total", "", "", "", "", allTotals.total, allTotals.private, allTotals.regular, allTotals.male, allTotals.female],
+      ],
+      styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0, valign: "top" },
+      headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+      footStyles: { fontStyle: "bold" },
+      theme: "grid",
+      columnStyles: {
+        3: { halign: "center" },
+        5: { halign: "center" },
+        6: { halign: "center" },
+        7: { halign: "center" },
+        8: { halign: "center" },
+        9: { halign: "center" },
+      },
+      didParseCell: (data) => {
+        if (data.row.index === allGroups.length) data.cell.styles.fillColor = [245, 245, 245];
+      },
+      didDrawPage: (d) => {
+        doc.setFontSize(9);
+        doc.text(`Page ${d.pageNumber}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 12, { align: "right" });
+      },
+    });
+
+    doc.save(`Exam Consolidation Report - ${scopeLabel} - ${today}.pdf`);
+  };
+
+  const buildExcel = async (allGroups, allTotals, today) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Consolidation Report");
+
+    // Page setup makes the sheet print-ready straight from Excel — landscape,
+    // fit-to-width, header row repeated on every printed page.
+    worksheet.pageSetup = {
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.4, header: 0.2, footer: 0.2 },
+      printTitlesRow: "3:3",
+    };
+    worksheet.headerFooter = {
+      oddHeader: "&C&12Exam Consolidation Report",
+      oddFooter: `&L${scopeLabel} (${wiseLabel} Wise) — Printed: ${today}&RPage &P of &N`,
+    };
+
+    worksheet.mergeCells(1, 1, 1, HEAD_ROW.length);
+    const titleRow = worksheet.getRow(1);
+    titleRow.getCell(1).value = "Exam Consolidation Report";
+    titleRow.getCell(1).font = { bold: true, size: 14 };
+    titleRow.getCell(1).alignment = { horizontal: "center" };
+
+    worksheet.mergeCells(2, 1, 2, HEAD_ROW.length);
+    const subRow = worksheet.getRow(2);
+    subRow.getCell(1).value = `${scopeLabel} (${wiseLabel} Wise)  |  Total: ${allTotals.total}  |  Printed: ${today}`;
+    subRow.getCell(1).alignment = { horizontal: "center" };
+
+    worksheet.columns = [
+      { key: "district", width: 18 },
+      { key: "area", width: 18 },
+      { key: "center", width: 26 },
+      { key: "centerTotal", width: 14 },
+      { key: "examName", width: 26 },
+      { key: "total", width: 16 },
+      { key: "private", width: 10 },
+      { key: "regular", width: 10 },
+      { key: "male", width: 10 },
+      { key: "female", width: 10 },
+    ];
+
+    const headerRow = worksheet.getRow(3);
+    HEAD_ROW.forEach((label, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = label;
+      cell.font = { bold: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE6E6E6" } };
+      cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+    });
+
+    const CENTER_COLS = [4, 6, 7, 8, 9, 10];
+    let rowIdx = 4;
+    groupStarts(allGroups).forEach(({ row: r, isGroupStart, groupSpan }) => {
+      const row = worksheet.getRow(rowIdx);
+      row.getCell(1).value = r.district;
+      row.getCell(2).value = r.area;
+      row.getCell(3).value = r.center;
+      row.getCell(4).value = r.centerTotal;
+      row.getCell(5).value = r.examName;
+      row.getCell(6).value = r.total;
+      row.getCell(7).value = r.private;
+      row.getCell(8).value = r.regular;
+      row.getCell(9).value = r.male;
+      row.getCell(10).value = r.female;
+      for (let c = 1; c <= HEAD_ROW.length; c++) {
+        row.getCell(c).border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+        if (CENTER_COLS.includes(c)) row.getCell(c).alignment = { horizontal: "center", vertical: "middle" };
+        else row.getCell(c).alignment = { vertical: "top", wrapText: true };
+      }
+      if (isGroupStart && groupSpan > 1) {
+        [1, 2, 3, 4].forEach((c) => worksheet.mergeCells(rowIdx, c, rowIdx + groupSpan - 1, c));
+      }
+      rowIdx++;
+    });
+
+    const totalRow = worksheet.getRow(rowIdx);
+    worksheet.mergeCells(rowIdx, 1, rowIdx, 5);
+    totalRow.getCell(1).value = "Grand Total";
+    totalRow.getCell(6).value = allTotals.total;
+    totalRow.getCell(7).value = allTotals.private;
+    totalRow.getCell(8).value = allTotals.regular;
+    totalRow.getCell(9).value = allTotals.male;
+    totalRow.getCell(10).value = allTotals.female;
+    for (let c = 1; c <= HEAD_ROW.length; c++) {
+      totalRow.getCell(c).font = { bold: true };
+      totalRow.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+      totalRow.getCell(c).border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+      if (CENTER_COLS.includes(c)) totalRow.getCell(c).alignment = { horizontal: "center" };
+    }
+
+    worksheet.pageSetup.printArea = `A1:${worksheet.getColumn(HEAD_ROW.length).letter}${rowIdx}`;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `Exam Consolidation Report - ${scopeLabel} - ${today}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Single click -> both files. No separate excel button; fetch the full
+  // (unpaginated) report once and hand it to both builders.
+  const handleExport = async () => {
+    if (!totalCount || exportLoading) return;
+    setExportLoading(true);
     try {
       const filter = selArea ? { area: selArea } : selDistrict ? { district: selDistrict } : {};
-      // Export always covers the full report, not just the visible page —
-      // fetch every group in one shot (limit omitted -> server returns all).
       const r = await getData({ ...filter, level: groupField, lowStudents }, "exam-registration/consolidation-report");
       const allGroups = r?.data?.response || [];
       const allTotals = r?.data?.totals || totals;
       if (!allGroups.length) return;
 
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
       const today = new Date().toLocaleDateString("en-GB");
-
-      doc.setFontSize(14);
-      doc.text("Exam Consolidation Report", pageWidth / 2, 30, { align: "center" });
-      doc.setFontSize(11);
-      doc.text(`${scopeLabel} (${wiseLabel} Wise)  |  Total: ${allTotals.total}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
-
-      // Cells covered by a rowSpan from a prior row must be omitted from
-      // this row's array entirely (jspdf-autotable shifts columns using the
-      // earlier row's rowSpan) — mirrors the merged District/Area/Center/
-      // Total-Students cells in the on-screen table.
-      const groupRows = allGroups.map((r, i) => {
-        const prev = allGroups[i - 1];
-        const isGroupStart = !prev || prev.district !== r.district || prev.area !== r.area || prev.center !== r.center;
-        let groupSpan = 0;
-        if (isGroupStart) {
-          groupSpan = 1;
-          for (let j = i + 1; j < allGroups.length; j++) {
-            const n = allGroups[j];
-            if (n.district === r.district && n.area === r.area && n.center === r.center) groupSpan++;
-            else break;
-          }
-        }
-        const examCells = [r.examName, r.total, r.private, r.regular, r.male, r.female];
-        return isGroupStart
-          ? [
-              { content: r.district, rowSpan: groupSpan },
-              { content: r.area, rowSpan: groupSpan },
-              { content: r.center, rowSpan: groupSpan },
-              { content: r.centerTotal, rowSpan: groupSpan, styles: { halign: "center" } },
-              ...examCells,
-            ]
-          : examCells;
-      });
-
-      doc.autoTable({
-        startY: 62,
-        head: [["District", "Area", "Center Name", "Total Students", "Exam Name", "Registered Students", "Private", "Regular", "Male", "Female"]],
-        body: [
-          ...groupRows,
-          ["Total", "", "", "", "", allTotals.total, allTotals.private, allTotals.regular, allTotals.male, allTotals.female],
-        ],
-        styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0, valign: "top" },
-        headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
-        footStyles: { fontStyle: "bold" },
-        theme: "grid",
-        columnStyles: {
-          3: { halign: "center" },
-          5: { halign: "center" },
-          6: { halign: "center" },
-          7: { halign: "center" },
-          8: { halign: "center" },
-          9: { halign: "center" },
-        },
-        didParseCell: (data) => {
-          if (data.row.index === allGroups.length) data.cell.styles.fillColor = [245, 245, 245];
-        },
-        didDrawPage: (d) => {
-          doc.setFontSize(9);
-          doc.text(`Page ${d.pageNumber}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 12, { align: "right" });
-        },
-      });
-
-      doc.save(`Exam Consolidation Report - ${scopeLabel} - ${today}.pdf`);
+      buildPdf(allGroups, allTotals, today);
+      await buildExcel(allGroups, allTotals, today);
     } catch (e) {
       props.setMessage?.({
         type: 1,
-        content: e?.response?.data?.message || e.message || "Failed to export PDF.",
+        content: e?.response?.data?.message || e.message || "Failed to export report.",
         proceed: "Okay",
       });
     } finally {
-      setPdfLoading(false);
+      setExportLoading(false);
     }
   };
 
@@ -245,11 +365,11 @@ const ExamConsolidationReport = (props) => {
             </div>
             <button
               type="button"
-              onClick={downloadPdf}
-              disabled={!totalCount || pdfLoading}
+              onClick={handleExport}
+              disabled={!totalCount || exportLoading}
               className="flex items-center gap-1 text-sm px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-3.5 h-3.5" /> {pdfLoading ? "Preparing…" : "Export PDF"}
+              <Download className="w-3.5 h-3.5" /> {exportLoading ? "Preparing…" : "Export (PDF + Excel)"}
             </button>
           </div>
         </div>

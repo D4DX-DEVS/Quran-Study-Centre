@@ -3,6 +3,7 @@ import { ArrowLeft, Building2, Download, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import ExcelJS from "exceljs";
 import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
 import { getData } from "../../../../backend/api";
@@ -63,55 +64,141 @@ const ExamConsolidationByCentre = (props) => {
 
   const scopeLabel = "All Kerala";
 
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
-  const downloadPdf = async () => {
-    if (!exams.length || pdfLoading) return;
-    setPdfLoading(true);
+  const buildPdf = (today) => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(14);
+    doc.text("Exam Consolidation", pageWidth / 2, 30, { align: "center" });
+    doc.setFontSize(11);
+    doc.text(`${scopeLabel}  |  Total: ${totalStudents}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
+
+    doc.autoTable({
+      startY: 62,
+      head: [["#", "Exam Name", "Exam Centres", "Registered Students"]],
+      body: [
+        ...exams.map((e, i) => [i + 1, e.exam_name, e.centres_count, e.students]),
+        ["", "Total", totalCentres, totalStudents],
+      ],
+      styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0 },
+      headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+      footStyles: { fontStyle: "bold" },
+      theme: "grid",
+      columnStyles: {
+        0: { halign: "center", cellWidth: 30 },
+        2: { halign: "center" },
+        3: { halign: "center" },
+      },
+      didParseCell: (data) => {
+        if (data.row.index === exams.length) data.cell.styles.fillColor = [245, 245, 245];
+      },
+      didDrawPage: (d) => {
+        doc.setFontSize(9);
+        doc.text(`Page ${d.pageNumber}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 12, { align: "right" });
+      },
+    });
+
+    doc.save(`Exam Consolidation - ${scopeLabel} - ${today}.pdf`);
+  };
+
+  const buildExcel = async (today) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Exam Consolidation");
+
+    // Print-ready straight from Excel — landscape, fit-to-width, header row
+    // repeated on every printed page.
+    worksheet.pageSetup = {
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.4, header: 0.2, footer: 0.2 },
+      printTitlesRow: "3:3",
+    };
+    worksheet.headerFooter = {
+      oddHeader: "&C&12Exam Consolidation",
+      oddFooter: `&L${scopeLabel} — Printed: ${today}&RPage &P of &N`,
+    };
+
+    const HEAD_ROW = ["#", "Exam Name", "Exam Centres", "Registered Students"];
+
+    worksheet.mergeCells(1, 1, 1, HEAD_ROW.length);
+    worksheet.getRow(1).getCell(1).value = "Exam Consolidation";
+    worksheet.getRow(1).getCell(1).font = { bold: true, size: 14 };
+    worksheet.getRow(1).getCell(1).alignment = { horizontal: "center" };
+
+    worksheet.mergeCells(2, 1, 2, HEAD_ROW.length);
+    worksheet.getRow(2).getCell(1).value = `${scopeLabel}  |  Total: ${totalStudents}  |  Printed: ${today}`;
+    worksheet.getRow(2).getCell(1).alignment = { horizontal: "center" };
+
+    worksheet.columns = [{ key: "no", width: 6 }, { key: "exam", width: 32 }, { key: "centres", width: 16 }, { key: "students", width: 20 }];
+
+    const headerRow = worksheet.getRow(3);
+    HEAD_ROW.forEach((label, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = label;
+      cell.font = { bold: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE6E6E6" } };
+      cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+    });
+
+    let rowIdx = 4;
+    exams.forEach((e, i) => {
+      const row = worksheet.getRow(rowIdx);
+      row.getCell(1).value = i + 1;
+      row.getCell(2).value = e.exam_name;
+      row.getCell(3).value = e.centres_count;
+      row.getCell(4).value = e.students;
+      for (let c = 1; c <= HEAD_ROW.length; c++) {
+        row.getCell(c).border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+        row.getCell(c).alignment = c === 1 || c === 3 || c === 4 ? { horizontal: "center" } : { vertical: "top", wrapText: true };
+      }
+      rowIdx++;
+    });
+
+    const totalRow = worksheet.getRow(rowIdx);
+    worksheet.mergeCells(rowIdx, 1, rowIdx, 2);
+    totalRow.getCell(1).value = "Grand Total";
+    totalRow.getCell(3).value = totalCentres;
+    totalRow.getCell(4).value = totalStudents;
+    for (let c = 1; c <= HEAD_ROW.length; c++) {
+      totalRow.getCell(c).font = { bold: true };
+      totalRow.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+      totalRow.getCell(c).border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+      if (c === 3 || c === 4) totalRow.getCell(c).alignment = { horizontal: "center" };
+    }
+
+    worksheet.pageSetup.printArea = `A1:${worksheet.getColumn(HEAD_ROW.length).letter}${rowIdx}`;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `Exam Consolidation - ${scopeLabel} - ${today}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Single click -> both files, no separate excel button.
+  const handleExport = async () => {
+    if (!exams.length || exportLoading) return;
+    setExportLoading(true);
     try {
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
       const today = new Date().toLocaleDateString("en-GB");
-
-      doc.setFontSize(14);
-      doc.text("Exam Consolidation", pageWidth / 2, 30, { align: "center" });
-      doc.setFontSize(11);
-      doc.text(`${scopeLabel}  |  Total: ${totalStudents}  |  Printed: ${today}`, pageWidth / 2, 48, { align: "center" });
-
-      doc.autoTable({
-        startY: 62,
-        head: [["#", "Exam Name", "Exam Centres", "Registered Students"]],
-        body: [
-          ...exams.map((e, i) => [i + 1, e.exam_name, e.centres_count, e.students]),
-          ["", "Total", totalCentres, totalStudents],
-        ],
-        styles: { fontSize: 9, cellPadding: 4, lineColor: 0, lineWidth: 0.2, textColor: 0 },
-        headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
-        footStyles: { fontStyle: "bold" },
-        theme: "grid",
-        columnStyles: {
-          0: { halign: "center", cellWidth: 30 },
-          2: { halign: "center" },
-          3: { halign: "center" },
-        },
-        didParseCell: (data) => {
-          if (data.row.index === exams.length) data.cell.styles.fillColor = [245, 245, 245];
-        },
-        didDrawPage: (d) => {
-          doc.setFontSize(9);
-          doc.text(`Page ${d.pageNumber}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 12, { align: "right" });
-        },
-      });
-
-      doc.save(`Exam Consolidation - ${scopeLabel} - ${today}.pdf`);
+      buildPdf(today);
+      await buildExcel(today);
     } catch (e) {
       props.setMessage?.({
         type: 1,
-        content: e?.response?.data?.message || e.message || "Failed to export PDF.",
+        content: e?.response?.data?.message || e.message || "Failed to export report.",
         proceed: "Okay",
       });
     } finally {
-      setPdfLoading(false);
+      setExportLoading(false);
     }
   };
 
@@ -137,11 +224,11 @@ const ExamConsolidationByCentre = (props) => {
             </div>
             <button
               type="button"
-              onClick={downloadPdf}
-              disabled={!exams.length || pdfLoading}
+              onClick={handleExport}
+              disabled={!exams.length || exportLoading}
               className="flex items-center gap-1 text-sm px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-3.5 h-3.5" /> {pdfLoading ? "Preparing…" : "Export PDF"}
+              <Download className="w-3.5 h-3.5" /> {exportLoading ? "Preparing…" : "Export (PDF + Excel)"}
             </button>
           </div>
         </div>
