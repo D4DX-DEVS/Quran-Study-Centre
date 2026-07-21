@@ -988,15 +988,12 @@ exports.getConsolidationReport = async (req, res) => {
       if (query[f] !== undefined) query[f] = castObjectId(query[f]);
     });
 
-    // Raw id field the current groupField maps to — used by the "counts"
-    // facet below to dedupe distinct districts/areas/centers without
-    // waiting for the name lookups the display grouping needs.
-    const groupIdField = groupField === "area" ? "$area" : groupField === "studyCentre" ? "$centerRegistration" : "$district";
-
-    // Collection/field the "top" facet looks up the winning group's display
-    // name from — mirrors groupIdField's district/area/studyCentre switch.
-    const topLookupFrom = groupField === "area" ? "areas" : groupField === "studyCentre" ? "centerregistrations" : "districts";
-    const topNameField = groupField === "area" ? "area" : groupField === "studyCentre" ? "nameOfCenter" : "district";
+    // Resolved-name field the current groupField maps to — used by "top"
+    // below. Grouping by the resolved NAME (not the raw district/area/
+    // centerRegistration id) so duplicate centerregistrations docs for the
+    // same physical centre (same name/district/area, different _id — a
+    // data-entry artifact) are treated as one centre everywhere, not split.
+    const groupNameField = groupField === "area" ? "$areaName" : groupField === "studyCentre" ? "$centerName" : "$districtName";
 
     const pipeline = [
       { $match: query },
@@ -1012,17 +1009,47 @@ exports.getConsolidationReport = async (req, res) => {
           nameOfExamAppearingNow: { $first: "$nameOfExamAppearingNow" },
         },
       },
+      // Resolve district/area/center/exam display names up front, once, so
+      // every facet below (centerTotal, table rows, counts, top cards) keys
+      // off the same identity. Doing this before the headcount window
+      // function (next stage) is what fixes duplicate centerregistrations
+      // docs — two docs with the same nameOfCenter/district/area but
+      // different _id used to create two separate headcount partitions;
+      // whichever wasn't picked by the later $first got silently dropped
+      // from "Total Students" while still counted in the per-exam sum.
+      { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
+      { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: "areas", localField: "area", foreignField: "_id", as: "areaDoc" } },
+      { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: "centerregistrations", localField: "centerRegistration", foreignField: "_id", as: "centerDoc" } },
+      { $unwind: { path: "$centerDoc", preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: "examtypes", localField: "nameOfExamAppearingNow", foreignField: "_id", as: "examDoc" } },
+      { $unwind: { path: "$examDoc", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          status: 1,
+          gender: 1,
+          districtName: { $ifNull: ["$districtDoc.district", "Unknown"] },
+          areaName: { $ifNull: ["$areaDoc.area", "Unknown"] },
+          centerName: { $ifNull: ["$centerDoc.nameOfCenter", "Unknown"] },
+          examName: {
+            $trim: {
+              input: { $arrayElemAt: [{ $split: [{ $ifNull: ["$examDoc.examType", ""] }, ":"] }, 0] },
+            },
+          },
+        },
+      },
       // Total headcount per exam center across ALL exams (not just the exam
       // on a given row) — computed here, before the per-exam breakdown below
       // collapses rows, so every doc still carries its center's full total.
-      // Partitioned by (district, area, centerRegistration) — not center
+      // Partitioned by (districtName, areaName, centerName) — not center
       // alone — so a center whose registrants carry mismatched area/district
       // values (data-entry error) doesn't leak its full headcount into every
       // area group it happens to show up in; each row's total stays scoped
       // to the same (district, area, center) tuple the row itself groups by.
       {
         $setWindowFields: {
-          partitionBy: { district: "$district", area: "$area", centerRegistration: "$centerRegistration" },
+          partitionBy: { district: "$districtName", area: "$areaName", center: "$centerName" },
           output: { centerTotal: { $sum: 1 } },
         },
       },
@@ -1032,34 +1059,17 @@ exports.getConsolidationReport = async (req, res) => {
       ...(lowStudents ? [{ $match: { centerTotal: { $lt: 5 } } }] : []),
       {
         $facet: {
-          // Display rows: one per (district, area, exam center, exam), with
-          // lookups for names. Always broken down to this finest grain,
-          // regardless of the district/area filter or `level` in scope.
+          // Display rows: one per (district, area, exam center, exam).
+          // Always broken down to this finest grain, regardless of the
+          // district/area filter or `level` in scope.
           data: [
-            { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
-            { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
-            { $lookup: { from: "areas", localField: "area", foreignField: "_id", as: "areaDoc" } },
-            { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
-            { $lookup: { from: "centerregistrations", localField: "centerRegistration", foreignField: "_id", as: "centerDoc" } },
-            { $unwind: { path: "$centerDoc", preserveNullAndEmptyArrays: true } },
-            { $lookup: { from: "examtypes", localField: "nameOfExamAppearingNow", foreignField: "_id", as: "examDoc" } },
-            { $unwind: { path: "$examDoc", preserveNullAndEmptyArrays: true } },
-            {
-              $addFields: {
-                examName: {
-                  $trim: {
-                    input: { $arrayElemAt: [{ $split: [{ $ifNull: ["$examDoc.examType", ""] }, ":"] }, 0] },
-                  },
-                },
-              },
-            },
             {
               $group: {
                 _id: {
-                  district: { $ifNull: ["$districtDoc.district", "Unknown"] },
-                  area: { $ifNull: ["$areaDoc.area", "Unknown"] },
-                  center: { $ifNull: ["$centerDoc.nameOfCenter", "Unknown"] },
-                  examName: { $ifNull: ["$examName", "Unknown"] },
+                  district: "$districtName",
+                  area: "$areaName",
+                  center: "$centerName",
+                  examName: "$examName",
                 },
                 total: { $sum: 1 },
                 private: { $sum: { $cond: [{ $eq: ["$status", "Private"] }, 1, 0] } },
@@ -1087,10 +1097,10 @@ exports.getConsolidationReport = async (req, res) => {
             { $sort: { district: 1, area: 1, center: 1, examName: 1 } },
             ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
           ],
-          // Group-row count, kept in sync with "data" (always center+exam,
-          // computed off raw ids — no lookups needed, distinct-pair count only).
+          // Group-row count, kept in sync with "data" (same center+exam
+          // name grouping, so duplicate center ids don't inflate the count).
           totalCount: [
-            { $group: { _id: { center: "$centerRegistration", examName: "$nameOfExamAppearingNow" } } },
+            { $group: { _id: { center: "$centerName", examName: "$examName" } } },
             { $count: "count" },
           ],
           // Grand totals across every group in scope, independent of paging.
@@ -1108,13 +1118,24 @@ exports.getConsolidationReport = async (req, res) => {
           ],
           // Distinct district/area/exam-center counts in scope, for the
           // summary cards above the table (cards shown depend on filter level).
+          // "centers" keys on (district, area, center) together, NOT center
+          // name alone — two different physical centres in different
+          // districts/areas can share the same name, and a bare name
+          // addToSet was silently merging them into one, undercounting
+          // centerCount vs every other exam-centre count in the app (see
+          // getExamCentreConsolidation / examCenterStickers.js which both
+          // scope identity by district+area+name too).
           counts: [
             {
               $group: {
                 _id: null,
-                districts: { $addToSet: "$district" },
-                areas: { $addToSet: "$area" },
-                centers: { $addToSet: "$centerRegistration" },
+                districts: { $addToSet: "$districtName" },
+                areas: { $addToSet: "$areaName" },
+                centers: {
+                  $addToSet: {
+                    $concat: ["$districtName", "|", "$areaName", "|", { $toLower: { $trim: { input: "$centerName" } } }],
+                  },
+                },
               },
             },
             {
@@ -1132,56 +1153,29 @@ exports.getConsolidationReport = async (req, res) => {
           // selected) -> top area in that district; "studyCentre" level
           // (district+area selected) -> top exam center in that area.
           top: [
-            { $group: { _id: groupIdField, total: { $sum: 1 } } },
+            { $group: { _id: groupNameField, total: { $sum: 1 } } },
             { $sort: { total: -1 } },
             { $limit: 1 },
-            { $lookup: { from: topLookupFrom, localField: "_id", foreignField: "_id", as: "doc" } },
-            { $unwind: { path: "$doc", preserveNullAndEmptyArrays: true } },
-            { $project: { _id: 0, name: { $ifNull: [`$doc.${topNameField}`, "Unknown"] }, total: 1 } },
+            { $project: { _id: 0, name: { $ifNull: ["$_id", "Unknown"] }, total: 1 } },
           ],
           // Top area by registrations, with its district — independent of
           // groupField so it stays meaningful regardless of the current
           // grouping level. Frontend hides this card once a district is
           // already selected (redundant with "top" at the "area" level).
           topArea: [
-            { $group: { _id: "$area", district: { $first: "$district" }, total: { $sum: 1 } } },
+            { $group: { _id: "$areaName", district: { $first: "$districtName" }, total: { $sum: 1 } } },
             { $sort: { total: -1 } },
             { $limit: 1 },
-            { $lookup: { from: "areas", localField: "_id", foreignField: "_id", as: "areaDoc" } },
-            { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
-            { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
-            { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                _id: 0,
-                name: { $ifNull: ["$areaDoc.area", "Unknown"] },
-                district: { $ifNull: ["$districtDoc.district", "Unknown"] },
-                total: 1,
-              },
-            },
+            { $project: { _id: 0, name: { $ifNull: ["$_id", "Unknown"] }, district: 1, total: 1 } },
           ],
           // Top exam center by registrations, with its district + area —
           // independent of groupField. Frontend hides this card once an area
           // is already selected (redundant with "top" at the "studyCentre" level).
           topCenter: [
-            { $group: { _id: "$centerRegistration", district: { $first: "$district" }, area: { $first: "$area" }, total: { $sum: 1 } } },
+            { $group: { _id: "$centerName", district: { $first: "$districtName" }, area: { $first: "$areaName" }, total: { $sum: 1 } } },
             { $sort: { total: -1 } },
             { $limit: 1 },
-            { $lookup: { from: "centerregistrations", localField: "_id", foreignField: "_id", as: "centerDoc" } },
-            { $unwind: { path: "$centerDoc", preserveNullAndEmptyArrays: true } },
-            { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
-            { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
-            { $lookup: { from: "areas", localField: "area", foreignField: "_id", as: "areaDoc" } },
-            { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                _id: 0,
-                name: { $ifNull: ["$centerDoc.nameOfCenter", "Unknown"] },
-                district: { $ifNull: ["$districtDoc.district", "Unknown"] },
-                area: { $ifNull: ["$areaDoc.area", "Unknown"] },
-                total: 1,
-              },
-            },
+            { $project: { _id: 0, name: { $ifNull: ["$_id", "Unknown"] }, district: 1, area: 1, total: 1 } },
           ],
         },
       },
@@ -1235,8 +1229,36 @@ exports.getExamCentreConsolidation = async (req, res) => {
       {
         $group: {
           _id: { $ifNull: ["$mobileNumber", "$_id"] },
+          district: { $first: "$district" },
+          area: { $first: "$area" },
           centerRegistration: { $first: "$centerRegistration" },
           nameOfExamAppearingNow: { $first: "$nameOfExamAppearingNow" },
+        },
+      },
+      // Resolve district/area/centre names once, up front — same identity
+      // fix as getConsolidationReport's "counts" facet. centerregistrations
+      // occasionally has two docs for the same physical centre (data-entry
+      // artifact, same root cause noted in examCenterStickers.js); grouping
+      // centres by raw centerRegistration _id (the old behaviour) counted
+      // those as two separate centres and inflated centres_count/total_centres
+      // above the true number of physical exam centres.
+      { $lookup: { from: "districts", localField: "district", foreignField: "_id", as: "districtDoc" } },
+      { $unwind: { path: "$districtDoc", preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: "areas", localField: "area", foreignField: "_id", as: "areaDoc" } },
+      { $unwind: { path: "$areaDoc", preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: "centerregistrations", localField: "centerRegistration", foreignField: "_id", as: "centerDoc" } },
+      { $unwind: { path: "$centerDoc", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          centreKey: {
+            $concat: [
+              { $ifNull: ["$districtDoc.district", "Unknown"] },
+              "|",
+              { $ifNull: ["$areaDoc.area", "Unknown"] },
+              "|",
+              { $toLower: { $trim: { input: { $ifNull: ["$centerDoc.nameOfCenter", "Unknown"] } } } },
+            ],
+          },
         },
       },
       {
@@ -1257,7 +1279,7 @@ exports.getExamCentreConsolidation = async (req, res) => {
               $group: {
                 _id: "$nameOfExamAppearingNow",
                 exam_name: { $first: { $ifNull: ["$examName", "Unknown"] } },
-                centres: { $addToSet: "$centerRegistration" },
+                centres: { $addToSet: "$centreKey" },
                 students: { $sum: 1 },
               },
             },
@@ -1272,7 +1294,7 @@ exports.getExamCentreConsolidation = async (req, res) => {
             },
             { $sort: { exam_name: 1 } },
           ],
-          totalCentres: [{ $group: { _id: "$centerRegistration" } }, { $count: "count" }],
+          totalCentres: [{ $group: { _id: "$centreKey" } }, { $count: "count" }],
           totalStudents: [{ $count: "count" }],
         },
       },

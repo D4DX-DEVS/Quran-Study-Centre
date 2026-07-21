@@ -2,10 +2,42 @@ const mongoose = require("mongoose");
 const ExamRegistration = require("../models/examRegistration");
 const District = require("../models/district");
 const Area = require("../models/area");
+const CenterRegistration = require("../models/centerRegistration");
 
 const INCOMPLETE_REGNO_MESSAGE = "Attendance Register numbers have not been generated for this Exam Center.";
 
 const toObjectId = (val) => (mongoose.Types.ObjectId.isValid(val) ? val : null);
+
+// centerregistrations occasionally has duplicate docs for the same physical
+// exam centre — same nameOfCenter/district/area, different _id (data-entry
+// artifact, same root cause fixed in exam-registration/consolidation-report).
+// Left unresolved, that split every downstream count/regno-range/sticker in
+// two. This builds rawCenterId -> canonical-group lookup so every place that
+// keys off a center id treats the duplicates as one centre. Queried fresh
+// per request (small collection, hundreds of rows — no staleness risk from
+// caching worth the complexity).
+const buildCentreCanonicalMap = async () => {
+  const centers = await CenterRegistration.find({}).select("_id nameOfCenter centerCode district area").sort({ _id: 1 }).lean();
+  const groups = new Map();
+  for (const c of centers) {
+    const key = `${c.district || ""}|${c.area || ""}|${(c.nameOfCenter || "").trim().toLowerCase()}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        canonicalId: String(c._id),
+        nameOfCenter: c.nameOfCenter || "",
+        centerCode: c.centerCode || "",
+        memberIds: [],
+      });
+    }
+    groups.get(key).memberIds.push(String(c._id));
+  }
+
+  const idToGroup = new Map();
+  for (const group of groups.values()) {
+    for (const id of group.memberIds) idToGroup.set(id, group);
+  }
+  return idToGroup;
+};
 
 // Same district/area scoping shape as getAttendanceSheet / getRegisteredStudentsList
 // (api/controllers/examRegistration.js) — directly on ExamRegistration's own
@@ -71,15 +103,28 @@ const fetchScopedRegistrations = async (req, extraFilter = {}) => {
 // that student's own area (CenterRegistration.area), so it's the only field
 // that keeps every exam center correctly grouped under its real area.
 // assignedExamCenter is only a fallback for a record with no home centre.
-const resolveExamCentre = (d) => d.centerRegistration || d.assignedExamCenter || null;
+const resolveRawCentre = (d) => d.centerRegistration || d.assignedExamCenter || null;
+
+// Same as resolveRawCentre, but collapsed through the canonical-group map so
+// two centerregistrations docs for the same physical centre (see
+// buildCentreCanonicalMap above) resolve to one shared id/name/code instead
+// of splitting the centre's students, exams and sticker across two entries.
+const resolveExamCentre = (d, canonicalMap) => {
+  const raw = resolveRawCentre(d);
+  if (!raw?._id) return null;
+  const group = canonicalMap.get(String(raw._id));
+  return group
+    ? { _id: group.canonicalId, nameOfCenter: group.nameOfCenter, centerCode: group.centerCode }
+    : { _id: String(raw._id), nameOfCenter: raw.nameOfCenter || "", centerCode: raw.centerCode || "" };
+};
 
 // Groups already-deduped registration rows into one sticker entry per exam
 // centre, with an exam-wise register-number range/count breakdown.
-const groupByExamCentre = (rows) => {
+const groupByExamCentre = (rows, canonicalMap) => {
   const byCenter = new Map();
 
   for (const d of rows) {
-    const centre = resolveExamCentre(d);
+    const centre = resolveExamCentre(d, canonicalMap);
     if (!centre?._id) continue; // no exam centre at all — nothing to attribute this row to
 
     const centerKey = String(centre._id);
@@ -159,10 +204,10 @@ exports.getFilterOptions = async (req, res) => {
 
     let examCenters = [];
     if (scopeDistrictId) {
-      const rows = await fetchScopedRegistrations(req);
+      const [rows, canonicalMap] = await Promise.all([fetchScopedRegistrations(req), buildCentreCanonicalMap()]);
       const seen = new Map();
       rows.forEach((d) => {
-        const centre = resolveExamCentre(d);
+        const centre = resolveExamCentre(d, canonicalMap);
         if (centre?._id) seen.set(String(centre._id), centre);
       });
       examCenters = [...seen.entries()].map(([id, c]) => ({ id, value: c.nameOfCenter, centerCode: c.centerCode }));
@@ -188,13 +233,20 @@ exports.getFilterOptions = async (req, res) => {
 exports.getStickerList = async (req, res) => {
   try {
     const { examCenter } = req.query;
+    const canonicalMap = await buildCentreCanonicalMap();
+
     const extraFilter = {};
     if (examCenter && toObjectId(examCenter)) {
-      extraFilter.$or = [{ centerRegistration: examCenter }, { centerRegistration: null, assignedExamCenter: examCenter }];
+      // examCenter may be any member id of a duplicate-centre group (the
+      // dropdown always sends the canonical id, but match on every member
+      // id in its group so nothing is missed either way) — filter on all of
+      // them, not just the one id, so the merged sticker stays complete.
+      const memberIds = canonicalMap.get(examCenter)?.memberIds || [examCenter];
+      extraFilter.$or = [{ centerRegistration: { $in: memberIds } }, { centerRegistration: null, assignedExamCenter: { $in: memberIds } }];
     }
 
     const rows = await fetchScopedRegistrations(req, extraFilter);
-    const byCenter = groupByExamCentre(rows);
+    const byCenter = groupByExamCentre(rows, canonicalMap);
 
     const response = [...byCenter.values()]
       .map(({ examMap, ...entry }) => entry)
@@ -223,16 +275,23 @@ exports.getStickerDetail = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid exam center id" });
     }
 
+    const canonicalMap = await buildCentreCanonicalMap();
+    // Resolve to every member id of examCenterId's duplicate-centre group (if
+    // any) so a sticker for a centre with two centerregistrations docs pulls
+    // every student and regno, not just the half attached to this one id.
+    const memberIds = canonicalMap.get(examCenterId)?.memberIds || [examCenterId];
+
     const extraFilter = {
-      $or: [{ centerRegistration: examCenterId }, { centerRegistration: null, assignedExamCenter: examCenterId }],
+      $or: [{ centerRegistration: { $in: memberIds } }, { centerRegistration: null, assignedExamCenter: { $in: memberIds } }],
     };
     const rows = await fetchScopedRegistrations(req, extraFilter);
     if (!rows.length) {
       return res.status(404).json({ success: false, message: "No students assigned to this exam center yet." });
     }
 
-    const byCenter = groupByExamCentre(rows);
-    const entry = byCenter.get(String(examCenterId));
+    const byCenter = groupByExamCentre(rows, canonicalMap);
+    const canonicalId = canonicalMap.get(examCenterId)?.canonicalId || String(examCenterId);
+    const entry = byCenter.get(canonicalId);
     if (!entry) {
       return res.status(404).json({ success: false, message: "Exam center not found" });
     }

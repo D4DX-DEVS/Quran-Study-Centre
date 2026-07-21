@@ -4,7 +4,7 @@ import { GetIcon } from "../../../../../icons";
 import { getValue } from "../../functions";
 import { Pencil } from "lucide-react";
 
-export const DisplayInformations = ({ editingHandler, attributes, data, formMode, popupMenu, style = "style1" }) => {
+export const DisplayInformations = ({ editingHandler, attributes, data, formMode, popupMenu, style = "style1", showEditButton = true }) => {
   const [showImage, setShowImage] = useState(false);
 
   const EditButton = () => (
@@ -64,9 +64,11 @@ export const DisplayInformations = ({ editingHandler, attributes, data, formMode
             }
             return null;
           })}
-          <div className="mt-6 px-4">
-            <EditButton />
-          </div>
+          {showEditButton && (
+            <div className="mt-6 px-4">
+              <EditButton />
+            </div>
+          )}
         </div>
         {showImage && <ImagePopup onClose={() => setShowImage(null)} src={showImage.src} />}
       </div>
@@ -118,9 +120,11 @@ export const DisplayInformations = ({ editingHandler, attributes, data, formMode
           return null;
         })}
       </div>
-      <div className="mt-6 border-t border-gray-100 pt-6">
-        <EditButton />
-      </div>
+      {showEditButton && (
+        <div className="mt-6 border-t border-gray-100 pt-6">
+          <EditButton />
+        </div>
+      )}
       {showImage && <ImagePopup onClose={() => setShowImage(null)} src={showImage.src} />}
     </div>
   );
@@ -182,9 +186,11 @@ export const DisplayInformations = ({ editingHandler, attributes, data, formMode
             return null;
           })}
         </div>
-        <div className="mt-6 px-5">
-          <EditButton />
-        </div>
+        {showEditButton && (
+          <div className="mt-6 px-5">
+            <EditButton />
+          </div>
+        )}
         {showImage && <ImagePopup onClose={() => setShowImage(null)} src={showImage.src} />}
       </div>
     </div>

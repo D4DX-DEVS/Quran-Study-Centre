@@ -174,6 +174,7 @@ const Tabs = ({ tabs: tabsData = [], className = "", popupMenu = "horizontal", e
           formMode={content.formMode}
           attributes={openData.attributes}
           data={openData.data}
+          showEditButton={content.updatePrivilege}
         />
       </TabContainer>
     ) : type === "jsx" ? (
