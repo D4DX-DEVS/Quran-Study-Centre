@@ -161,7 +161,7 @@ const QuestionPapersComponent = (props) => {
         <div className="landing-page-shell">
           <Main>
             <Column>
-              <Title>Download Question Papers Now!</Title>
+              <Title>Download Question Banks Now!</Title>
               <TabBox>
                 {tabs.map((tab, index) => (
                   <StyledButton key={index} onClick={() => handleTabClick(index)}>
