@@ -1,6 +1,15 @@
 const router = require("express").Router();
 // controllers
-const { addHallTicket, select, updateHallTicket, deleteHallTicket, getHallTicket, downloadHallTicket } = require("../controllers/hallTicket");
+const {
+  addHallTicket,
+  select,
+  updateHallTicket,
+  deleteHallTicket,
+  getHallTicket,
+  downloadHallTicket,
+  generateAllHallTickets,
+  printHallTicketSheet,
+} = require("../controllers/hallTicket");
 // middleware
 const { protect, authorize } = require("../middleware/auth");
 const { reqFilter } = require("../middleware/filter");
@@ -11,5 +20,7 @@ router.route("/select").get(reqFilter, select);
 
 router.get("/get-hall-ticket", getHallTicket);
 router.post("/download", downloadHallTicket);
+router.post("/generate-all", generateAllHallTickets);
+router.post("/print-sheet", printHallTicketSheet);
 
 module.exports = router;

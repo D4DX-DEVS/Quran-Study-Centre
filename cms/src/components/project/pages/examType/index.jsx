@@ -13,12 +13,12 @@ const ExamType = (props) => {
   const [attributes] = useState([
     {
       type: "text",
-      placeholder: "ExamType",
-      name: "examType",
+      placeholder: "Exam Name",
+      name: "examShortName",
       validation: "",
       default: "",
       tag: true,
-      label: "ExamType",
+      label: "Exam Name",
       showItem: "",
       required: true,
       view: true,
@@ -26,18 +26,34 @@ const ExamType = (props) => {
       update: true,
     },
     {
-      type: "text",
-      placeholder: "Exam Short Name",
-      name: "examShortName",
+      type: "textarea",
+      placeholder: "Syllabus / description",
+      name: "description",
       validation: "",
       default: "",
-      tag: true,
-      label: "ExamShortName",
+      tag: false,
+      label: "Description",
       showItem: "",
-      required: true,
+      required: false,
       view: true,
       add: true,
       update: true,
+    },
+    {
+      // Auto-generated from Exam Name + Description on save — not directly
+      // editable, so admins can't accidentally truncate the description.
+      type: "text",
+      placeholder: "ExamType",
+      name: "examType",
+      validation: "",
+      default: "",
+      tag: false,
+      label: "Full Exam Type (auto)",
+      showItem: "",
+      required: false,
+      view: true,
+      add: false,
+      update: false,
     },
     {
       // Phase 3 — State vs District. Drives certificate template picker and
@@ -86,7 +102,7 @@ const ExamType = (props) => {
         // actions={actions}
         api={`exam-type`}
         itemTitle={{
-          name: "examType",
+          name: "examShortName",
           type: "text",
           collection: "",
         }}

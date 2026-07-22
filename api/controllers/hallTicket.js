@@ -1,13 +1,11 @@
 const HallTickets = require("../models/hallTicket.js");
 const { default: mongoose } = require("mongoose");
-const { PDFDocument, StandardFonts } = require("pdf-lib");
-const fontkit = require("fontkit");
-const fs = require("fs");
-const moment = require("moment");
 const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
-const path = require("path");
 const examRegistration = require("../models/examRegistration.js");
-const { text } = require("stream/consumers");
+const { resolveExamCenterName, genderRank, modeRank, examSortOrder } = require("../utils/studentSort");
+// The hall ticket PDF is built with @react-pdf/renderer (see hallTicketDocument.js).
+// It replaced an older pdf-lib renderer that could not shape Malayalam correctly.
+const { renderHallTicketPdf, renderHallTicketSheet } = require("./hallTicketDocument.js");
 
 const s3 = new S3Client({
   endpoint: `https://${process.env.DO_SPACES_ENDPOINT}`,
@@ -18,13 +16,45 @@ const s3 = new S3Client({
   },
 });
 
-// Helper to normalize Roman numerals to ASCII
-const normalizeExamType = (str) => {
-  const normalized = str.replace(/Ⅲ/g, "III").replace(/Ⅱ/g, "II").replace(/Ⅰ/g, "I");
-  if (str !== normalized) {
-    console.log(`Normalized exam type from "${str}" to "${normalized}"`);
-  }
-  return normalized;
+const HALL_TICKET_POPULATE_OPTS = [
+  { path: "centerRegistration", select: "nameOfCenter centerCode" },
+  { path: "assignedExamCenter", select: "nameOfCenter centerCode" },
+  { path: "district", select: "district" },
+  { path: "area", select: "area" },
+  { path: "examCenter", select: "centerName" },
+  { path: "outsideExamCenter", select: "centerName" },
+  { path: "nameOfExamAppearingNow", select: "examType" },
+];
+
+// "QSC Hall Ticket - <regno>" — falls back to the Mongo _id for the rare
+// registration that hasn't been assigned a regno yet, so the name is always
+// unique even then.
+const hallTicketFileName = (user) => `QSC Hall Ticket - ${user.regno || user._id}`;
+
+const uploadHallTicketPdf = async (pdfBytes, keySuffix, displayName) => {
+  const folder = process.env.DO_SPACES_FOLDER || "";
+  const fileName = folder ? `${folder}/hallTickets/${keySuffix}.pdf` : `hallTickets/${keySuffix}.pdf`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: process.env.DO_SPACES_BUCKET,
+      Key: fileName,
+      Body: pdfBytes,
+      ContentType: "application/pdf",
+      ACL: "public-read",
+      // Suggests this name in the browser's "Save As" dialog even though the
+      // object key (below) is what actually shows up in the URL bar.
+      ContentDisposition: displayName ? `attachment; filename="${displayName}.pdf"` : undefined,
+    })
+  );
+
+  // The object key stays the same on every regeneration, but the CDN
+  // (Cloudflare in front of DO Spaces) caches each URL for max-age=3600.
+  // Without a fresh cache key a regenerated ticket would keep serving the
+  // stale copy for up to an hour. A ?v=<timestamp> query is part of the
+  // CDN cache key here, so every generation hands out a URL that misses
+  // the cache and fetches the just-uploaded PDF.
+  return `${process.env.DO_SPACES_CDN_ENDPOINT}/${fileName}?v=${Date.now()}`;
 };
 
 // @desc      ADD HALL TICKET
@@ -55,7 +85,7 @@ exports.getHallTicket = async (req, res) => {
         { path: "district", select: "district" },
         { path: "area", select: "area" },
         { path: "centerRegistration", select: "nameOfCenter centerCode" },
-        { path: "nameOfExamAppearingNow", select: "examType" },
+        { path: "nameOfExamAppearingNow", select: "examType sortOrder" },
         { path: "assignedExamCenter", select: "nameOfCenter centerCode" },
       ],
     };
@@ -65,7 +95,6 @@ exports.getHallTicket = async (req, res) => {
       return res.status(200).json({ success: true, message: "Retrieved specific hallTicket", response });
     }
     const query = { ...req.filter };
-    let data;
 
     if (searchkey) {
       // Search across multiple fields in exam registrations
@@ -80,43 +109,38 @@ exports.getHallTicket = async (req, res) => {
         })
         .select("_id");
 
-      const registrationIds = matchingRegistrations.map((reg) => reg._id);
-
-      data = await HallTickets.find({
-        ...query,
-        nameOfApplicant: { $in: registrationIds },
-      })
-        .populate(populateOpts)
-        .skip(parseInt(skip) || 0)
-        .limit(parseInt(limit) || 50);
-    } else {
-      data = await HallTickets.find(query)
-        .populate(populateOpts)
-        .skip(parseInt(skip) || 0)
-        .limit(parseInt(limit) || 50);
+      query.nameOfApplicant = { $in: matchingRegistrations.map((reg) => reg._id) };
     }
 
-    const [totalCount, filterCount] = await Promise.all([
-      parseInt(skip) === 0 && HallTickets.countDocuments(),
-      parseInt(skip) === 0 &&
-        (searchkey
-          ? HallTickets.countDocuments({
-              ...query,
-              nameOfApplicant: {
-                $in: await examRegistration
-                  .find({
-                    $or: [
-                      { nameOfApplicant: { $regex: searchkey, $options: "i" } },
-                      { regno: { $regex: searchkey, $options: "i" } },
-                      { mobileNumber: !isNaN(searchkey) ? Number(searchkey) : undefined },
-                    ].filter((c) => !Object.values(c).includes(undefined)),
-                  })
-                  .select("_id")
-                  .then((regs) => regs.map((reg) => reg._id)),
-              },
-            })
-          : HallTickets.countDocuments(query)),
-    ]);
+    // Row order needs to match the attendance/registered-students table
+    // (district -> area -> exam centre -> exam stage -> gender -> mode of
+    // study -> reg no -> name, see utils/studentSort.js), which depends on
+    // populated display names — not sortable at the DB level with a plain
+    // .sort(), so every match is fetched, sorted in JS, then paginated.
+    const allMatches = await HallTickets.find(query).populate(populateOpts);
+
+    const collator = new Intl.Collator("en", { sensitivity: "base" });
+    allMatches.sort((a, b) => {
+      const regA = a.nameOfApplicant || {};
+      const regB = b.nameOfApplicant || {};
+      return (
+        collator.compare(regA.district?.district || "", regB.district?.district || "") ||
+        collator.compare(regA.area?.area || "", regB.area?.area || "") ||
+        collator.compare(resolveExamCenterName(regA), resolveExamCenterName(regB)) ||
+        (examSortOrder(regA.nameOfExamAppearingNow) - examSortOrder(regB.nameOfExamAppearingNow)) ||
+        (genderRank(regA.gender) - genderRank(regB.gender)) ||
+        (modeRank(regA.status) - modeRank(regB.status)) ||
+        collator.compare(regA.regno || "", regB.regno || "") ||
+        collator.compare(regA.nameOfApplicant || "", regB.nameOfApplicant || "")
+      );
+    });
+
+    const filterCount = allMatches.length;
+    const skipNum = parseInt(skip) || 0;
+    const limitNum = parseInt(limit) || 50;
+    const data = allMatches.slice(skipNum, skipNum + limitNum);
+
+    const totalCount = skipNum === 0 ? await HallTickets.countDocuments() : 0;
 
     res.status(200).json({ success: true, message: `Retrieved all hallTicket`, response: data, count: data.length, totalCount: totalCount || 0, filterCount: filterCount || 0 });
   } catch (err) {
@@ -124,7 +148,44 @@ exports.getHallTicket = async (req, res) => {
   }
 };
 
-// @desc      DOWNLOAD HALL TICKET
+// Renders + uploads a fresh hall ticket for one already-populated student doc,
+// and records the result on the HallTicket collection. Shared by the on-demand
+// download endpoint and the auto-regeneration triggered on student edits.
+const regenerateHallTicketFor = async (user) => {
+  const pdfBytes = await renderHallTicketPdf(user);
+  const fileName = hallTicketFileName(user);
+  const cdnUrl = await uploadHallTicketPdf(pdfBytes, fileName, fileName);
+
+  await HallTickets.findOneAndUpdate(
+    { nameOfApplicant: user._id },
+    { pdfUrl: cdnUrl, status: "generated", generatedAt: new Date(), error: null },
+    { upsert: true }
+  );
+
+  return cdnUrl;
+};
+
+// Looks up a student by _id (populating what the ticket needs) and
+// regenerates their hall ticket. Used as a fire-and-forget side effect after
+// a student's details are edited, so an out-of-date PDF never lingers on the
+// CDN. Failures are recorded on the HallTicket doc rather than thrown, since
+// callers use this without awaiting/handling a rejection.
+exports.regenerateHallTicketForId = async (registrationId) => {
+  try {
+    const user = await examRegistration.findById(registrationId).populate(HALL_TICKET_POPULATE_OPTS);
+    if (!user) return;
+    await regenerateHallTicketFor(user);
+  } catch (error) {
+    console.error(`Auto hall-ticket regeneration failed for registration ${registrationId}:`, error.message);
+    await HallTickets.findOneAndUpdate(
+      { nameOfApplicant: registrationId },
+      { status: "failed", error: error.message.toString().slice(0, 500) },
+      { upsert: true }
+    ).catch(() => {});
+  }
+};
+
+// @desc      DOWNLOAD HALL TICKET (single student, on demand)
 // @route     GET /api/v1/hall-ticket/download
 // @access    public
 exports.downloadHallTicket = async (req, res) => {
@@ -134,15 +195,7 @@ exports.downloadHallTicket = async (req, res) => {
       return res.status(400).json({ success: false, customMessage: "Mobile number is required" });
     }
 
-    // Find user data (your existing code)
-    const user = await examRegistration
-      .findOne({ mobileNumber })
-      .populate({ path: "centerRegistration", select: "nameOfCenter centerCode" })
-      .populate({ path: "assignedExamCenter", select: "nameOfCenter centerCode" })
-      .populate({ path: "district", select: "district" })
-      .populate({ path: "examCenter", select: "centerName" })
-      .populate({ path: "outsideExamCenter", select: "centerName" })
-      .populate({ path: "nameOfExamAppearingNow", select: "examType" });
+    const user = await examRegistration.findOne({ mobileNumber }).populate(HALL_TICKET_POPULATE_OPTS);
 
     if (!user) {
       return res.status(404).json({
@@ -151,232 +204,12 @@ exports.downloadHallTicket = async (req, res) => {
       });
     }
 
-    // Read the PDF template
-    const templatePath = path.join(__dirname, "Hal_Ticket_2025.pdf");
-    const templateBytes = await fs.promises.readFile(templatePath);
-
-    // Load PDF and register fontkit
-    const pdfDoc = await PDFDocument.load(templateBytes);
-    pdfDoc.registerFontkit(fontkit);
-
-    // Embed standard font
-    const standardFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-
-    // Try to load Malayalam font with better error handling
-    let malayalamFont = null;
-    const possibleFontPaths = [path.join(__dirname, "NotoSansMalayalam-Regular.ttf"), path.join(__dirname, "fonts", "NotoSansMalayalam-Regular.ttf"), path.join(__dirname, "assets", "NotoSansMalayalam-Regular.ttf")];
-
-    for (const fontPath of possibleFontPaths) {
-      try {
-        if (fs.existsSync(fontPath)) {
-          const malayalamFontBytes = await fs.promises.readFile(fontPath);
-
-          // Verify it's a valid TTF file by checking the first 4 bytes
-          if (malayalamFontBytes.length > 4) {
-            const signature = malayalamFontBytes.slice(0, 4).toString("ascii");
-            if (signature === "\x00\x01\x00\x00" || signature === "OTTO" || signature === "true" || signature === "typ1") {
-              malayalamFont = await pdfDoc.embedFont(malayalamFontBytes);
-              console.log(`Successfully loaded Malayalam font from: ${fontPath}`);
-              break;
-            }
-          }
-        }
-      } catch (fontError) {
-        console.log(`Failed to load font from ${fontPath}:`, fontError.message);
-        continue;
-      }
-    }
-
-    if (!malayalamFont) {
-      console.log("No Malayalam font found, will use ASCII-only approach");
-    }
-
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
-
-    const drawText = (text, x, y, size = 16) => {
-      if (!text) return;
-
-      try {
-        const textStr = normalizeExamType(text.toString());
-
-        // Check if this is the exam type field
-        if (x === 185 && y === 540) {
-          drawExamTypeMultiLine(textStr, x, y, 12);
-          return;
-        }
-
-        if (malayalamFont && /[\u0D00-\u0D7F]/.test(textStr)) {
-          firstPage.drawText(textStr, {
-            x,
-            y,
-            size,
-            font: malayalamFont,
-          });
-        } else if (/^[\x00-\x7F]*$/.test(textStr)) {
-          firstPage.drawText(textStr, {
-            x,
-            y,
-            size,
-            font: standardFont,
-          });
-        } else {
-          const asciiOnly = textStr
-            .replace(/[^\x00-\x7F]/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-            .replace(/[,\s]+$/, "")
-            .replace(/:\s*[,\s]*$/, ":");
-
-          if (asciiOnly && asciiOnly !== "") {
-            firstPage.drawText(asciiOnly, {
-              x,
-              y,
-              size,
-              font: standardFont,
-            });
-          }
-        }
-      } catch (error) {
-        console.error(`❌ Error drawing text: "${text.toString().substring(0, 30)}..."`, error.message);
-      }
-    };
-
-    // Keep the original textFields with y:525
-    const textFields = [
-      { text: user.regno?.toString() || "NIL", x: 185, y: 709 },
-      { text: (user.status || "Regular").toUpperCase(), x: 460, y: 709 },
-      { text: user.nameOfApplicant || "NIL", x: 185, y: 677 },
-      { text: user.centerRegistration?.nameOfCenter || "NIL", x: 185, y: 633 },
-      { text: user.district?.district || "NIL", x: 185, y: 595 },
-      {
-        text:
-          user.assignedExamCenter?.nameOfCenter ||
-          user.examCenter?.centerName ||
-          user.outsideExamCenter?.centerName ||
-          user.centerRegistration?.nameOfCenter ||
-          "NIL",
-        x: 185,
-        y: 565,
-      },
-      { text: user.nameOfExamAppearingNow?.examType || "NIL", x: 185, y: 540 },
-    ];
-
-    const drawExamTypeMultiLine = (text, x, y, size = 7) => {
-      try {
-        const normText = normalizeExamType(text);
-        const lineHeight = size;
-        const maxLines = 4;
-        const targetCharsPerLine = 45;
-        const words = normText.split(/\s+/);
-        const lines = [];
-        let currentLine = "";
-        words.forEach((word) => {
-          if ((currentLine + " " + word).trim().length > targetCharsPerLine && lines.length < maxLines - 1) {
-            lines.push(currentLine.trim());
-            currentLine = word;
-          } else {
-            currentLine += (currentLine ? " " : "") + word;
-          }
-        });
-        if (currentLine) lines.push(currentLine.trim());
-        while (lines.length < maxLines) lines.push("");
-        lines.slice(0, maxLines).forEach((line, index) => {
-          if (!line.trim()) return;
-          const lineY = y - index * lineHeight;
-          // Log the line after normalization
-          console.log(`[drawExamTypeMultiLine] Drawing line:`, line);
-
-          if (line.includes(":")) {
-            drawMixedFontLine(line, x, lineY, size);
-          } else {
-            const usesMalayalam = /[\u0D00-\u0D7F]/.test(line);
-            let font = standardFont;
-            let textToDraw = line;
-            if (usesMalayalam && malayalamFont) {
-              font = malayalamFont;
-            }
-            // Log which font is being used
-            console.log(`[drawExamTypeMultiLine] Using font:`, font === malayalamFont ? "malayalamFont" : "standardFont");
-            firstPage.drawText(textToDraw, {
-              x,
-              y: lineY,
-              size,
-              font,
-            });
-          }
-        });
-      } catch (error) {
-        console.error("❌ Error in drawExamTypeMultiLine:", error.message);
-      }
-    };
-
-    // Update the mixed font function for smaller size
-    const drawMixedFontLine = (text, x, y, size) => {
-      try {
-        const colonIndex = text.indexOf(":");
-        if (colonIndex === -1) {
-          const font = /[\u0D00-\u0D7F]/.test(text) && malayalamFont ? malayalamFont : standardFont;
-          firstPage.drawText(text, { x, y, size, font });
-          return;
-        }
-
-        const englishPart = text.substring(0, colonIndex + 1).trim();
-        const malayalamPart = text.substring(colonIndex + 1).trim();
-
-        // Draw English part
-        firstPage.drawText(englishPart, {
-          x,
-          y,
-          size,
-          font: standardFont,
-        });
-
-        // Calculate width for Malayalam positioning (adjusted for smaller font)
-        const englishWidth = englishPart.length * (size * 0.4); // Reduced multiplier for size 7
-
-        // Draw Malayalam part
-        if (malayalamPart && malayalamFont) {
-          firstPage.drawText(" " + malayalamPart, {
-            x: x + englishWidth,
-            y,
-            size,
-            font: malayalamFont,
-          });
-        }
-      } catch (error) {
-        console.error("❌ Error in drawMixedFontLine:", error.message);
-        firstPage.drawText(text, { x, y, size, font: standardFont });
-      }
-    };
-
-    // Draw all text fields
-    textFields.forEach((field) => {
-      drawText(field.text, field.x, field.y);
-    });
-
-    // Save and upload (your existing code)
-    const modifiedPdfBytes = await pdfDoc.save();
-    const folder = process.env.DO_SPACES_FOLDER || "";
-    const fileName = folder ? `${folder}/hallTickets/HallTicket-${Date.now()}.pdf` : `hallTickets/HallTicket-${Date.now()}.pdf`;
-
-    const uploadParams = {
-      Bucket: process.env.DO_SPACES_BUCKET,
-      Key: fileName,
-      Body: modifiedPdfBytes,
-      ContentType: "application/pdf",
-    };
-
-    const command = new PutObjectCommand(uploadParams);
-    await s3.send(command);
-
-    const cdnUrl = `${process.env.DO_SPACES_CDN_ENDPOINT}/${fileName}`;
+    const cdnUrl = await regenerateHallTicketFor(user);
 
     return res.status(200).json({
       success: true,
       message: "Hall ticket generated successfully",
       url: cdnUrl,
-      fontStatus: malayalamFont ? "Malayalam font loaded" : "ASCII-only mode",
     });
   } catch (error) {
     console.error("Hall ticket generation error:", error);
@@ -384,6 +217,124 @@ exports.downloadHallTicket = async (req, res) => {
       success: false,
       message: error.toString(),
     });
+  }
+};
+
+// Processes all registrations in the background, a handful at a time, writing
+// per-student progress onto the HallTicket collection as it goes. Deliberately
+// not awaited by the route handler — with thousands of students this can run
+// well past any reasonable HTTP timeout, so the admin polls progress via the
+// existing hall-ticket list instead of waiting on the request.
+const BULK_CONCURRENCY = 5;
+const processBulkHallTickets = async (registrations, onProgress) => {
+  let cursor = 0;
+  let done = 0;
+  let failed = 0;
+
+  const worker = async () => {
+    while (cursor < registrations.length) {
+      const user = registrations[cursor++];
+      try {
+        await HallTickets.findOneAndUpdate({ nameOfApplicant: user._id }, { status: "pending" }, { upsert: true });
+        await regenerateHallTicketFor(user);
+        done++;
+      } catch (err) {
+        failed++;
+        console.error(`Bulk hall ticket generation failed for registration ${user._id}:`, err.message);
+        await HallTickets.findOneAndUpdate(
+          { nameOfApplicant: user._id },
+          { status: "failed", error: err.message.toString().slice(0, 500) },
+          { upsert: true }
+        );
+      } finally {
+        if (onProgress) onProgress(done, failed, registrations.length);
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: BULK_CONCURRENCY }, worker));
+  console.log(`Bulk hall ticket generation finished: ${done} generated, ${failed} failed, ${registrations.length} total.`);
+  return { done, failed, total: registrations.length };
+};
+
+exports.processBulkHallTickets = processBulkHallTickets;
+exports.HALL_TICKET_POPULATE_OPTS = HALL_TICKET_POPULATE_OPTS;
+
+// @desc      GENERATE HALL TICKETS FOR EVERY CURRENTLY REGISTERED STUDENT
+// @route     POST /api/v1/hall-ticket/generate-all
+// @access    public
+exports.generateAllHallTickets = async (req, res) => {
+  try {
+    const registrations = await examRegistration.find({}).populate(HALL_TICKET_POPULATE_OPTS);
+
+    if (!registrations.length) {
+      return res.status(200).json({ success: true, message: "No registered students found.", total: 0 });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Started generating ${registrations.length} hall ticket(s) in the background. Refresh this list in a bit to see progress (status column) and download links.`,
+      total: registrations.length,
+    });
+
+    processBulkHallTickets(registrations).catch((err) => {
+      console.error("Bulk hall ticket generation crashed:", err);
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, message: err.toString() });
+  }
+};
+
+// @desc      PRINT SHEET — 2 students' hall tickets per A4 page, for handing
+//            out printed copies. Accepts either an explicit list of
+//            examRegistration _ids to print, or (if omitted) prints every
+//            currently-registered student in the same district -> area ->
+//            exam centre -> stage -> gender -> mode -> regno -> name order
+//            used elsewhere, so a printed stack matches the attendance list.
+// @route     POST /api/v1/hall-ticket/print-sheet
+// @access    public
+exports.printHallTicketSheet = async (req, res) => {
+  try {
+    const { ids } = req.body || {};
+
+    let registrations;
+    if (Array.isArray(ids) && ids.length) {
+      const validIds = ids.filter((id) => mongoose.isValidObjectId(id));
+      registrations = await examRegistration.find({ _id: { $in: validIds } }).populate(HALL_TICKET_POPULATE_OPTS);
+      // Preserve the order the caller asked for (e.g. selection order in the UI).
+      const byId = new Map(registrations.map((r) => [r._id.toString(), r]));
+      registrations = validIds.map((id) => byId.get(id)).filter(Boolean);
+    } else {
+      registrations = await examRegistration.find({}).populate(HALL_TICKET_POPULATE_OPTS);
+      const collator = new Intl.Collator("en", { sensitivity: "base" });
+      registrations.sort(
+        (a, b) =>
+          collator.compare(a.district?.district || "", b.district?.district || "") ||
+          collator.compare(a.area?.area || "", b.area?.area || "") ||
+          collator.compare(resolveExamCenterName(a), resolveExamCenterName(b)) ||
+          examSortOrder(a.nameOfExamAppearingNow) - examSortOrder(b.nameOfExamAppearingNow) ||
+          genderRank(a.gender) - genderRank(b.gender) ||
+          modeRank(a.status) - modeRank(b.status) ||
+          collator.compare(a.regno || "", b.regno || "") ||
+          collator.compare(a.nameOfApplicant || "", b.nameOfApplicant || "")
+      );
+    }
+
+    if (!registrations.length) {
+      return res.status(404).json({ success: false, customMessage: "No matching students found." });
+    }
+
+    const pdfBytes = await renderHallTicketSheet(registrations);
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="hall-tickets-print-sheet.pdf"`,
+    });
+    return res.status(200).send(Buffer.from(pdfBytes));
+  } catch (err) {
+    console.error("Print sheet generation error:", err);
+    return res.status(400).json({ success: false, message: err.toString() });
   }
 };
 

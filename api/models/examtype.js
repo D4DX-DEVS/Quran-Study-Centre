@@ -9,6 +9,14 @@ const ExamTypeSchema = new mongoose.Schema(
     examShortName: {
       type: String,
     },
+    // Syllabus/description text for this exam stage. Kept separate from
+    // examType so admins edit it directly instead of hand-editing the
+    // combined "Name: description" string (which was easy to truncate
+    // by accident and lose the description on save).
+    description: {
+      type: String,
+      default: "",
+    },
     // Phase 3 — classify exam so certificate / rank list logic doesn't have to
     // guess from exam name strings. "State" = centralised (e.g. Preliminary VI,
     // Secondary III); "District" = conducted within each district.
@@ -48,6 +56,9 @@ const ExamTypeSchema = new mongoose.Schema(
 );
 
 ExamTypeSchema.pre("save", function (next) {
+  if (this.isModified("examShortName") || this.isModified("description") || this.isNew) {
+    this.examType = this.description?.trim() ? `${this.examShortName}: ${this.description.trim()}` : this.examShortName;
+  }
   if (this.isModified("examType") || this.isModified("examShortName") || this.isNew) {
     const text = this.examShortName || this.examType;
     this.sortOrder = computeExamSortOrder(text);

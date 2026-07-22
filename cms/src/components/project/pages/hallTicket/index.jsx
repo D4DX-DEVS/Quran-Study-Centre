@@ -145,6 +145,26 @@ const HallTicket = (props) => {
       update: false,
       filter: false,
     },
+    {
+      type: "text",
+      name: "status",
+      label: "Generation Status",
+      tag: true,
+      view: true,
+      add: false,
+      update: false,
+      filter: false,
+    },
+    {
+      type: "text",
+      name: "pdfUrl",
+      label: "PDF Link",
+      tag: false,
+      view: true,
+      add: false,
+      update: false,
+      filter: false,
+    },
   ]);
 
   const [actions] = useState([
@@ -183,9 +203,15 @@ const HallTicket = (props) => {
         console.log(response.data.url);
         props.setLoaderBox(false);
         if (response.data) {
-          props.setMessage({ content: response.data.message });
+          props.setMessage({ type: 1, content: response.data.message, icon: "success" });
           window.open(response.data.url, "_blank");
-          refreshView();
+          // The shared list's in-app refresh (refreshView/refreshUpdate) leaves
+          // this table stuck showing stale/blank rows after this action, for
+          // reasons that trace out as correct in the shared list code — a real
+          // page reload is the one thing that reliably shows the fresh status
+          // (regenerated/pdfUrl) afterwards, so force that instead of the
+          // normally-preferred in-app refresh.
+          window.location.reload();
         } else {
           console.error("Response data is undefined.");
         }
