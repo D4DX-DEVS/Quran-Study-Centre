@@ -57,7 +57,12 @@ const CONCURRENCY = 8;
   const worker = async () => {
     while (cursor < tickets.length) {
       const t = tickets[cursor++];
-      const key = t.pdfUrl.startsWith(cdnPrefix) ? t.pdfUrl.slice(cdnPrefix.length) : null;
+      // Stored pdfUrl carries a "?v=<timestamp>" cache-buster; the S3 object
+      // key does NOT include it. Strip the query (and any decode) so the ACL
+      // is applied to the real object instead of a nonexistent "...pdf?v=" key.
+      const key = t.pdfUrl.startsWith(cdnPrefix)
+        ? decodeURIComponent(t.pdfUrl.slice(cdnPrefix.length).split("?")[0])
+        : null;
       if (!key) {
         failed++;
         console.error(`Unrecognized pdfUrl format for ${t._id}: ${t.pdfUrl}`);
