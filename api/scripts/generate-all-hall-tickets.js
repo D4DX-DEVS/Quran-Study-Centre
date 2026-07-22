@@ -38,18 +38,31 @@ const { processBulkHallTickets, HALL_TICKET_POPULATE_OPTS } = require("../contro
   await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 });
   console.log("Connected:", mongoose.connection.host);
 
-  const alreadyGenerated = await HallTicket.find({ status: "generated" }).select("nameOfApplicant");
-  const doneIds = new Set(alreadyGenerated.map((h) => h.nameOfApplicant.toString()));
-  console.log(`${doneIds.size} already generated, skipping those.`);
+  const args = process.argv.slice(2);
+  const force = args.includes("--force");
+  const limit = parseInt(args.find((a) => /^\d+$/.test(a)), 10);
 
   const all = await ExamRegistration.find({}).populate(HALL_TICKET_POPULATE_OPTS);
-  let remaining = all.filter((r) => !doneIds.has(r._id.toString()));
-  console.log(`${all.length} total registrations, ${remaining.length} remaining to generate.`);
+  let remaining = all;
 
-  const limit = parseInt(process.argv[2], 10);
+  if (force) {
+    // Regenerate everyone regardless of existing status — used when the
+    // render code changed and every already-"generated" ticket on the CDN
+    // is stale (e.g. built with an older template/renderer), so the normal
+    // skip-if-already-generated resume behavior would wrongly skip all of
+    // them.
+    console.log(`--force passed, regenerating all ${all.length} registrations regardless of current status.`);
+  } else {
+    const alreadyGenerated = await HallTicket.find({ status: "generated" }).select("nameOfApplicant");
+    const doneIds = new Set(alreadyGenerated.map((h) => h.nameOfApplicant.toString()));
+    console.log(`${doneIds.size} already generated, skipping those.`);
+    remaining = all.filter((r) => !doneIds.has(r._id.toString()));
+    console.log(`${all.length} total registrations, ${remaining.length} remaining to generate.`);
+  }
+
   if (limit) {
     remaining = remaining.slice(0, limit);
-    console.log(`--limit passed, only processing first ${remaining.length}.`);
+    console.log(`limit passed, only processing first ${remaining.length}.`);
   }
 
   if (!remaining.length) {

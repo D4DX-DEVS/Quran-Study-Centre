@@ -26,7 +26,12 @@ const HALL_TICKET_POPULATE_OPTS = [
   { path: "nameOfExamAppearingNow", select: "examType" },
 ];
 
-const uploadHallTicketPdf = async (pdfBytes, keySuffix) => {
+// "QSC Hall Ticket - <regno>" — falls back to the Mongo _id for the rare
+// registration that hasn't been assigned a regno yet, so the name is always
+// unique even then.
+const hallTicketFileName = (user) => `QSC Hall Ticket - ${user.regno || user._id}`;
+
+const uploadHallTicketPdf = async (pdfBytes, keySuffix, displayName) => {
   const folder = process.env.DO_SPACES_FOLDER || "";
   const fileName = folder ? `${folder}/hallTickets/${keySuffix}.pdf` : `hallTickets/${keySuffix}.pdf`;
 
@@ -37,6 +42,9 @@ const uploadHallTicketPdf = async (pdfBytes, keySuffix) => {
       Body: pdfBytes,
       ContentType: "application/pdf",
       ACL: "public-read",
+      // Suggests this name in the browser's "Save As" dialog even though the
+      // object key (below) is what actually shows up in the URL bar.
+      ContentDisposition: displayName ? `attachment; filename="${displayName}.pdf"` : undefined,
     })
   );
 
@@ -161,7 +169,8 @@ exports.downloadHallTicket = async (req, res) => {
 
     const modifiedPdfBytes = await renderHallTicketPdf(user);
 
-    const cdnUrl = await uploadHallTicketPdf(modifiedPdfBytes, `HallTicket-${user._id}`);
+    const fileName = hallTicketFileName(user);
+    const cdnUrl = await uploadHallTicketPdf(modifiedPdfBytes, fileName, fileName);
 
     await HallTickets.findOneAndUpdate(
       { nameOfApplicant: user._id },
@@ -200,7 +209,8 @@ const processBulkHallTickets = async (registrations, onProgress) => {
       try {
         await HallTickets.findOneAndUpdate({ nameOfApplicant: user._id }, { status: "pending" }, { upsert: true });
         const pdfBytes = await renderHallTicketPdf(user);
-        const cdnUrl = await uploadHallTicketPdf(pdfBytes, `HallTicket-${user._id}`);
+        const fileName = hallTicketFileName(user);
+        const cdnUrl = await uploadHallTicketPdf(pdfBytes, fileName, fileName);
         await HallTickets.findOneAndUpdate(
           { nameOfApplicant: user._id },
           { pdfUrl: cdnUrl, status: "generated", generatedAt: new Date(), error: null }
