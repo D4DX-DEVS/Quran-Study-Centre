@@ -148,6 +148,43 @@ exports.getHallTicket = async (req, res) => {
   }
 };
 
+// Renders + uploads a fresh hall ticket for one already-populated student doc,
+// and records the result on the HallTicket collection. Shared by the on-demand
+// download endpoint and the auto-regeneration triggered on student edits.
+const regenerateHallTicketFor = async (user) => {
+  const pdfBytes = await renderHallTicketPdf(user);
+  const fileName = hallTicketFileName(user);
+  const cdnUrl = await uploadHallTicketPdf(pdfBytes, fileName, fileName);
+
+  await HallTickets.findOneAndUpdate(
+    { nameOfApplicant: user._id },
+    { pdfUrl: cdnUrl, status: "generated", generatedAt: new Date(), error: null },
+    { upsert: true }
+  );
+
+  return cdnUrl;
+};
+
+// Looks up a student by _id (populating what the ticket needs) and
+// regenerates their hall ticket. Used as a fire-and-forget side effect after
+// a student's details are edited, so an out-of-date PDF never lingers on the
+// CDN. Failures are recorded on the HallTicket doc rather than thrown, since
+// callers use this without awaiting/handling a rejection.
+exports.regenerateHallTicketForId = async (registrationId) => {
+  try {
+    const user = await examRegistration.findById(registrationId).populate(HALL_TICKET_POPULATE_OPTS);
+    if (!user) return;
+    await regenerateHallTicketFor(user);
+  } catch (error) {
+    console.error(`Auto hall-ticket regeneration failed for registration ${registrationId}:`, error.message);
+    await HallTickets.findOneAndUpdate(
+      { nameOfApplicant: registrationId },
+      { status: "failed", error: error.message.toString().slice(0, 500) },
+      { upsert: true }
+    ).catch(() => {});
+  }
+};
+
 // @desc      DOWNLOAD HALL TICKET (single student, on demand)
 // @route     GET /api/v1/hall-ticket/download
 // @access    public
@@ -167,16 +204,7 @@ exports.downloadHallTicket = async (req, res) => {
       });
     }
 
-    const modifiedPdfBytes = await renderHallTicketPdf(user);
-
-    const fileName = hallTicketFileName(user);
-    const cdnUrl = await uploadHallTicketPdf(modifiedPdfBytes, fileName, fileName);
-
-    await HallTickets.findOneAndUpdate(
-      { nameOfApplicant: user._id },
-      { pdfUrl: cdnUrl, status: "generated", generatedAt: new Date(), error: null },
-      { upsert: true }
-    );
+    const cdnUrl = await regenerateHallTicketFor(user);
 
     return res.status(200).json({
       success: true,
@@ -208,13 +236,7 @@ const processBulkHallTickets = async (registrations, onProgress) => {
       const user = registrations[cursor++];
       try {
         await HallTickets.findOneAndUpdate({ nameOfApplicant: user._id }, { status: "pending" }, { upsert: true });
-        const pdfBytes = await renderHallTicketPdf(user);
-        const fileName = hallTicketFileName(user);
-        const cdnUrl = await uploadHallTicketPdf(pdfBytes, fileName, fileName);
-        await HallTickets.findOneAndUpdate(
-          { nameOfApplicant: user._id },
-          { pdfUrl: cdnUrl, status: "generated", generatedAt: new Date(), error: null }
-        );
+        await regenerateHallTicketFor(user);
         done++;
       } catch (err) {
         failed++;

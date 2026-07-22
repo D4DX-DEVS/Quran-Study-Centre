@@ -13,6 +13,7 @@ const ExamSettings = require("../models/examSettings");
 const { recomputeAllocation } = require("./examAllocation");
 const { nextRegistrationNumberForNewStudent } = require("./registrationNumber");
 const { resolveExamCenterName, genderRank, modeRank, examSortOrder } = require("../utils/studentSort");
+const { regenerateHallTicketForId } = require("./hallTicket");
 
 const s3 = new S3Client({
   endpoint: `https://${process.env.DO_SPACES_ENDPOINT}`,
@@ -268,6 +269,14 @@ exports.updateExamRegistration = async (req, res) => {
     if (!examRegistration) {
       return res.status(404).json({ success: false, message: " ExamRegistration not found" });
     }
+
+    // Keep the hall ticket PDF in sync with whatever just changed (name,
+    // district, exam centre, exam type, ...). Fire-and-forget: the edit
+    // should save immediately regardless of how long the PDF render/upload
+    // takes, and a failure here must not fail the student update itself.
+    regenerateHallTicketForId(examRegistration._id).catch((err) =>
+      console.error(`Post-update hall ticket regeneration failed for ${examRegistration._id}:`, err.message)
+    );
 
     res.status(200).json({ success: true, message: "ExamRegistration updated successfully", data: examRegistration });
   } catch (err) {
