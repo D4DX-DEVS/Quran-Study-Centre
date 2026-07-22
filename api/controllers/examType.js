@@ -23,9 +23,6 @@ exports.getExamType = async (req, res) => {
 
     if (id && mongoose.isValidObjectId(id)) {
       let response = await ExamType.findById(id);
-
-      // Modify the examType to only show text before the colon
-     
       return res.status(200).json({ success: true, message: "Retrieved specific examType", response });
     }
 
@@ -39,12 +36,7 @@ exports.getExamType = async (req, res) => {
         .sort({ _id: -1 }),
     ]);
 
-    // Modify the examType field in each record to show text only before the colon
-    const modifiedData = data.map((item) => ({
-      ...item._doc,
-      examType: item.examType.split(":")[0].trim(),
-    }));
-    res.status(200).json({ success: true, message: `Retrieved all examType`, response: modifiedData, count: modifiedData.length, totalCount: totalCount || 0, filterCount: filterCount || 0 });
+    res.status(200).json({ success: true, message: `Retrieved all examType`, response: data, count: data.length, totalCount: totalCount || 0, filterCount: filterCount || 0 });
   } catch (err) {
     console.log(err);
     errorLog(req, err);
@@ -57,8 +49,13 @@ exports.getExamType = async (req, res) => {
 // @access    public
 exports.updateExamType = async (req, res) => {
   try {
-    const { id } = req.body;
-    const response = await ExamType.findByIdAndUpdate(id, req.body);
+    const { id, ...updates } = req.body;
+    const doc = await ExamType.findById(id);
+    if (!doc) {
+      return res.status(404).json({ success: false, message: "ExamType not found" });
+    }
+    Object.assign(doc, updates);
+    const response = await doc.save();
     res.status(200).json({ success: true, message: `updated specific examType`, response });
   } catch (err) {
     console.log(err);

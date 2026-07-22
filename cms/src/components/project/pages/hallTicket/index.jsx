@@ -145,6 +145,26 @@ const HallTicket = (props) => {
       update: false,
       filter: false,
     },
+    {
+      type: "text",
+      name: "status",
+      label: "Generation Status",
+      tag: true,
+      view: true,
+      add: false,
+      update: false,
+      filter: false,
+    },
+    {
+      type: "text",
+      name: "pdfUrl",
+      label: "PDF Link",
+      tag: false,
+      view: true,
+      add: false,
+      update: false,
+      filter: false,
+    },
   ]);
 
   const [actions] = useState([

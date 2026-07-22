@@ -7,6 +7,23 @@ const HallTicketSchema = new mongoose.Schema(
       ref: "ExamRegistration",
       required: true,
     },
+    pdfUrl: {
+      type: String,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "generated", "failed"],
+      default: "pending",
+    },
+    error: {
+      type: String,
+      default: null,
+    },
+    generatedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
