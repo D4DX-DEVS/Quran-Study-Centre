@@ -202,21 +202,22 @@ const printPage = (topProps, bottomProps, key) =>
       : e(View, { style: styles.ticketHalf })
   );
 
-// A single student's hall ticket: ONE copy, sized to exactly half an A4
-// sheet (A4 is 595.28 x 841.89pt, so this page is 595.28 x 420.94pt — the
-// same as cutting a printed A4 page in half). This also fixes a real
-// printing bug: the ticket used to be built on a US "LETTER" page, but
-// everyone prints on A4 — a printer scaling LETTER content to fit A4 paper
-// left a stray blank band on the physical page. Sizing to an exact fraction
-// of A4 removes that mismatch entirely.
-const HALF_A4 = { width: 595.28, height: 420.94 };
+// A single student's hall ticket: ONE copy, on a full A4 page, with the
+// ticket itself kept at the compact (half-A4) size and placed in the top
+// half — the bottom half stays blank. The page is deliberately full A4, not
+// a custom half-height size: printers apply "fit to page" to whatever paper
+// they're loaded with, so a smaller custom page size gets scaled UP to fill
+// the physical A4 sheet, stretching the ticket oversized (that's what
+// happened when this was a half-height page). Matching the page to the
+// actual A4 paper means no scaling happens, so the ticket prints at its
+// designed compact size instead of being blown up.
 const HallTicketDoc = (props) =>
   e(
     Document,
     { title: `Hall Ticket - ${props.regno || ""}`, author: "Quran Study Centre Kerala" },
     e(
       Page,
-      { size: HALF_A4, style: { fontSize: 11, color: "#000", paddingHorizontal: 26, paddingTop: 18, paddingBottom: 10 } },
+      { size: "A4", style: { fontSize: 11, color: "#000", paddingHorizontal: 26, paddingTop: 24 } },
       ticketBody(props, "p0", sheetStyles)
     )
   );
