@@ -58,7 +58,6 @@ const Footer = () => {
       <div className="landing-page-shell landing-footer-grid">
         <div className="landing-footer-brand">
           <img src={logo} alt="QSC logo" />
-          <p className="landing-footer-text">{footerContent.footerText}</p>
           <div className="landing-footer-social">
             {SOCIAL_LINKS.map(({ icon: Icon, href, label }) => (
               <a

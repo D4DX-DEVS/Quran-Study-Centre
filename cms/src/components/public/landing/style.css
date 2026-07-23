@@ -1321,7 +1321,8 @@ button.landing-video-card {
 
   .landing-app-banner img {
     width: 100%;
-    height: auto;
+    height: 80px;
+    object-fit: fill;
   }
 
   .landing-thafheem-actions {
