@@ -304,18 +304,6 @@ const SyllabusPage = (props) => {
                         <FieldValue>{section.portion}</FieldValue>
                       </Field>
 
-                      {section.prayers && (
-                        <Field>
-                          <FieldLabel>പ്രാർത്ഥനകൾ &amp; ഹദീസുകൾ</FieldLabel>
-                          <FieldValue>{section.prayers}</FieldValue>
-                        </Field>
-                      )}
-
-                      <Field>
-                        <FieldLabel>പ്രത്യേകം പഠിപ്പിക്കേണ്ട വിഷയങ്ങൾ</FieldLabel>
-                        <FieldValue>{section.special}</FieldValue>
-                      </Field>
-
                       <CardFooter>
                         {previousPaper ? (
                           <QpButton
@@ -324,7 +312,7 @@ const SyllabusPage = (props) => {
                             rel="noopener noreferrer"
                             download={CDN + previousPaper.attachment}
                           >
-                            Previous Question Paper
+                            Question Bank
                           </QpButton>
                         ) : (
                           <ComingSoon>Coming Soon</ComingSoon>
