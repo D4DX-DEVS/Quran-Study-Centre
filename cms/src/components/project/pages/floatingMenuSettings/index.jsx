@@ -117,7 +117,6 @@ const EMPTY_ABOUT_FORM = {
   image: "",
   landingMainbanner: "",
   landingStoryImage: "",
-  welcomeEyebrow: "",
   welcomeTitleLine1: "",
   welcomeTitleHighlight: "",
   welcomeDescription: "",
@@ -137,7 +136,6 @@ const mapAboutForm = (row = {}) => ({
   image: row.image || "",
   landingMainbanner: row.landingMainbanner || "",
   landingStoryImage: row.landingStoryImage || "",
-  welcomeEyebrow: row.welcomeEyebrow || "",
   welcomeTitleLine1: row.welcomeTitleLine1 || "",
   welcomeTitleHighlight: row.welcomeTitleHighlight || "",
   welcomeDescription: row.welcomeDescription || "",
@@ -319,8 +317,6 @@ const FloatingMenuSettings = (props) => {
 
   const validateAbout = () => {
     const missing = [];
-    if (!aboutForm.title?.trim()) missing.push("About Title");
-    if (!aboutForm.description?.trim()) missing.push("About Description");
     if (!aboutForm.email?.trim()) missing.push("Email");
     if (!aboutForm.mobile?.trim()) missing.push("Mobile");
     if (!aboutForm.footerText?.trim()) missing.push("Footer Text");
@@ -380,7 +376,6 @@ const FloatingMenuSettings = (props) => {
           email: aboutForm.email,
           mobile: aboutForm.mobile,
           footerText: aboutForm.footerText,
-          welcomeEyebrow: aboutForm.welcomeEyebrow,
           welcomeTitleLine1: aboutForm.welcomeTitleLine1,
           welcomeTitleHighlight: aboutForm.welcomeTitleHighlight,
           welcomeDescription: aboutForm.welcomeDescription,
@@ -581,19 +576,9 @@ const FloatingMenuSettings = (props) => {
 
             <SectionCard
               title="Welcome hero (top of homepage)"
-              description="The very first section visitors see. Fully admin-controlled: eyebrow text, headline, description and image."
+              description="The very first section visitors see. Fully admin-controlled: headline, description and image."
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Eyebrow text">
-                  <input
-                    type="text"
-                    value={aboutForm.welcomeEyebrow}
-                    onChange={handleAboutChange("welcomeEyebrow")}
-                    placeholder="e.g. Welcome to"
-                    className={inputCls}
-                  />
-                </Field>
-                <div />
                 <Field label="Title (line 1)">
                   <input
                     type="text"
@@ -648,7 +633,7 @@ const FloatingMenuSettings = (props) => {
               description="This single content block powers the public /about-us page, landing headline, homepage banners and footer contact details."
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="About Title" required>
+                <Field label="About Title">
                   <input
                     type="text"
                     value={aboutForm.title}
@@ -675,7 +660,7 @@ const FloatingMenuSettings = (props) => {
                 />
               </div>
 
-              <Field label="About Description" required className="mt-4">
+              <Field label="About Description" className="mt-4">
                 <textarea
                   value={aboutForm.description}
                   onChange={handleAboutChange("description")}
