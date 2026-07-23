@@ -25,7 +25,6 @@ const defaultContent = {
   image: "",
   landingMainbanner: "",
   landingStoryImage: "",
-  welcomeEyebrow: "Welcome to",
   welcomeTitleLine1: "Quran Study",
   welcomeTitleHighlight: "Centre Kerala",
   welcomeDescription:
@@ -48,6 +47,7 @@ function Hero() {
   const [introImageFailed, setIntroImageFailed] = useState(false);
   const [videos, setVideos] = useState([]);
   const [playingVideoId, setPlayingVideoId] = useState(null);
+  const [showWelcomeStory, setShowWelcomeStory] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,20 +110,35 @@ function Hero() {
   const showIntroBanner = Boolean(introBannerUrl) && !introImageFailed;
   const introMarkSrc = showIntroBanner ? introBannerUrl : qscLogo;
 
+  const welcomeParagraphs = (content.welcomeDescription || "")
+    .split("\n\n")
+    .map((para) => para.trim())
+    .filter(Boolean);
+  const welcomeFirstParagraph = welcomeParagraphs[0] || "";
+  const hasMoreWelcomeStory = welcomeParagraphs.length > 1;
+
   return (
     <main className="landing-home">
       {/* ── Welcome hero: copy + Quran photo right ── */}
       <section className="landing-page-shell landing-hero-shell">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
-            <span className="landing-eyebrow">{content.welcomeEyebrow}</span>
             <h1 className="landing-welcome-title">
               {content.welcomeTitleLine1}{" "}
               <span>{content.welcomeTitleHighlight}</span>
             </h1>
             <p className="landing-hero-description">
-              {content.welcomeDescription}
+              {welcomeFirstParagraph}
             </p>
+            {hasMoreWelcomeStory && (
+              <button
+                type="button"
+                className="landing-hero-readmore"
+                onClick={() => setShowWelcomeStory(true)}
+              >
+                Read more
+              </button>
+            )}
           </div>
 
           <div className="landing-hero-visual">
@@ -135,6 +150,81 @@ function Hero() {
           </div>
         </div>
       </section>
+
+      {showWelcomeStory && (
+        <div
+          className="landing-modal-backdrop"
+          onClick={() => setShowWelcomeStory(false)}
+        >
+          <div
+            className="landing-modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="help-content">
+              <h3 className="landing-welcome-story-title">
+                {content.welcomeTitleLine1}
+                <span>{content.welcomeTitleHighlight}</span>
+              </h3>
+              {welcomeParagraphs.map((para, index) => (
+                <p key={index}>{para}</p>
+              ))}
+              <button
+                type="button"
+                className="landing-help-close"
+                onClick={() => setShowWelcomeStory(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hero highlights: eyebrow + story card + stat numbers, admin-controlled ── */}
+      {(landingSettings.copy.heroEyebrow ||
+        landingSettings.copy.heroStoryTitle ||
+        landingSettings.copy.heroStoryDescription ||
+        landingSettings.heroStats.some((stat) => stat.value)) && (
+        <section className="landing-page-shell landing-section landing-highlights-shell">
+          {landingSettings.copy.heroEyebrow && (
+            <span className="landing-eyebrow">{landingSettings.copy.heroEyebrow}</span>
+          )}
+          <div className="landing-highlights-grid">
+            {(landingSettings.copy.heroStoryBadge ||
+              landingSettings.copy.heroStoryTitle ||
+              landingSettings.copy.heroStoryDescription) && (
+              <div className="landing-story-card">
+                {landingSettings.copy.heroStoryBadge && (
+                  <span className="landing-story-badge">
+                    {landingSettings.copy.heroStoryBadge}
+                  </span>
+                )}
+                {landingSettings.copy.heroStoryTitle && (
+                  <h2 className="landing-section-title">
+                    {landingSettings.copy.heroStoryTitle}
+                  </h2>
+                )}
+                {landingSettings.copy.heroStoryDescription && (
+                  <p className="landing-hero-description">
+                    {landingSettings.copy.heroStoryDescription}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="landing-stats-grid">
+              {landingSettings.heroStats
+                .filter((stat) => stat.value || stat.label)
+                .map((stat, index) => (
+                  <div className="landing-stat-card" key={`hero-stat-${index}`}>
+                    <span className="landing-stat-value">{stat.value}</span>
+                    <span className="landing-stat-label">{stat.label}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── QSC intro: heading + copy + Read More, logo mark right ── */}
       {hasIntroSection && (
@@ -186,9 +276,11 @@ function Hero() {
 
         <div className="landing-thafheem-card">
           <div className="landing-thafheem-copy">
-            <h3>This exam is entirely based on Thafheemul Quran</h3>
-            <p>
-              Prepare using the official Thafheem ul Quran app — refer to it for every topic covered in this exam.
+            <p className="landing-thafheem-malayalam">
+              ഈ പരീക്ഷ പൂർണമായും തഫ്ഹീമുൽ ഖുർആനെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്. പഠനത്തിനായി
+              Thafheemul Quran വെബ്സൈറ്റും Android &amp; iOS മൊബൈൽ ആപ്പുകളും
+              ഉപയോഗിക്കാവുന്നതാണ്. ഈ ഡിജിറ്റൽ പ്ലാറ്റ്ഫോമുകളിൽ ഖുർആൻ, വിവർത്തനം,
+              തഫ്സീർ, പഠനസഹായികൾ എന്നിവ ലഭ്യമാണ്.
             </p>
             <div className="landing-thafheem-actions">
               <StoreBadge

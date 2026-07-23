@@ -117,7 +117,6 @@ const EMPTY_ABOUT_FORM = {
   image: "",
   landingMainbanner: "",
   landingStoryImage: "",
-  welcomeEyebrow: "",
   welcomeTitleLine1: "",
   welcomeTitleHighlight: "",
   welcomeDescription: "",
@@ -137,7 +136,6 @@ const mapAboutForm = (row = {}) => ({
   image: row.image || "",
   landingMainbanner: row.landingMainbanner || "",
   landingStoryImage: row.landingStoryImage || "",
-  welcomeEyebrow: row.welcomeEyebrow || "",
   welcomeTitleLine1: row.welcomeTitleLine1 || "",
   welcomeTitleHighlight: row.welcomeTitleHighlight || "",
   welcomeDescription: row.welcomeDescription || "",
@@ -380,7 +378,6 @@ const FloatingMenuSettings = (props) => {
           email: aboutForm.email,
           mobile: aboutForm.mobile,
           footerText: aboutForm.footerText,
-          welcomeEyebrow: aboutForm.welcomeEyebrow,
           welcomeTitleLine1: aboutForm.welcomeTitleLine1,
           welcomeTitleHighlight: aboutForm.welcomeTitleHighlight,
           welcomeDescription: aboutForm.welcomeDescription,
@@ -581,19 +578,9 @@ const FloatingMenuSettings = (props) => {
 
             <SectionCard
               title="Welcome hero (top of homepage)"
-              description="The very first section visitors see. Fully admin-controlled: eyebrow text, headline, description and image."
+              description="The very first section visitors see. Fully admin-controlled: headline, description and image."
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Eyebrow text">
-                  <input
-                    type="text"
-                    value={aboutForm.welcomeEyebrow}
-                    onChange={handleAboutChange("welcomeEyebrow")}
-                    placeholder="e.g. Welcome to"
-                    className={inputCls}
-                  />
-                </Field>
-                <div />
                 <Field label="Title (line 1)">
                   <input
                     type="text"

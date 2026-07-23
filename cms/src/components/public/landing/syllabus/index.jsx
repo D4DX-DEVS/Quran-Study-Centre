@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
+import { Globe } from "lucide-react";
 import withLayout from "../../layout";
 import { getData } from "../../../../backend/api";
 import Header from "../Header";
 import Footer from "../footer/footer";
+import { thafheem } from "../../../project/brand";
+import { AppleLogo, PlayStoreLogo, StoreBadge } from "../storeBadges";
 
 const CDN = import.meta.env.VITE_APP_CDN || "";
+
+const THAFHEEM_LINKS = {
+  banner: "https://app.thafheem.net/",
+  web: "https://thafheem.net/?lang=mal",
+  appStore: "https://apps.apple.com/in/app/thafheemul-quran/id1292572556",
+  playStore: "https://play.google.com/store/apps/details?id=com.d4media.thafheem",
+};
 
 // Static syllabus content, transcribed from the QSC annual exam syllabus document.
 const SECTIONS = [
@@ -148,13 +158,6 @@ const PageTitle = styled.h1`
   }
 `;
 
-const IntroSub = styled.p`
-  font-family: "Noto Sans Malayalam", sans-serif;
-  color: #59718a;
-  font-size: 15px;
-  margin: 0;
-`;
-
 const GroupWrap = styled.section`
   padding: 24px 20px 8px;
 `;
@@ -285,8 +288,7 @@ const SyllabusPage = (props) => {
       <main className="landing-home">
         <div className="landing-page-shell">
           <Intro>
-            <PageTitle>വാർഷിക പരീക്ഷ സിലബസ്</PageTitle>
-            <IntroSub>ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള</IntroSub>
+            <PageTitle>പരീക്ഷ സിലബസ്</PageTitle>
           </Intro>
 
           {SECTION_GROUPS.map((groupBlock) => (
@@ -325,6 +327,49 @@ const SyllabusPage = (props) => {
             </GroupWrap>
           ))}
         </div>
+
+        {/* ── App promo: ready-made Thafheem banner (phone mockups, logo, QR codes) ── */}
+        <section className="landing-page-shell landing-section">
+          <a
+            href={THAFHEEM_LINKS.banner}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="landing-app-banner"
+          >
+            <img src={thafheem} alt="Thafheem ul Quran — samagramaya Quran app" />
+          </a>
+
+          <div className="landing-thafheem-card">
+            <div className="landing-thafheem-copy">
+              <p className="landing-thafheem-malayalam">
+                ഈ പരീക്ഷ പൂർണമായും തഫ്ഹീമുൽ ഖുർആനെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്. പഠനത്തിനായി
+                Thafheemul Quran വെബ്സൈറ്റും Android &amp; iOS മൊബൈൽ ആപ്പുകളും
+                ഉപയോഗിക്കാവുന്നതാണ്. ഈ ഡിജിറ്റൽ പ്ലാറ്റ്ഫോമുകളിൽ ഖുർആൻ, വിവർത്തനം,
+                തഫ്സീർ, പഠനസഹായികൾ എന്നിവ ലഭ്യമാണ്.
+              </p>
+              <div className="landing-thafheem-actions">
+                <StoreBadge
+                  href={THAFHEEM_LINKS.web}
+                  icon={<Globe size={22} color="#3BA7FF" />}
+                  eyebrow="Visit our"
+                  title="Website"
+                />
+                <StoreBadge
+                  href={THAFHEEM_LINKS.appStore}
+                  icon={<AppleLogo size={22} />}
+                  eyebrow="Download on the"
+                  title="App Store"
+                />
+                <StoreBadge
+                  href={THAFHEEM_LINKS.playStore}
+                  icon={<PlayStoreLogo size={22} />}
+                  eyebrow="GET IT ON"
+                  title="Google Play"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
       <Footer />
     </>
