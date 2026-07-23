@@ -10,14 +10,19 @@
 const path = require("path");
 const fs = require("fs");
 const React = require("react");
-const { Document, Page, View, Text, Image, StyleSheet, Font, renderToBuffer } = require("@react-pdf/renderer");
 
+// @react-pdf/renderer v4 ships as an ES Module only, so a top-level
+// `require()` throws ERR_REQUIRE_ESM under CommonJS/Node. We load it once, on
+// the first render, via a dynamic import() — the only way a CJS module can pull
+// in an ESM package. Font registration and StyleSheet.create both need the
+// imported module, so they run inside the same lazy init (memoized below).
 const e = React.createElement;
 const ASSETS = path.join(__dirname, "hallTicketAssets");
 
-Font.register({ family: "Malayalam", src: path.join(ASSETS, "NotoSansMalayalam-Regular.ttf") });
-// Keep long Malayalam words from being force-broken mid-cluster.
-Font.registerHyphenationCallback((word) => [word]);
+// Bound to the react-pdf exports the first time init() runs.
+let Document, Page, View, Text, Image, StyleSheet, Font, renderToBuffer;
+// Bound to the compiled stylesheets after StyleSheet is available.
+let styles, sheetStyles;
 
 // react-pdf running in Node treats a bare filesystem path in Image `src` as a
 // URL and fails to fetch it. Embedding the JPEGs as base64 data URIs is the
@@ -45,50 +50,67 @@ const INSTRUCTIONS = [
   "പരീക്ഷ ഒബ്ജക്റ്റീവ് ടൈപ്പ് ആയതിനാൽ ഓപ്ഷൻ ടിക്ക് ചെയ്യുന്നതിന് ആവശ്യമായ പേന, പെൻസിൽ, ഇറേസർ എന്നിവ കരുതേണ്ടതാണ്",
 ];
 
-// Page/sheet chrome: an A4 page holding two ticket halves stacked, with a
-// dashed cut line between them.
-const styles = StyleSheet.create({
-  sheetPage: { fontSize: 11, color: "#000" },
-  ticketHalf: { height: "50%", paddingHorizontal: 26, paddingTop: 18, paddingBottom: 10 },
-  cutLine: { borderTopWidth: 1, borderTopColor: "#999", borderStyle: "dashed", marginHorizontal: 20 },
-});
+// Lazily import the ESM-only @react-pdf/renderer, register the Malayalam font,
+// and build the stylesheets — exactly once. Every render entry point awaits
+// this before it touches Document/Page/StyleSheet/etc. The memoized promise
+// makes concurrent renders (e.g. the bulk generator) share a single init.
+let initPromise;
+const init = () => {
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    ({ Document, Page, View, Text, Image, StyleSheet, Font, renderToBuffer } = await import("@react-pdf/renderer"));
 
-// The ticket itself: compact enough that a full ticket fits within half of
-// an A4 page (every ticket is printed two-up — see printPage below).
-const sheetStyles = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 6 },
-  logo: { width: 112, height: 43, objectFit: "contain" },
-  titleCol: { flex: 1, alignItems: "center", paddingHorizontal: 6 },
-  titleMl: { fontFamily: "Malayalam", fontSize: 14, textAlign: "center" },
-  subTitleMl: { fontFamily: "Malayalam", fontSize: 11, textAlign: "center", marginTop: 1 },
-  banner: { backgroundColor: "#000", borderRadius: 11, paddingVertical: 3, paddingHorizontal: 16, marginTop: 4 },
-  bannerText: { fontFamily: "Malayalam", fontSize: 14, color: "#fff", textAlign: "center" },
-  dateBox: { borderWidth: 1, borderColor: "#000", padding: 4, width: 112, alignItems: "center" },
-  dateHead: { fontFamily: "Helvetica-Bold", fontSize: 7.5, textAlign: "center", textDecoration: "underline", marginBottom: 2 },
-  dateLine: { fontSize: 7.5, textAlign: "center" },
+    Font.register({ family: "Malayalam", src: path.join(ASSETS, "NotoSansMalayalam-Regular.ttf") });
+    // Keep long Malayalam words from being force-broken mid-cluster.
+    Font.registerHyphenationCallback((word) => [word]);
 
-  table: { borderWidth: 1, borderColor: "#000" },
-  row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#000" },
-  rowLast: { flexDirection: "row" },
-  labelCell: { width: "34%", borderRightWidth: 1, borderRightColor: "#000", paddingVertical: 4, paddingHorizontal: 7, justifyContent: "center" },
-  valueCell: { flex: 1, paddingVertical: 4, paddingHorizontal: 10, justifyContent: "center" },
-  labelEn: { fontFamily: "Helvetica-Bold", fontSize: 11 },
-  labelMl: { fontFamily: "Malayalam", fontSize: 9.5, marginTop: 1 },
-  valueEn: { fontFamily: "Helvetica", fontSize: 12.5 },
-  valueMl: { fontFamily: "Malayalam", fontSize: 11, lineHeight: 1.3 },
+    // Page/sheet chrome: an A4 page holding two ticket halves stacked, with a
+    // dashed cut line between them.
+    styles = StyleSheet.create({
+      sheetPage: { fontSize: 11, color: "#000" },
+      ticketHalf: { height: "50%", paddingHorizontal: 26, paddingTop: 18, paddingBottom: 10 },
+      cutLine: { borderTopWidth: 1, borderTopColor: "#999", borderStyle: "dashed", marginHorizontal: 20 },
+    });
 
-  instrWrap: { flexDirection: "row", marginTop: 8 },
-  instrCol: { flex: 1, paddingRight: 10 },
-  instrHead: { fontFamily: "Malayalam", fontSize: 11, color: "#c00000", textDecoration: "underline", marginBottom: 4 },
-  instrItem: { flexDirection: "row", marginBottom: 3 },
-  instrNum: { width: 14, fontSize: 9.5 },
-  instrText: { fontFamily: "Malayalam", fontSize: 9.5, flex: 1, lineHeight: 1.3 },
-  signCol: { width: 168, flexDirection: "row", alignItems: "flex-start", justifyContent: "center" },
-  seal: { width: 64, height: 64, objectFit: "contain" },
-  signInner: { width: 92, alignItems: "center" },
-  sign: { width: 58, height: 56, objectFit: "contain" },
-  caption: { fontFamily: "Malayalam", fontSize: 8, textAlign: "center", marginTop: 2 },
-});
+    // The ticket itself: compact enough that a full ticket fits within half of
+    // an A4 page (every ticket is printed two-up — see printPage below).
+    sheetStyles = StyleSheet.create({
+      header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 6 },
+      logo: { width: 112, height: 43, objectFit: "contain" },
+      titleCol: { flex: 1, alignItems: "center", paddingHorizontal: 6 },
+      titleMl: { fontFamily: "Malayalam", fontSize: 14, textAlign: "center" },
+      subTitleMl: { fontFamily: "Malayalam", fontSize: 11, textAlign: "center", marginTop: 1 },
+      banner: { backgroundColor: "#000", borderRadius: 11, paddingVertical: 3, paddingHorizontal: 16, marginTop: 4 },
+      bannerText: { fontFamily: "Malayalam", fontSize: 14, color: "#fff", textAlign: "center" },
+      dateBox: { borderWidth: 1, borderColor: "#000", padding: 4, width: 112, alignItems: "center" },
+      dateHead: { fontFamily: "Helvetica-Bold", fontSize: 7.5, textAlign: "center", textDecoration: "underline", marginBottom: 2 },
+      dateLine: { fontSize: 7.5, textAlign: "center" },
+
+      table: { borderWidth: 1, borderColor: "#000" },
+      row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#000" },
+      rowLast: { flexDirection: "row" },
+      labelCell: { width: "34%", borderRightWidth: 1, borderRightColor: "#000", paddingVertical: 4, paddingHorizontal: 7, justifyContent: "center" },
+      valueCell: { flex: 1, paddingVertical: 4, paddingHorizontal: 10, justifyContent: "center" },
+      labelEn: { fontFamily: "Helvetica-Bold", fontSize: 11 },
+      labelMl: { fontFamily: "Malayalam", fontSize: 9.5, marginTop: 1 },
+      valueEn: { fontFamily: "Helvetica", fontSize: 12.5 },
+      valueMl: { fontFamily: "Malayalam", fontSize: 11, lineHeight: 1.3 },
+
+      instrWrap: { flexDirection: "row", marginTop: 8 },
+      instrCol: { flex: 1, paddingRight: 10 },
+      instrHead: { fontFamily: "Malayalam", fontSize: 11, color: "#c00000", textDecoration: "underline", marginBottom: 4 },
+      instrItem: { flexDirection: "row", marginBottom: 3 },
+      instrNum: { width: 14, fontSize: 9.5 },
+      instrText: { fontFamily: "Malayalam", fontSize: 9.5, flex: 1, lineHeight: 1.3 },
+      signCol: { width: 168, flexDirection: "row", alignItems: "flex-start", justifyContent: "center" },
+      seal: { width: 64, height: 64, objectFit: "contain" },
+      signInner: { width: 92, alignItems: "center" },
+      sign: { width: 58, height: 56, objectFit: "contain" },
+      caption: { fontFamily: "Malayalam", fontSize: 8, textAlign: "center", marginTop: 2 },
+    });
+  })();
+  return initPromise;
+};
 
 const isMalayalam = (s) => /[ഀ-ൿ]/.test(s || "");
 
@@ -265,12 +287,14 @@ const buildProps = (user) => ({
 
 // Renders one student's hall ticket and returns the PDF as a Buffer.
 const renderHallTicketPdf = async (user) => {
+  await init();
   const props = buildProps(user);
   return renderToBuffer(e(HallTicketDoc, props));
 };
 
 // Renders a two-up print sheet (2 students per A4 page) for a list of students.
 const renderHallTicketSheet = async (users) => {
+  await init();
   const propsList = users.map(buildProps);
   return renderToBuffer(e(HallTicketSheetDoc, { propsList }));
 };
