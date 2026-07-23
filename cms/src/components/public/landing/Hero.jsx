@@ -291,10 +291,9 @@ function Hero() {
         <div className="landing-thafheem-card">
           <div className="landing-thafheem-copy">
             <p className="landing-thafheem-malayalam">
-              ഈ പരീക്ഷ പൂർണമായും തഫ്ഹീമുൽ ഖുർആനെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്. പഠനത്തിനായി
+              പരീക്ഷ പൂർണമായും തഫ്ഹീമുൽ ഖുർആനെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്. പഠനത്തിനായി
               Thafheemul Quran വെബ്സൈറ്റും Android &amp; iOS മൊബൈൽ ആപ്പുകളും
-              ഉപയോഗിക്കാവുന്നതാണ്. ഈ ഡിജിറ്റൽ പ്ലാറ്റ്ഫോമുകളിൽ ഖുർആൻ, വിവർത്തനം,
-              തഫ്സീർ, പഠനസഹായികൾ എന്നിവ ലഭ്യമാണ്.
+              ഉപയോഗിക്കാം.
             </p>
             <div className="landing-thafheem-actions">
               <StoreBadge
