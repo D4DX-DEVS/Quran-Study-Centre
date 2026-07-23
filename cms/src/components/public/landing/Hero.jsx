@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Globe, Play } from "lucide-react";
+import { Globe, Play, ArrowRight } from "lucide-react";
 import "./style.css";
 import { getData } from "../../../backend/api";
 import { normalizeLandingSettings } from "./defaults";
@@ -221,8 +221,13 @@ function Hero() {
             <img src={aayathLogo} alt="Aayath Darse Quran" className="landing-video-logo" />
             <h2 className="landing-section-title">Aayath Darse Quran</h2>
           </div>
-          <a href="/videos" className="landing-chip-button secondary">
-            More Videos
+          <a
+            href="/videos"
+            className="landing-chip-button secondary landing-more-videos"
+            aria-label="More Videos"
+          >
+            <span className="landing-more-videos-text">More Videos</span>
+            <ArrowRight size={18} className="landing-more-videos-arrow" />
           </a>
         </div>
         <div className="landing-video-grid">
