@@ -317,8 +317,6 @@ const FloatingMenuSettings = (props) => {
 
   const validateAbout = () => {
     const missing = [];
-    if (!aboutForm.title?.trim()) missing.push("About Title");
-    if (!aboutForm.description?.trim()) missing.push("About Description");
     if (!aboutForm.email?.trim()) missing.push("Email");
     if (!aboutForm.mobile?.trim()) missing.push("Mobile");
     if (!aboutForm.footerText?.trim()) missing.push("Footer Text");
@@ -635,7 +633,7 @@ const FloatingMenuSettings = (props) => {
               description="This single content block powers the public /about-us page, landing headline, homepage banners and footer contact details."
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="About Title" required>
+                <Field label="About Title">
                   <input
                     type="text"
                     value={aboutForm.title}
@@ -662,7 +660,7 @@ const FloatingMenuSettings = (props) => {
                 />
               </div>
 
-              <Field label="About Description" required className="mt-4">
+              <Field label="About Description" className="mt-4">
                 <textarea
                   value={aboutForm.description}
                   onChange={handleAboutChange("description")}

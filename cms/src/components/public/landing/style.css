@@ -1022,7 +1022,7 @@
 
 .landing-highlights-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
   gap: 24px;
   align-items: stretch;
 }
@@ -1038,6 +1038,42 @@
   padding: 32px 36px;
 }
 
+.landing-story-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 240px);
+  gap: 24px;
+  align-items: center;
+}
+
+.landing-story-card-grid-full {
+  grid-template-columns: 1fr;
+}
+
+.landing-story-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.landing-story-card-visual {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.landing-story-card-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .landing-story-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .landing-story-badge {
   display: inline-flex;
   align-items: center;
@@ -1050,6 +1086,11 @@
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.04em;
+}
+
+.landing-story-card .landing-section-title,
+.landing-story-card .landing-hero-description {
+  font-family: "Noto Sans Malayalam", sans-serif;
 }
 
 .landing-stats-grid {

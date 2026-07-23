@@ -101,6 +101,7 @@ function Hero() {
 
   const welcomeImage =
     resolveAssetUrl(content.welcomeImage) || quranHeroPhoto;
+  const storyImageUrl = resolveAssetUrl(content.landingStoryImage);
 
   const hasIntroSection = Boolean(
     content.landingTitle?.trim() || content.landingDescription?.trim()
@@ -199,16 +200,29 @@ function Hero() {
                     {landingSettings.copy.heroStoryBadge}
                   </span>
                 )}
-                {landingSettings.copy.heroStoryTitle && (
-                  <h2 className="landing-section-title">
-                    {landingSettings.copy.heroStoryTitle}
-                  </h2>
-                )}
-                {landingSettings.copy.heroStoryDescription && (
-                  <p className="landing-hero-description">
-                    {landingSettings.copy.heroStoryDescription}
-                  </p>
-                )}
+                <div
+                  className={`landing-story-card-grid${
+                    storyImageUrl ? "" : " landing-story-card-grid-full"
+                  }`}
+                >
+                  <div className="landing-story-card-copy">
+                    {landingSettings.copy.heroStoryTitle && (
+                      <h2 className="landing-section-title">
+                        {landingSettings.copy.heroStoryTitle}
+                      </h2>
+                    )}
+                    {landingSettings.copy.heroStoryDescription && (
+                      <p className="landing-hero-description">
+                        {landingSettings.copy.heroStoryDescription}
+                      </p>
+                    )}
+                  </div>
+                  {storyImageUrl && (
+                    <div className="landing-story-card-visual">
+                      <img src={storyImageUrl} alt="" />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
