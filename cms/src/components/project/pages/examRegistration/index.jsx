@@ -560,7 +560,7 @@ const ExamRegistration = (props) => {
       showItem: "nameOfCenter",
       default: "",
       tag: false,
-      label: "Exam Center",
+      label: "Study Centre (Registered)",
       required: true,
       view: true,
       add: true,
@@ -569,7 +569,30 @@ const ExamRegistration = (props) => {
       search: false,
       export: true,
     },
-    
+    {
+      // Exam-day venue printed on the hall ticket (assignedExamCenter — set by
+      // the clubbing/allocation algorithm). View-only: allocation owns this
+      // field; manual moves go through the exam-allocation override endpoint.
+      type: "select",
+      apiType: "API",
+      selectApi: "center-registration/select",
+      placeholder: "Exam Centre (Hall Ticket)",
+      customClass: "full",
+      name: "assignedExamCenter",
+      validation: "",
+      showItem: "nameOfCenter",
+      default: "",
+      tag: false,
+      label: "Exam Centre (Hall Ticket)",
+      required: false,
+      view: true,
+      add: false,
+      update: false,
+      filter: false,
+      search: false,
+      export: true,
+    },
+
     {
       type: "title",
       title: "Payment Information",
