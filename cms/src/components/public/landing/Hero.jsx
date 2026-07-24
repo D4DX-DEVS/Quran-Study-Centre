@@ -59,7 +59,6 @@ function Hero() {
   const [introImageFailed, setIntroImageFailed] = useState(false);
   const [videos, setVideos] = useState([]);
   const [playingVideoId, setPlayingVideoId] = useState(null);
-  const [showWelcomeStory, setShowWelcomeStory] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,75 +122,16 @@ function Hero() {
   const showIntroBanner = Boolean(introBannerUrl) && !introImageFailed;
   const introMarkSrc = showIntroBanner ? introBannerUrl : qscLogo;
 
-  const welcomeParagraphs = (content.welcomeDescription || "")
-    .split("\n\n")
-    .map((para) => para.trim())
-    .filter(Boolean);
-  const welcomeFirstParagraph = welcomeParagraphs[0] || "";
-  const hasMoreWelcomeStory = welcomeParagraphs.length > 1;
-
   return (
     <main className="landing-home">
-      {/* ── Welcome hero: copy + Quran photo right ── */}
-      <section className="landing-page-shell landing-hero-shell">
-        <div className="landing-hero-grid">
-          <div className="landing-hero-copy">
-            <h1 className="landing-welcome-title">
-              {content.welcomeTitleLine1}{" "}
-              <span>{content.welcomeTitleHighlight}</span>
-            </h1>
-            <p className="landing-hero-description">
-              {renderBold(welcomeFirstParagraph)}
-            </p>
-            {hasMoreWelcomeStory && (
-              <button
-                type="button"
-                className="landing-hero-readmore"
-                onClick={() => setShowWelcomeStory(true)}
-              >
-                Read more
-              </button>
-            )}
-          </div>
-
-          <div className="landing-hero-visual">
-            <img
-              src={welcomeImage}
-              alt="Illuminated Holy Quran"
-              className="landing-quran-banner"
-            />
-          </div>
-        </div>
+      {/* ── Welcome hero: full-width image, no title/description ── */}
+      <section className="landing-hero-shell landing-hero-full">
+        <img
+          src={welcomeImage}
+          alt="Illuminated Holy Quran"
+          className="landing-hero-full-img"
+        />
       </section>
-
-      {showWelcomeStory && (
-        <div
-          className="landing-modal-backdrop"
-          onClick={() => setShowWelcomeStory(false)}
-        >
-          <div
-            className="landing-modal-card"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="help-content">
-              <h3 className="landing-welcome-story-title">
-                {content.welcomeTitleLine1}
-                <span>{content.welcomeTitleHighlight}</span>
-              </h3>
-              {welcomeParagraphs.map((para, index) => (
-                <p key={index}>{renderBold(para)}</p>
-              ))}
-              <button
-                type="button"
-                className="landing-help-close"
-                onClick={() => setShowWelcomeStory(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Hero highlights: eyebrow + story card + stat numbers, admin-controlled ── */}
       {(landingSettings.copy.heroEyebrow ||
