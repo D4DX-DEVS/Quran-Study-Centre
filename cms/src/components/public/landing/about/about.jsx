@@ -68,7 +68,10 @@ const Description = styled.div`
   line-height: 1.9;
   color: #444444;
   text-align: justify;
+  text-justify: inter-word;
   white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: anywhere;
 
   p {
     margin: 0 0 18px;
@@ -77,7 +80,7 @@ const Description = styled.div`
     margin-bottom: 0;
   }
 
-  @media only screen and (max-width: 768px) {
+  @media only screen and (max-width: 600px) {
     text-align: left;
   }
 `;

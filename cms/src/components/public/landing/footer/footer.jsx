@@ -74,7 +74,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="landing-footer-block">
+        <div className="landing-footer-block landing-footer-links">
           <span className="landing-footer-label">{copy.footerLinksLabel}</span>
           <a href="/question-papers" className="landing-footer-link">
             Downloads

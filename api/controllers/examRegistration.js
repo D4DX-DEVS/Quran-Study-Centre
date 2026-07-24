@@ -275,7 +275,22 @@ exports.updateExamRegistration = async (req, res) => {
     // district, exam centre, exam type, ...). Fire-and-forget: the edit
     // should save immediately regardless of how long the PDF render/upload
     // takes, and a failure here must not fail the student update itself.
-    regenerateHallTicketForId(examRegistration._id).catch((err) =>
+    // If the edit moved the student's study centre or district, the clubbing
+    // allocation must be recomputed FIRST — otherwise the ticket would render
+    // with the stale assignedExamCenter from before the move.
+    (async () => {
+      try {
+        if (req.body.centerRegistration || req.body.district) {
+          const settings = await ExamSettings.getCurrent();
+          if (!settings.allocationLocked && examRegistration.district) {
+            await recomputeAllocation({ district: examRegistration.district });
+          }
+        }
+      } catch (err) {
+        console.error(`Post-update allocation recompute failed for ${examRegistration._id}:`, err.message);
+      }
+      await regenerateHallTicketForId(examRegistration._id);
+    })().catch((err) =>
       console.error(`Post-update hall ticket regeneration failed for ${examRegistration._id}:`, err.message)
     );
 

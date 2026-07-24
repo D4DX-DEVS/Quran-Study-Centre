@@ -576,56 +576,26 @@ const FloatingMenuSettings = (props) => {
 
             <SectionCard
               title="Welcome hero (top of homepage)"
-              description="The very first section visitors see. Fully admin-controlled: headline, description and image."
+              description="The very first section visitors see. Just one full-width image — no headline or description."
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Title (line 1)">
-                  <input
-                    type="text"
-                    value={aboutForm.welcomeTitleLine1}
-                    onChange={handleAboutChange("welcomeTitleLine1")}
-                    placeholder="e.g. Quran Study"
-                    className={inputCls}
-                  />
-                </Field>
-                <Field label="Title (highlighted)">
-                  <input
-                    type="text"
-                    value={aboutForm.welcomeTitleHighlight}
-                    onChange={handleAboutChange("welcomeTitleHighlight")}
-                    placeholder="e.g. Centre Kerala"
-                    className={inputCls}
-                  />
-                </Field>
-              </div>
-
-              <Field label="Description" className="mt-4">
-                <textarea
-                  value={aboutForm.welcomeDescription}
-                  onChange={handleAboutChange("welcomeDescription")}
-                  rows={3}
-                  placeholder="Short intro line shown under the headline."
-                  className={textareaCls}
-                />
-              </Field>
-
-              <div className="mt-4">
-                <ImageField
-                  label="Hero Image"
-                  hint="Shown on the right side of the welcome hero. Recommended: tall portrait image."
-                  existingUrl={aboutForm.welcomeImage ? `${CDN}${aboutForm.welcomeImage}` : ""}
-                  file={welcomeImageFile}
-                  onChange={(f) => {
-                    setWelcomeImageFile(f);
-                    if (f) setWelcomeImageRemoved(false);
-                  }}
-                  removed={welcomeImageRemoved}
-                  onRemove={() => {
-                    setWelcomeImageRemoved(true);
-                    setWelcomeImageFile(null);
-                  }}
-                />
-              </div>
+              <ImageField
+                label="Hero Image"
+                hint="Shown full-width at the very top of the homepage. Recommended: wide landscape image."
+                existingUrl={aboutForm.welcomeImage ? `${CDN}${aboutForm.welcomeImage}` : ""}
+                file={welcomeImageFile}
+                onChange={(f) => {
+                  setWelcomeImageFile(f);
+                  if (f) setWelcomeImageRemoved(false);
+                }}
+                removed={welcomeImageRemoved}
+                onRemove={() => {
+                  setWelcomeImageRemoved(true);
+                  setWelcomeImageFile(null);
+                }}
+              />
+              <p className="text-[11px] text-slate-400 mt-2">
+                Ideal ratio: <span className="font-medium text-slate-500">5:1</span> — e.g. 2400×480px (2x: 4800×960px).
+              </p>
             </SectionCard>
 
             <SectionCard
