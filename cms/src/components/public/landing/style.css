@@ -1171,8 +1171,8 @@
 }
 
 .landing-video-logo {
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
   border-radius: 8px;
 }
@@ -1185,7 +1185,7 @@
 
 .landing-video-card {
   position: relative;
-  width: 100%;
+  width: 80%;
   aspect-ratio: 16 / 9;
   display: flex;
   align-items: center;
@@ -1263,6 +1263,17 @@ button.landing-video-card {
 @media (max-width: 560px) {
   .landing-video-grid {
     grid-template-columns: 1fr;
+  }
+
+  .landing-video-card {
+    width: 80%;
+    margin: 0 auto;
+  }
+
+  .landing-video-title {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
@@ -1402,15 +1413,20 @@ button.landing-video-card {
 
   /* 5 — Thafheem: full-bleed banner (100% wide, taller) + 3 buttons on one row */
   .landing-app-banner {
-    margin-left: calc((min(1280px, 100vw - 20px) - 100vw) / 2);
-    margin-right: calc((min(1280px, 100vw - 20px) - 100vw) / 2);
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
     margin-bottom: 20px;
     border-radius: 0;
   }
 
   .landing-app-banner img {
     width: 100%;
-    height: auto;
+    height: 38px;
+    object-fit: cover;
   }
 
   .landing-thafheem-actions {
