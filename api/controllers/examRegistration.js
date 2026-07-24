@@ -87,8 +87,8 @@ exports.addExamRegistration = async (req, res) => {
 
     const response = await ExamRegistration.create(payload);
 
-    // Fire-and-forget async re-allocation for this (district, examType) bucket so
-    // the ≥minCount clubbing rule stays current as new registrations arrive.
+    // Fire-and-forget async re-allocation for this district so the ≥minCount
+    // clubbing rule stays current as new registrations arrive.
     // Intentionally NOT awaited — the applicant's response should not be held up.
     (async () => {
       try {
@@ -203,7 +203,8 @@ exports.getExamRegistration = async (req, res) => {
         .populate("centerRegistration")
         .populate("examDistrict")
         .populate("outsideExamCenter")
-        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age"),
+        .populate("assignedExamCenter", "nameOfCenter")
+        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter assignedExamCenter assignedByClubbing regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age"),
     ]);
 
     const dataById = new Map(data.map((d) => [String(d._id), d]));
@@ -334,7 +335,14 @@ exports.getExamResult = async (req, res) => {
         // Removed the nameOfExamAppearingNow condition
       };
 
-      const examData = await ExamRegistration.find(filters).populate("district").populate("area").populate("nameOfExamAppearingNow").populate("examCenter").populate("centerRegistration");
+      const examData = await ExamRegistration.find(filters)
+        .populate("district")
+        .populate("area")
+        .populate("nameOfExamAppearingNow")
+        .populate("examCenter")
+        .populate("centerRegistration")
+        .populate("assignedExamCenter", "nameOfCenter")
+        .populate("outsideExamCenter", "centerName");
 
       // Check if examData is empty
       if (examData.length === 0) {

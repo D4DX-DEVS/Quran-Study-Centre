@@ -259,8 +259,21 @@ function VerifyRegistration({ onClose, setMessage, setLoaderBox }) {
                   <dd>{item.area?.area || "-"}</dd>
                 </div>
                 <div>
-                  <dt>Exam Center</dt>
+                  <dt>Study Centre</dt>
                   <dd>{item.centerRegistration?.nameOfCenter || "-"}</dd>
+                </div>
+                <div>
+                  {/* Exam-day venue — same precedence as the hall ticket
+                      (assignedExamCenter first), so this always matches what
+                      prints on the ticket even when clubbing moved the student. */}
+                  <dt>Exam Center (Exam Day)</dt>
+                  <dd>
+                    {item.assignedExamCenter?.nameOfCenter ||
+                      item.examCenter?.centerName ||
+                      item.outsideExamCenter?.centerName ||
+                      item.centerRegistration?.nameOfCenter ||
+                      "-"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Registered On</dt>

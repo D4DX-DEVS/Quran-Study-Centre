@@ -7,11 +7,18 @@ const ExamSettings = require("../models/examSettings");
 /**
  * Phase 2.2 — Automatic exam-centre allocation with ≥N clubbing rule.
  *
- * Input:  all registrations for one (district, examType) bucket.
+ * Input:  all registrations for one district.
  * Output: per-study-centre counts; centres below threshold are merged into the
  *         "nearest" centre in the same district that has ≥threshold members,
  *         where "nearest" == earliest-in-area-order within the district
  *         (stand-in for real geography; see plan 2.2).
+ *
+ * The threshold counts a centre's TOTAL registrations across every exam type:
+ * all exam types sit the same session at the same centre, so a centre that is
+ * viable overall must host ALL of its own students. (Bucketing by examType —
+ * the original design — split one centre into survivor-for-exam-A but
+ * absorbed-for-exam-B, shipping lone students of a rarer exam type away from
+ * a centre that was simultaneously receiving clubbed students.)
  *
  * Writes `assignedExamCenter` and `assignedByClubbing` on each registration.
  * Idempotent: safe to run repeatedly. Respects `allocationLocked` in settings.
@@ -36,19 +43,14 @@ async function orderedCentresForDistrict(districtId) {
   return centres;
 }
 
-// Recompute allocation for one (district, examType) group.
-async function recomputeGroup({ districtId, examTypeId, minCount }) {
-  const query = {
-    district: districtId,
-    nameOfExamAppearingNow: examTypeId,
-  };
-
-  const regs = await ExamRegistration.find(query)
+// Recompute allocation for one district (all exam types together).
+async function recomputeGroup({ districtId, minCount }) {
+  const regs = await ExamRegistration.find({ district: districtId })
     .select("_id centerRegistration assignedExamCenter assignedByClubbing")
     .lean();
 
   if (!regs.length) {
-    return { district: String(districtId), examType: String(examTypeId), moved: 0, survivors: 0, absorbed: 0 };
+    return { district: String(districtId), moved: 0, survivors: 0, absorbed: 0 };
   }
 
   // Count per home study centre.
@@ -125,7 +127,6 @@ async function recomputeGroup({ districtId, examTypeId, minCount }) {
 
   return {
     district: String(districtId),
-    examType: String(examTypeId),
     survivors: survivors.size,
     absorbed,
     moved: movedCount,
@@ -145,15 +146,13 @@ async function recomputeAllocation(opts = {}) {
   const distMatch = opts.district ? { _id: new mongoose.Types.ObjectId(opts.district) } : {};
   const districts = await mongoose.model("District").find(distMatch).select("_id district").lean();
 
-  const examTypeMatch = opts.examType ? { _id: new mongoose.Types.ObjectId(opts.examType) } : {};
-  const examTypes = await mongoose.model("ExamType").find(examTypeMatch).select("_id examType").lean();
-
+  // opts.examType is accepted for backward compatibility but no longer narrows
+  // the recompute: the clubbing threshold applies to a centre's total across
+  // all exam types, so any change recomputes the whole district.
   const results = [];
   for (const d of districts) {
-    for (const t of examTypes) {
-      const r = await recomputeGroup({ districtId: d._id, examTypeId: t._id, minCount });
-      if (r.total) results.push({ districtName: d.district, examTypeName: t.examType, ...r });
-    }
+    const r = await recomputeGroup({ districtId: d._id, minCount });
+    if (r.total) results.push({ districtName: d.district, ...r });
   }
   return { skipped: false, minCount, results };
 }
