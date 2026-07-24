@@ -1,0 +1,18 @@
+Total: 10911
+UnknownCenter: 0
+NoDistrict: 0
+NoArea: 0
+NoExamType: 0
+NoRegno: 0
+NoName: 0
+SharedMobileDiffName: 0
+SharedMobileSameName: 0
+MixedPrefixGroups: 8
+QSC DARUSSALAM :: Preliminary II  -> KD2, AD2
+QSC ISLAMIC CENTRE :: Preliminary III  -> KI3, TI3
+QSC DARUSSALAM :: Preliminary I -> KD1, AD1
+QSC DARUSSALAM :: Preliminary IV  -> KD4, AD4
+QSC DARUSSALAM :: Preliminary III  -> KD3, AD3
+QSC ISLAMIC CENTRE :: Preliminary II  -> KI2, TI2
+QSC ISLAMIC CENTRE :: Preliminary I -> TI1, KI1
+QSC ANSAR :: Preliminary I -> EA1, CA1

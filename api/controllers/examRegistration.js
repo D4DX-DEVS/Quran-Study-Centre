@@ -87,8 +87,8 @@ exports.addExamRegistration = async (req, res) => {
 
     const response = await ExamRegistration.create(payload);
 
-    // Fire-and-forget async re-allocation for this (district, examType) bucket so
-    // the ≥minCount clubbing rule stays current as new registrations arrive.
+    // Fire-and-forget async re-allocation for this district so the ≥minCount
+    // clubbing rule stays current as new registrations arrive.
     // Intentionally NOT awaited — the applicant's response should not be held up.
     (async () => {
       try {
