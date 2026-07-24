@@ -9,6 +9,18 @@ import quranHeroPhoto from "./assets/home.png.avif";
 import qscLogo from "./assets/qsc-icon-mark.png";
 import aayathLogo from "./assets/aayath-logo.png";
 
+// Turn **text** into bold. Used for admin-editable copy (hero, story modal, story card).
+const renderBold = (text) =>
+  (text || "")
+    .split(/(\*\*[^*]+\*\*)/g)
+    .map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") ? (
+        <strong key={i}>{part.slice(2, -2)}</strong>
+      ) : (
+        part
+      )
+    );
+
 const THAFHEEM_LINKS = {
   banner: "https://app.thafheem.net/",
   web: "https://thafheem.net/?lang=mal",
@@ -129,7 +141,7 @@ function Hero() {
               <span>{content.welcomeTitleHighlight}</span>
             </h1>
             <p className="landing-hero-description">
-              {welcomeFirstParagraph}
+              {renderBold(welcomeFirstParagraph)}
             </p>
             {hasMoreWelcomeStory && (
               <button
@@ -167,7 +179,7 @@ function Hero() {
                 <span>{content.welcomeTitleHighlight}</span>
               </h3>
               {welcomeParagraphs.map((para, index) => (
-                <p key={index}>{para}</p>
+                <p key={index}>{renderBold(para)}</p>
               ))}
               <button
                 type="button"
@@ -213,7 +225,7 @@ function Hero() {
                     )}
                     {landingSettings.copy.heroStoryDescription && (
                       <p className="landing-hero-description">
-                        {landingSettings.copy.heroStoryDescription}
+                        {renderBold(landingSettings.copy.heroStoryDescription)}
                       </p>
                     )}
                   </div>
