@@ -65,7 +65,7 @@ const Title = styled.h1`
 const Description = styled.div`
   font-family: "Noto Sans Malayalam", sans-serif;
   font-size: 16px;
-  line-height: 1.9;
+  line-height: 1.6;
   color: #444444;
   text-align: justify;
   text-justify: inter-word;
@@ -74,7 +74,7 @@ const Description = styled.div`
   overflow-wrap: anywhere;
 
   p {
-    margin: 0 0 18px;
+    margin: 0 0 0px;
   }
   p:last-child {
     margin-bottom: 0;

@@ -207,11 +207,6 @@ function Hero() {
                       {para}
                     </p>
                   ))}
-                <div className="landing-hero-actions">
-                  <a href="/about-us" className="landing-chip-button primary">
-                    Read More
-                  </a>
-                </div>
               </div>
               <div
                 className={`landing-intro-mark${
