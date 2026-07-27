@@ -676,7 +676,7 @@ const ExamRegistration = (props) => {
         {...props}
         attributes={attributes}
         additionalButtons={additionalButtons}
-        addPrivilege={false} // "+ Exam Registration" hidden per request; remove this line to unhide
+        addPrivilege={props.addPrivilege}
       ></ListTable>
     </Container>
   );
