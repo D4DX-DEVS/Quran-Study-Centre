@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Bell } from "lucide-react";
 import { Container, HeaderMenu, Logo, Status, Title } from "./styels";
 import ProfileBar from "../profile";
 import headerLogo from "../../../../components/project/brand/logo-header.png";
@@ -47,8 +48,11 @@ const Header = (props) => {
         <Title>
           <Logo src={headerLogo} alt="logo" />
         </Title>
-        <div className="flex-1 flex justify-end pr-4">
+        <div className="flex-1 flex justify-end items-center gap-2 pr-4">
           <SearchMenu />
+          <button type="button" aria-label="Notifications" className="hidden md:flex items-center justify-center w-9 h-9 rounded-full text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors">
+            <Bell size={18} strokeWidth={2} />
+          </button>
         </div>
         <HeaderMenu
           ref={profileRef}
