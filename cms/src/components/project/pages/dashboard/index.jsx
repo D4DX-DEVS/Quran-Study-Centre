@@ -1,89 +1,55 @@
-import { useSelector } from "react-redux";
+import React from "react";
+import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
 import withLayout from "../../../core/layout";
-import { ElementContainer } from "../../../core/elements";
-import { DashBox } from "../../../core/dashboard/dashbox";
-import HighlightCards from "../../../core/dashboard/highlitecard";
-import LineGraph from "../../../core/dashboard/linegraph";
-import BarChart from "../../../core/dashboard/barchart";
-import ComparisonLineChart from "../../../core/dashboard/comparisonlinechart";
-import ComparisonBarChart from "../../../core/dashboard/comparisonbarchart";
-import DashTable from "../../../core/dashboard/dashtable";
-import LevelChart from "../../../core/dashboard/levelchart";
-import PieChart from "../../../core/dashboard/piechart";
+import { Container } from "../../../core/layout/styels";
+import StatsRow from "../../../core/dashboard/statsrow";
+import AnalyticsCard from "../../../core/dashboard/analyticscard";
+import QuickActions from "../../../core/dashboard/quickactions";
+import RecentSyllabus from "../../../core/dashboard/recentsyllabus";
+import RecentActivities from "../../../core/dashboard/recentactivities";
+import { findMenuLink, dispatchMenuSelection } from "../../../core/dashboard/menuLinks";
+import { useDispatch } from "react-redux";
+
 const Dashboard = (props) => {
-  const themeColors = useSelector((state) => state.themeColors);
-  // const dispatch = useDispatch();
-  // const [initialized, setInitialized] = useState(false);
-  // const dashboard = useSelector((state) =>
-  //   state?.pages?.[`dashboard`]
-  //     ? state?.pages?.[`dashboard`]
-  //     : {
-  //         data: null,
-  //         isLoading: true,
-  //         error: null,
-  //       }
-  // );
-  // useEffect(() => {
-  //   props.setLoaderBox(dashboard.isLoading);
-  //   dashboard.isLoading && setInitialized(true);
-  // }, [dashboard, props]);
+  const dispatch = useDispatch();
+  const menu = props.user?.menu ?? [];
+  const displayName = props.user?.fullName ?? props.user?.username ?? "admin";
+  const addSyllabusEntry = findMenuLink(menu, (label) => /syllabus/i.test(label));
 
-  // useEffect(() => {
-  //   if (initialized) {
-  //     dispatch(addPageObject("dashboard", 0, {}));
-  //   }
-  // }, [initialized, dispatch]);
-
-  // useEffect(() => {
-  //   // console.log(dashboard);
-  // }, [dashboard]);
-
-  // return (
-  //   <DashboardSection>
-  //     {/* <h1>dasfasdfds</h1> */}
-  //     {dashboard?.data?.length > 0 &&
-  //       dashboard?.data?.map((item, index) => (
-  //         <Tile key={index}>
-  //           <TitleBox>
-  //             <Count>{item.count}</Count>
-  //             <Title>{item.title}</Title>
-  //           </TitleBox>
-  //           <IconWrapper
-  //             style={{ background: item.background, color: item.color }}
-  //           >
-  //             <GetIcon icon={item.icon} />
-  //           </IconWrapper>
-  //         </Tile>
-  //       ))}
-  //   </DashboardSection>
-  // );
   return (
-    <ElementContainer className="dashboard">
-      <DashBox key={1} width="60%">
-        <HighlightCards title="Total Summery" description="A total summery of the key section."></HighlightCards>
-      </DashBox>
-      <DashBox width="40%">
-        <LineGraph></LineGraph>
-      </DashBox>
-      <DashBox width="40%">
-        <BarChart></BarChart>
-      </DashBox>
-      <DashBox width="30%">
-        <ComparisonLineChart></ComparisonLineChart>
-      </DashBox>
-      <DashBox width="29%">
-        <ComparisonBarChart></ComparisonBarChart>
-      </DashBox>
-      <DashBox width="40%">
-        <DashTable themeColors={themeColors}></DashTable>
-      </DashBox>
-      <DashBox width="30%">
-        <PieChart></PieChart>
-      </DashBox>
-      <DashBox width="29%">
-        <LevelChart></LevelChart>
-      </DashBox>
-    </ElementContainer>
+    <Container className="noshadow">
+      <div className="w-full bg-bg-weak p-6 flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-text-main">Assalamu Alaikum, {displayName} 👋</h1>
+            <p className="text-sm text-text-sub mt-1">Welcome back to Quran Study Centre Kerala</p>
+          </div>
+          {addSyllabusEntry && (
+            <Link
+              to={addSyllabusEntry.path}
+              onClick={() => dispatchMenuSelection(dispatch, addSyllabusEntry)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-base text-white text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              <Plus size={16} strokeWidth={2} />
+              Add Syllabus
+            </Link>
+          )}
+        </div>
+
+        <StatsRow />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AnalyticsCard />
+          <QuickActions menu={menu} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <RecentSyllabus menu={menu} />
+          <RecentActivities />
+        </div>
+      </div>
+    </Container>
   );
 };
 

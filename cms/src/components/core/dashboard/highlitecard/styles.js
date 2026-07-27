@@ -26,29 +26,29 @@ export const DashboardSection = styled.div`
 `;
 
 export const Tile = styled.div`
-  padding: 30px 24px 30px 24px;
-  gap: 12px;
+  padding: 20px;
+  gap: 14px;
   border-radius: 16px;
-  border: 1px;
   border: 1px solid ${appTheme.stroke.soft};
+  background: ${appTheme.bg.white};
   display: flex;
+  align-items: center;
 `;
 
 export const TitleBox = styled.div`
   margin-top: 0;
   display: flex;
-  -webkit-box-pack: left;
   justify-content: baseline;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 `;
 export const TitleHead = styled.span`
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 12px;
+  line-height: 16px;
   letter-spacing: 0.02em;
   text-align: left;
-  color: ${appTheme.text.soft};
+  color: ${appTheme.text.sub};
 
   &.info {
     color: Blue;
@@ -56,40 +56,35 @@ export const TitleHead = styled.span`
 `;
 
 export const Count = styled.div`
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 700;
+  color: ${appTheme.text.main};
 `;
 
 export const IconWrapper = styled.div`
-  height: 40px;
-  width: 40px;
-  padding: 10px;
-  gap: 10px;
-  border-radius: 50%;
-  border: 1px;
-  opacity: 0px;
-  border: 1px solid ${appTheme.stroke.soft};
+  height: 44px;
+  width: 44px;
+  border-radius: 12px;
   display: flex;
   align-self: center;
+  align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  background: ${appTheme.primary.lightest};
   color: ${appTheme.primary.base};
   svg {
-    width: 16.09px;
-    height: 16.09px;
+    width: 20px;
+    height: 20px;
   }
 `;
 export const TileContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(1, 1fr);
-  gap: 20px;
-  margin-top: 10px;
-  @media (max-width: 768px) and (min-width: 460px) {
+  gap: 16px;
+  @media (max-width: 1024px) and (min-width: 641px) {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
   }
-  @media (max-width: 460px) {
+  @media (max-width: 640px) {
     grid-template-columns: repeat(1, 1fr);
-    gap: 10px;
   }
 `;

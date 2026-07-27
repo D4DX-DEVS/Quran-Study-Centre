@@ -217,6 +217,7 @@ const MasterData = (props) => {
             itemTitle={tab.itemTitle}
             shortName={tab.shortName}
             formMode="single"
+            surfaceTheme={"district"}
             {...props}
             attributes={tab.attributes}
           />
