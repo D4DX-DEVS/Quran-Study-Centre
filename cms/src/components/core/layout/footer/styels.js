@@ -1,10 +1,43 @@
 import styled from "styled-components";
+import { appTheme } from "../../../project/brand/project";
 
 export const FooterText = styled.footer`
   display: flex;
   align-items: flex-end;
   margin-top: auto;
   padding: 0;
+`;
+
+export const QuoteCard = styled.div`
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: 16px;
+  padding: 18px 16px;
+  background: linear-gradient(135deg, ${appTheme.primary.dark} 0%, ${appTheme.primary.base} 100%);
+  color: ${appTheme.text.white};
+  svg {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    width: 76px;
+    height: 76px;
+    opacity: 0.18;
+  }
+  p.quote {
+    position: relative;
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    font-style: italic;
+  }
+  p.ref {
+    position: relative;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.85;
+  }
 `;
 
 export const Nav = styled.nav`

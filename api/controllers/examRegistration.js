@@ -104,6 +104,12 @@ exports.addExamRegistration = async (req, res) => {
       }
     })();
 
+    // Fire-and-forget hall ticket generation so new registrations show up in
+    // the Hall Ticket list immediately, same as they already do everywhere
+    // else (registered students, attendance, exam center sticker, consolidation
+    // report). Mirrors the same side effect updateExamRegistration fires on edit.
+    regenerateHallTicketForId(response._id);
+
     res.status(200).json({
       success: true,
       message: "Successfully added exam registration.",

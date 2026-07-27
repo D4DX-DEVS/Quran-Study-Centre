@@ -5,11 +5,11 @@ import { useUser } from "../../../../contexts/UserContext";
 import { useDispatch } from "react-redux";
 import { menuStatus, currentMenu, selectedMenu, selectedSubMenu, openedMenu } from "../../../../store/actions/common";
 
-const SearchMenu = () => {
+const SearchMenu = ({ isMobile }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(!isMobile);
   const searchRef = useRef(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
@@ -68,20 +68,38 @@ const SearchMenu = () => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setIsSearchOpen(false);
-        setIsExpanded(false);
+        // On desktop the search bar stays permanently expanded; only the
+        // mobile icon-toggle version collapses back down on outside click.
+        if (isMobile) {
+          setIsExpanded(false);
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
-    if (isExpanded && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isExpanded]);
+    setIsExpanded(!isMobile);
+  }, [isMobile]);
+
+  // Ctrl+K / Cmd+K focuses the search bar, matching the hint shown inside it.
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsExpanded(true);
+        setIsSearchOpen(true);
+        requestAnimationFrame(() => inputRef.current?.focus());
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const handleSelectMenuItem = (item) => {
     if (item.type === "submenu") {
@@ -124,8 +142,8 @@ const SearchMenu = () => {
             <span className="absolute left-2 text-gray-400 w-[32px] h-[32px] flex items-center justify-center">
               <GetIcon icon="search" className="w-4 h-4" />
             </span>
-            <input ref={inputRef} type="text" placeholder="Search" className="pl-10 pr-8 py-1.5 w-56 md:w-72 bg-transparent text-gray-700 placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 text-sm" value={searchTerm} onChange={(e) => handleSearch(e.target.value)} onFocus={() => setIsSearchOpen(true)} style={{ height: "36px" }} />
-            {searchTerm && (
+            <input ref={inputRef} type="text" placeholder="Search anything..." className="pl-10 pr-16 py-1.5 w-56 md:w-80 bg-transparent text-gray-700 placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 text-sm" value={searchTerm} onChange={(e) => handleSearch(e.target.value)} onFocus={() => setIsSearchOpen(true)} style={{ height: "36px" }} />
+            {searchTerm ? (
               <button
                 type="button"
                 className="absolute right-2 text-gray-400 hover:text-gray-600 w-6 h-6 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-blue-100"
@@ -141,6 +159,8 @@ const SearchMenu = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+            ) : (
+              <kbd className="absolute right-2 hidden md:flex items-center gap-0.5 px-1.5 h-5 rounded border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-400">Ctrl K</kbd>
             )}
           </div>
         </div>
