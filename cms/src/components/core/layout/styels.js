@@ -35,7 +35,9 @@ export const SideBar = styled.div`
   .menus {
     color: white;
     position: relative;
-    display: inline-flex;
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
     flex-direction: column;
     background: white;
     background-color: ${(props) => props.theme.background};
@@ -64,6 +66,15 @@ export const SideBar = styled.div`
   &.submenu {
     width: 90px;
     .title {
+      display: none;
+    }
+    .sidebar-brand {
+      display: none;
+    }
+    .sidebar-quote {
+      display: none;
+    }
+    .menu-caret {
       display: none;
     }
     a.main {
@@ -121,6 +132,19 @@ export const SideBar = styled.div`
     &.active {
       visibility: visible;
     }
+  }
+`;
+
+export const SidebarBrand = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 4px 4px 20px 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eef2f8;
+  img {
+    height: 40px;
+    max-width: 100%;
+    object-fit: contain;
   }
 `;
 

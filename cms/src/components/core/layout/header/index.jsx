@@ -32,24 +32,25 @@ const Header = (props) => {
   // const navigate = useNavigate();
   return (
     <Container className={isProfileBarOpen ? "profile-open" : ""}>
-      {/* <Title
-        className="navicon"
-        onClick={() => {
-          dispatch(menuStatus(!menuCurrentStatus));
-        }}
-      >
-        <GetIcon icon={"menu"} />
-      </MNav> */}
-
       <Status>
-        {/* <MNav>
-          <GetIcon icon={selectedMenuItem.icon} />
-        </MNav> */}
-        <Title>
-          <Logo src={headerLogo} alt="logo" />
-        </Title>
-        <div className="flex-1 flex justify-end items-center gap-2 pr-4">
-          <SearchMenu />
+        {!props.isMobile && (
+          <button
+            type="button"
+            aria-label="Toggle sidebar"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-stroke-soft text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors mr-3 shrink-0"
+            onClick={() => props.onToggleSidebar?.()}
+          >
+            <GetIcon icon={"menu"} />
+          </button>
+        )}
+        {props.isMobile && (
+          <Title>
+            <Logo src={headerLogo} alt="logo" />
+          </Title>
+        )}
+        <div className="flex-1" />
+        <SearchMenu isMobile={props.isMobile} />
+        <div className="flex items-center gap-2 pl-4 pr-4">
           <button type="button" aria-label="Notifications" className="hidden md:flex items-center justify-center w-9 h-9 rounded-full text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors">
             <Bell size={18} strokeWidth={2} />
           </button>

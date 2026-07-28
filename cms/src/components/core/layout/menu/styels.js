@@ -34,6 +34,10 @@ export const Nav = styled.nav`
     display: flex;
     flex-direction: column;
     gap: 6px;
+    width: 100%;
+  }
+  .menu-item {
+    width: 100%;
   }
   .menu-section + .menu-section {
     margin-top: 8px;
@@ -97,9 +101,12 @@ export const Nav = styled.nav`
     text-decoration: none;
     color: #627798;
     min-height: 40px;
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     justify-content: left;
-    align-items: center;
+    align-items: flex-start;
+    padding-top: 10px;
     transition: all 0.02s;
     position: relative;
     margin: 0px;
@@ -132,18 +139,16 @@ export const Nav = styled.nav`
     }
     opacity: 1;
   }
-  a.main.active:after {
-    content: "";
-    display: block;
-    position: absolute;
-    right: 18px;
-    top: 50%;
-    transform: translateY(-50%) rotate(45deg);
-    width: 6px;
-    height: 6px;
-    border-top: 1px solid #1a4993;
-    border-right: 1px solid #1a4993;
-    transition: all 0.02s;
+  a.main .menu-caret,
+  .open .menu-caret {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: #9aa8c2;
+    transition: all 0.2s ease-in;
+  }
+  a.main.active .menu-caret,
+  a.main:hover .menu-caret {
+    color: ${(props) => props.theme.theme};
   }
   a.main.active::before {
     content: "";

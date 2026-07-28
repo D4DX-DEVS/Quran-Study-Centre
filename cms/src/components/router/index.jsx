@@ -5,11 +5,12 @@ import { useUser } from "../../contexts/UserContext";
 
 import Switch from "./switch";
 import Page404 from "../project/pages/page404";
-import { Container, MainContainer, SideBar } from "../core/layout/styels";
+import { Container, MainContainer, SideBar, SidebarBrand } from "../core/layout/styels";
 import { RowContainer } from "../styles/containers/styles";
 import Header from "../core/layout/header";
 import Footer from "../core/layout/footer";
 import Menu from "../core/layout/menu";
+import headerLogo from "../project/brand/logo-header.png";
 import InternetStatusPopup from "../core/InternetStatusPopup";
 import { GetIcon } from "../../icons";
 import { currentMenu, menuStatus, selectedMenu } from "../../store/actions/common";
@@ -29,6 +30,7 @@ const PageRouter = () => {
   const themeColors = useSelector((state) => state.themeColors);
   const [isMobile, setIsMobile] = useState(window.matchMedia("(max-width: 600px)").matches);
   const [pageLoaded, setPageLoaded] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const updateIsMobile = useCallback(() => {
     setIsMobile(window.matchMedia("(max-width: 600px)").matches);
@@ -115,14 +117,17 @@ const PageRouter = () => {
       </BrowserRouter>
     ) : (
       <BrowserRouter>
-        {!(selectedMenuItem.hideHeader ?? false) && <Header isMobile={isMobile} user={userData.user}></Header>}
+        {!(selectedMenuItem.hideHeader ?? false) && <Header isMobile={isMobile} user={userData.user} onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}></Header>}
         <MainContainer>
           {isMobile ? (
             <Menu isMobile={isMobile} user={userData} menu={userData.menu}></Menu>
           ) : (
             !(selectedMenuItem.hideMenu ?? false) && (
-              <SideBar theme={themeColors} className={`${menuStatus1 && "active"} sticky`}>
+              <SideBar theme={themeColors} className={`${menuStatus1 && "active"} sticky ${sidebarCollapsed ? "submenu" : ""}`}>
                 <div className="menus">
+                  <SidebarBrand className="sidebar-brand">
+                    <img src={headerLogo} alt="logo" />
+                  </SidebarBrand>
                   <Menu isMobile={isMobile} user={userData}></Menu>
                   <Footer></Footer>
                 </div>

@@ -1,19 +1,15 @@
 import React from "react";
-import { FooterText } from "./styels";
+import { BookOpen } from "lucide-react";
+import { FooterText, QuoteCard } from "./styels";
 
 const Footer = () => {
   return (
     <FooterText>
-      {/* <Nav theme={themeColors}> */}
-      {/* Link to the home page */}
-      {/* <Link target="_blank" to="https://www.example.com/privacy">
-          {t("privacy")}
-        </Link> */}
-      {/* Link to the imprint page */}
-      {/* <Link target="_blank" to="https://www.example.com/imprint">
-          {t("imprint")}
-        </Link> */}
-      {/* </Nav> */}
+      <QuoteCard className="sidebar-quote">
+        <BookOpen strokeWidth={1.5} />
+        <p className="quote">"And We have certainly made the Quran easy for remembrance"</p>
+        <p className="ref">(Quran 54:17)</p>
+      </QuoteCard>
     </FooterText>
   );
 };

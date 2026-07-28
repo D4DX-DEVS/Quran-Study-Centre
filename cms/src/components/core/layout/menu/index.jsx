@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Nav, SubMenuHead } from "./styels";
 import { useDispatch, useSelector } from "react-redux";
@@ -62,6 +63,7 @@ const Menu = (props) => {
                       >
                         <GetIcon icon={menuItem.icon} />
                         {props.isMobile ? <span>{menuItem.label.substring(0, menuItem.label.indexOf(" ") !== -1 ? menuItem.label.indexOf(" ") : menuItem.label.length)}</span> : <span>{menuItem.label}</span>}
+                        {!props.isMobile && <ChevronRight className="menu-caret" size={15} />}
                       </Link>
                       {!props.isMobile && selectedSubMenuItem?._id === menuItem._id && (
                         <div className="inline-submenus">
@@ -102,6 +104,7 @@ const Menu = (props) => {
                     >
                       <GetIcon icon={menuItem.icon} />
                       {props.isMobile ? <span>{menuItem.label.substring(0, menuItem.label.indexOf(" ") !== -1 ? menuItem.label.indexOf(" ") : menuItem.label.length)}</span> : <span>{menuItem.label}</span>}
+                      {!props.isMobile && <ChevronRight className="menu-caret" size={15} />}
                     </Link>
                   )}
                 </div>
