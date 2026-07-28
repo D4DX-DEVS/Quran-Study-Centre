@@ -87,6 +87,11 @@ app.use(
 // Connect to database
 connectDB();
 
+// Backstop for the fire-and-forget hall ticket generation fired on every
+// registration/edit: repairs students whose ticket was lost to a restart,
+// redeploy or transient S3/Mongo failure. See controllers/hallTicket.js.
+require("./controllers/hallTicket.js").startHallTicketSweeper();
+
 app.use("/images", express.static("./public/user"));
 app.use("/images", express.static("./public/proteincategory"));
 
