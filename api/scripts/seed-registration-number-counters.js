@@ -1,10 +1,8 @@
 // Syncs the Counter collection with the highest regno sequence already in use
-// per (area+centre+exam-stage) key, so real-time signup can hand out the next
-// number atomically via Counter.nextSeq() without colliding with existing data.
-//
-// Run this once now, and again any time scripts/generate-registration-numbers.js
-// (full recompute) is run — that recompute renumbers everyone from scratch
-// without touching Counters, so Counters would otherwise fall behind.
+// per 2-letter (area+centre) prefix — shared across every exam-stage digit,
+// matching controllers/registrationNumber.js. Real-time signup now self-heals
+// this on every call (see syncPrefixCounterToActualMax there), so running this
+// script is no longer required, but it's kept as a manual/verification tool.
 //
 // Usage:
 //   node scripts/seed-registration-number-counters.js            # writes
@@ -27,7 +25,7 @@ async function seedCounters({ dryRun = false } = {}) {
   for (const doc of existing) {
     const regno = String(doc.regno);
     if (regno.length < 4) continue; // malformed, ignore rather than crash the seed
-    const key = regno.slice(0, 3); // 2-char area+centre initials + 1-digit exam stage
+    const key = regno.slice(0, 2); // 2-char area+centre initials (shared across exam-stage digits)
     const seq = parseInt(regno.slice(3), 10);
     if (Number.isNaN(seq)) continue;
     maxByKey.set(key, Math.max(maxByKey.get(key) || 0, seq));

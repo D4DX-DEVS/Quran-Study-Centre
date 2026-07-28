@@ -51,21 +51,34 @@ function buildPrefix(areaName, centerName) {
   return `${initialOf(areaName)}${examCenterInitial(centerName)}`;
 }
 
-// Regno key = prefix (area+centre initials) + exam-stage digit, e.g. "KC1".
-function regnoKey(prefix, digit) {
-  return `${prefix}${digit}`;
+// The 3-digit sequence is shared across every exam-stage digit for a given
+// prefix (e.g. PP1xxx, PP2xxx, ... PP9xxx all draw from the same running
+// count) — this matches generateRegistrationNumbers()/verify-full-sequence.js
+// below, which key their per-prefix counter on the 2-letter prefix alone.
+//
+// Before handing out a number, sync the Counter up to the true max already
+// stored in ExamRegistration for this prefix (via $max, so it only ever
+// moves forward). This makes real-time issuance self-healing: it can never
+// fall behind actual data, even after a full recompute (which renumbers
+// everyone without touching Counters) or if a Counter document is missing.
+async function syncPrefixCounterToActualMax(prefix) {
+  const re = new RegExp(`^${prefix}\\d{${1 + SEQUENCE_DIGITS}}$`);
+  const docs = await ExamRegistration.find({ regno: re }).select("regno").lean();
+  let max = 0;
+  for (const d of docs) {
+    const seq = parseInt(String(d.regno).slice(prefix.length + 1), 10);
+    if (!Number.isNaN(seq)) max = Math.max(max, seq);
+  }
+  if (max > 0) {
+    await Counter.findByIdAndUpdate(prefix, { $max: { seq: max } }, { upsert: true, setDefaultsOnInsert: true });
+  }
 }
 
 // Real-time regno assignment for a single new registration (used at signup,
 // not during the full recompute). Atomically takes the next sequence number
-// for this student's (area+centre+exam-stage) key via the Counter collection
-// — safe under concurrent signups, unlike the in-memory counting the batch
-// generator/backfill script use.
-//
-// IMPORTANT: the Counter collection must be kept in sync with whatever the
-// highest regno actually in use is. Run scripts/seed-registration-number-counters.js
-// any time generateRegistrationNumbers() (full recompute) is run afterward,
-// since that recompute renumbers everyone from scratch without touching Counters.
+// for this student's prefix via the Counter collection — safe under
+// concurrent signups, unlike the in-memory counting the batch generator/
+// backfill script use.
 async function nextRegistrationNumberForNewStudent({ areaId, centerRegistrationId, assignedExamCenterId, examTypeId }) {
   const [area, center, assignedCenter, examType] = await Promise.all([
     areaId ? Area.findById(areaId).select("area").lean() : null,
@@ -78,14 +91,14 @@ async function nextRegistrationNumberForNewStudent({ areaId, centerRegistrationI
   const centerName = center?.nameOfCenter || assignedCenter?.nameOfCenter || "";
   const prefix = buildPrefix(areaName, centerName);
   const digit = examType?.stageDigit ?? 0;
-  const key = regnoKey(prefix, digit);
 
-  const seq = await Counter.nextSeq(key);
+  await syncPrefixCounterToActualMax(prefix);
+  const seq = await Counter.nextSeq(prefix);
   if (seq > MAX_SEQUENCE) {
-    throw new Error(`Prefix "${key}" exceeds ${MAX_SEQUENCE} registrations — the ${SEQUENCE_DIGITS}-digit sequence has overflowed.`);
+    throw new Error(`Prefix "${prefix}" exceeds ${MAX_SEQUENCE} registrations — the ${SEQUENCE_DIGITS}-digit sequence has overflowed.`);
   }
 
-  return `${key}${String(seq).padStart(SEQUENCE_DIGITS, "0")}`;
+  return `${prefix}${digit}${String(seq).padStart(SEQUENCE_DIGITS, "0")}`;
 }
 
 async function loadSortedStudents() {
@@ -185,4 +198,4 @@ exports.generate = async (req, res) => {
 
 exports.generateRegistrationNumbers = generateRegistrationNumbers;
 exports.nextRegistrationNumberForNewStudent = nextRegistrationNumberForNewStudent;
-exports._internal = { buildPrefix, examCenterInitial, initialOf, compareBySpec, regnoKey };
+exports._internal = { buildPrefix, examCenterInitial, initialOf, compareBySpec };
