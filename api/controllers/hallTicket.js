@@ -148,6 +148,29 @@ exports.getHallTicket = async (req, res) => {
   }
 };
 
+// Anything can end up in a `catch` — an Error, a string, an AggregateError
+// with no `.message`. `err.message.toString()` blew up on those, which turned a
+// recoverable render/upload failure into an unhandled rejection (fatal on Node
+// 20) and left the student with no hall ticket row at all.
+const errText = (err) => String(err?.message ?? err ?? "Unknown error").slice(0, 500);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Rendering + uploading a PDF takes a couple of seconds, and until it finished
+// the student had NO row in the HallTicket collection — so a just-registered
+// student was simply absent from the Hall Ticket list, which reads as
+// "generation never happened". Claiming the row as "pending" first makes them
+// show up immediately with a visible status. Any existing pdfUrl is kept so a
+// regeneration doesn't blank out the currently-working link.
+const markHallTicketPending = (registrationId) =>
+  HallTickets.findOneAndUpdate(
+    { nameOfApplicant: registrationId },
+    { $set: { status: "pending", error: null } },
+    { upsert: true, setDefaultsOnInsert: true }
+  );
+
+exports.markHallTicketPending = markHallTicketPending;
+
 // Renders + uploads a fresh hall ticket for one already-populated student doc,
 // and records the result on the HallTicket collection. Shared by the on-demand
 // download endpoint and the auto-regeneration triggered on student edits.
@@ -166,23 +189,49 @@ const regenerateHallTicketFor = async (user) => {
 };
 
 // Looks up a student by _id (populating what the ticket needs) and
-// regenerates their hall ticket. Used as a fire-and-forget side effect after
-// a student's details are edited, so an out-of-date PDF never lingers on the
-// CDN. Failures are recorded on the HallTicket doc rather than thrown, since
-// callers use this without awaiting/handling a rejection.
-exports.regenerateHallTicketForId = async (registrationId) => {
-  try {
-    const user = await examRegistration.findById(registrationId).populate(HALL_TICKET_POPULATE_OPTS);
-    if (!user) return;
-    await regenerateHallTicketFor(user);
-  } catch (error) {
-    console.error(`Auto hall-ticket regeneration failed for registration ${registrationId}:`, error.message);
-    await HallTickets.findOneAndUpdate(
-      { nameOfApplicant: registrationId },
-      { status: "failed", error: error.message.toString().slice(0, 500) },
-      { upsert: true }
-    ).catch(() => {});
+// regenerates their hall ticket. Used as a fire-and-forget side effect after a
+// student registers or their details are edited, so every student has a
+// current PDF without anyone pressing a button.
+//
+// Retries before giving up: a single transient S3/Mongo blip used to leave the
+// student permanently without a ticket, because nothing ever came back for
+// them. Whatever the outcome, it is written to the HallTicket doc (never
+// thrown) — callers use this without awaiting or handling a rejection.
+const HALL_TICKET_ATTEMPTS = 3;
+
+exports.regenerateHallTicketForId = async (registrationId, { attempts = HALL_TICKET_ATTEMPTS } = {}) => {
+  await markHallTicketPending(registrationId).catch((err) =>
+    console.error(`Could not mark hall ticket pending for ${registrationId}:`, errText(err))
+  );
+
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const user = await examRegistration.findById(registrationId).populate(HALL_TICKET_POPULATE_OPTS);
+      if (!user) {
+        // Registration was deleted before we got to it — don't leave an
+        // orphan row stuck on "pending" in the list.
+        await HallTickets.deleteMany({ nameOfApplicant: registrationId }).catch(() => {});
+        return null;
+      }
+      return await regenerateHallTicketFor(user);
+    } catch (error) {
+      lastError = error;
+      console.error(
+        `Auto hall-ticket generation attempt ${attempt}/${attempts} failed for registration ${registrationId}:`,
+        errText(error)
+      );
+      if (attempt < attempts) await sleep(1000 * attempt);
+    }
   }
+
+  await HallTickets.findOneAndUpdate(
+    { nameOfApplicant: registrationId },
+    { status: "failed", error: errText(lastError) },
+    { upsert: true }
+  ).catch((err) => console.error(`Could not record hall ticket failure for ${registrationId}:`, errText(err)));
+
+  return null;
 };
 
 // @desc      DOWNLOAD HALL TICKET (single student, on demand)
@@ -240,10 +289,10 @@ const processBulkHallTickets = async (registrations, onProgress) => {
         done++;
       } catch (err) {
         failed++;
-        console.error(`Bulk hall ticket generation failed for registration ${user._id}:`, err.message);
+        console.error(`Bulk hall ticket generation failed for registration ${user._id}:`, errText(err));
         await HallTickets.findOneAndUpdate(
           { nameOfApplicant: user._id },
-          { status: "failed", error: err.message.toString().slice(0, 500) },
+          { status: "failed", error: errText(err) },
           { upsert: true }
         );
       } finally {
@@ -259,6 +308,97 @@ const processBulkHallTickets = async (registrations, onProgress) => {
 
 exports.processBulkHallTickets = processBulkHallTickets;
 exports.HALL_TICKET_POPULATE_OPTS = HALL_TICKET_POPULATE_OPTS;
+
+// ---------------------------------------------------------------------------
+// Self-healing sweep
+//
+// The per-registration hook above is fire-and-forget, so it can still be lost
+// for reasons no amount of retrying inside it can cover: the process is
+// restarted or redeployed mid-render, Mongo is briefly unreachable at exactly
+// the wrong moment, or a student is inserted by a script/import that never goes
+// through the controller. Every one of those leaves a student silently absent
+// from the Hall Ticket list forever.
+//
+// This sweep is the backstop: it looks for registrations with no usable hall
+// ticket (no row, a failed row, a "pending" row that has clearly been abandoned,
+// or a row with no pdfUrl) and generates them. Small batches, low concurrency —
+// it must never compete with live traffic.
+// ---------------------------------------------------------------------------
+const SWEEP_STALE_PENDING_MS = 10 * 60 * 1000;
+const SWEEP_BATCH = 25;
+const SWEEP_CONCURRENCY = 2;
+
+const findRegistrationsNeedingHallTickets = (limit = SWEEP_BATCH) =>
+  examRegistration.aggregate([
+    {
+      $lookup: {
+        from: HallTickets.collection.name,
+        localField: "_id",
+        foreignField: "nameOfApplicant",
+        as: "ticket",
+      },
+    },
+    { $addFields: { ticket: { $first: "$ticket" } } },
+    {
+      $match: {
+        $or: [
+          { ticket: null },
+          { "ticket.status": "failed" },
+          { "ticket.pdfUrl": null },
+          { "ticket.status": "pending", "ticket.updatedAt": { $lt: new Date(Date.now() - SWEEP_STALE_PENDING_MS) } },
+        ],
+      },
+    },
+    { $project: { _id: 1 } },
+    { $limit: limit },
+  ]);
+
+let sweepInFlight = false;
+
+const sweepMissingHallTickets = async ({ limit = SWEEP_BATCH } = {}) => {
+  if (sweepInFlight) return { picked: 0, skipped: "already running" };
+  sweepInFlight = true;
+  try {
+    const rows = await findRegistrationsNeedingHallTickets(limit);
+    if (!rows.length) return { picked: 0 };
+
+    console.log(`Hall ticket sweep: ${rows.length} student(s) without a usable hall ticket — generating.`);
+    const ids = rows.map((r) => r._id);
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < ids.length) {
+        await exports.regenerateHallTicketForId(ids[cursor++], { attempts: 1 });
+      }
+    };
+    await Promise.all(Array.from({ length: SWEEP_CONCURRENCY }, worker));
+    console.log(`Hall ticket sweep: finished ${ids.length} student(s).`);
+    return { picked: ids.length };
+  } finally {
+    sweepInFlight = false;
+  }
+};
+
+exports.sweepMissingHallTickets = sweepMissingHallTickets;
+
+// Kicks off the sweep shortly after boot (so a restart that interrupted a
+// generation is repaired on its own) and then on an interval.
+// HALL_TICKET_SWEEP=off disables it; HALL_TICKET_SWEEP_MINUTES tunes the period.
+exports.startHallTicketSweeper = () => {
+  if (String(process.env.HALL_TICKET_SWEEP || "").toLowerCase() === "off") {
+    console.log("Hall ticket sweeper disabled (HALL_TICKET_SWEEP=off).");
+    return null;
+  }
+  const minutes = Number(process.env.HALL_TICKET_SWEEP_MINUTES) > 0 ? Number(process.env.HALL_TICKET_SWEEP_MINUTES) : 5;
+  const run = () => sweepMissingHallTickets().catch((err) => console.error("Hall ticket sweep failed:", errText(err)));
+
+  // 30s of headroom so the sweep never lands in the middle of boot / the DB
+  // connection still coming up.
+  setTimeout(run, 30 * 1000).unref?.();
+  const timer = setInterval(run, minutes * 60 * 1000);
+  timer.unref?.();
+  console.log(`Hall ticket sweeper active (every ${minutes} min).`);
+  return timer;
+};
 
 // @desc      GENERATE HALL TICKETS FOR EVERY CURRENTLY REGISTERED STUDENT
 // @route     POST /api/v1/hall-ticket/generate-all
@@ -351,6 +491,12 @@ exports.updateHallTicket = async (req, res) => {
     res.status(204).json({ success: false, message: err });
   }
 };
+
+// Cascade-delete helper for when the underlying ExamRegistration is removed —
+// without this an orphaned row lingers in the Hall Ticket list forever (the
+// self-healing sweep above scans outward from ExamRegistration, so it never
+// sees a HallTicket row whose parent registration is already gone).
+exports.deleteHallTicketForRegistration = (registrationId) => HallTickets.deleteMany({ nameOfApplicant: registrationId });
 
 // @desc      DELETE SPECIFIC HallTicket
 // @route     DELETE /api/user/hallTicket

@@ -13,7 +13,7 @@ const ExamSettings = require("../models/examSettings");
 const { recomputeAllocation } = require("./examAllocation");
 const { nextRegistrationNumberForNewStudent } = require("./registrationNumber");
 const { resolveExamCenterName, genderRank, modeRank, examSortOrder } = require("../utils/studentSort");
-const { regenerateHallTicketForId } = require("./hallTicket");
+const { regenerateHallTicketForId, markHallTicketPending, deleteHallTicketForRegistration } = require("./hallTicket");
 
 const s3 = new S3Client({
   endpoint: `https://${process.env.DO_SPACES_ENDPOINT}`,
@@ -87,10 +87,28 @@ exports.addExamRegistration = async (req, res) => {
 
     const response = await ExamRegistration.create(payload);
 
-    // Fire-and-forget async re-allocation for this district so the ≥minCount
-    // clubbing rule stays current as new registrations arrive.
-    // Intentionally NOT awaited — the applicant's response should not be held up.
+    // Fire-and-forget post-submit work. Intentionally NOT awaited — the
+    // applicant's response should not be held up by it.
+    //
+    // Order matters, and these used to run as two independent racing tasks:
+    //  1. re-allocation for this district, so the ≥minCount clubbing rule stays
+    //     current as new registrations arrive. It can move this very student's
+    //     assignedExamCenter.
+    //  2. hall ticket generation — and the assigned exam centre is printed ON
+    //     the ticket. Run concurrently, the ticket regularly won the race and
+    //     went out with the pre-clubbing venue.
+    // updateExamRegistration already orders these two for exactly this reason;
+    // the create path now does the same.
+    //
+    // The ticket row itself is claimed as "pending" first, before the (slower)
+    // recompute, so the student appears in the Hall Ticket list the moment they
+    // register — same as they already do in registered students, attendance,
+    // exam center sticker and the consolidation report.
     (async () => {
+      await markHallTicketPending(response._id).catch((e) =>
+        console.error(`post-submit hall ticket pending marker failed for ${response._id}:`, e.message)
+      );
+
       try {
         const settings = await ExamSettings.getCurrent();
         if (settings.autoRecomputeOnSubmit && !settings.allocationLocked && response.district && response.nameOfExamAppearingNow) {
@@ -102,13 +120,11 @@ exports.addExamRegistration = async (req, res) => {
       } catch (e) {
         console.error("post-submit recompute failed:", e.message);
       }
-    })();
 
-    // Fire-and-forget hall ticket generation so new registrations show up in
-    // the Hall Ticket list immediately, same as they already do everywhere
-    // else (registered students, attendance, exam center sticker, consolidation
-    // report). Mirrors the same side effect updateExamRegistration fires on edit.
-    regenerateHallTicketForId(response._id);
+      await regenerateHallTicketForId(response._id);
+    })().catch((e) =>
+      console.error(`post-submit hall ticket generation failed for ${response._id}:`, e?.message || e)
+    );
 
     res.status(200).json({
       success: true,
@@ -314,6 +330,7 @@ exports.deleteExamRegistration = async (req, res) => {
   try {
     const { id } = req.query;
     const response = await ExamRegistration.findByIdAndDelete(id);
+    await deleteHallTicketForRegistration(id);
     res.status(200).json({ success: true, message: `deleted specific ExamRegistration`, response });
   } catch (err) {
     console.log(err);
