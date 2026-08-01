@@ -5,10 +5,11 @@ import { useUser } from "../../contexts/UserContext";
 
 import Switch from "./switch";
 import Page404 from "../project/pages/page404";
-import { Container, MainContainer, SideBar, SidebarBrand } from "../core/layout/styels";
+import { Container, MainContainer, MobileMenuBackdrop, SideBar, SidebarBrand } from "../core/layout/styels";
 import { RowContainer } from "../styles/containers/styles";
 import Header from "../core/layout/header";
 import Footer from "../core/layout/footer";
+import PageFooter from "../core/layout/pageFooter";
 import Menu from "../core/layout/menu";
 import headerLogo from "../project/brand/logo-header.png";
 import InternetStatusPopup from "../core/InternetStatusPopup";
@@ -31,6 +32,7 @@ const PageRouter = () => {
   const [isMobile, setIsMobile] = useState(window.matchMedia("(max-width: 600px)").matches);
   const [pageLoaded, setPageLoaded] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const updateIsMobile = useCallback(() => {
     setIsMobile(window.matchMedia("(max-width: 600px)").matches);
@@ -52,6 +54,12 @@ const PageRouter = () => {
       setPageLoaded(true);
     }
   }, [pageLoaded]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileMenuOpen(false);
+    }
+  }, [isMobile]);
 
   const createRouter = useCallback(
     (router, menu = true) => {
@@ -134,14 +142,32 @@ const PageRouter = () => {
             )
           )}
 
+          {isMobile && mobileMenuOpen && (
+            <React.Fragment>
+              <MobileMenuBackdrop onClick={() => setMobileMenuOpen(false)} />
+              <SideBar theme={themeColors} className="active">
+                <div className="menus" onClick={(e) => (e.target.closest("a") ? setMobileMenuOpen(false) : null)}>
+                  <SidebarBrand className="sidebar-brand">
+                    <img src={headerLogo} alt="logo" />
+                    <button type="button" aria-label="Close menu" className="flex items-center justify-center w-8 h-8 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                      <GetIcon icon="close" />
+                    </button>
+                  </SidebarBrand>
+                  <Menu isMobile={false} variant="drawer" user={userData}></Menu>
+                  <Footer></Footer>
+                </div>
+              </SideBar>
+            </React.Fragment>
+          )}
+
           {selectedSubMenuItem?.submenus?.length > 0 && isMobile ? (
             <MobileSubMenu>
               <SubMenuOpen theme={themeColors}>{renderGroupedSubMenus()}</SubMenuOpen>
             </MobileSubMenu>
           ) : null}
           <RowContainer className={`content ${selectedMenuItem.hideMenu ? "hidemenu" : ""} ${selectedSubMenuItem?.submenus?.length > 0 && isMobile ? "has-menu" : ""}`}>
-            {!(selectedMenuItem.hideHeader ?? false) && <Header isMobile={isMobile} user={userData.user} onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}></Header>}
-            <Container className="nopadding" theme={themeColors}>
+            {!(selectedMenuItem.hideHeader ?? false) && <Header isMobile={isMobile} user={userData.user} onToggleSidebar={() => (isMobile ? setMobileMenuOpen((open) => !open) : setSidebarCollapsed((collapsed) => !collapsed))}></Header>}
+            <Container className="nopadding" theme={themeColors} style={{ marginBottom: "30px" }}>
               <Routes>
                 <Route key="login" path="/" element={<Switch page="login" />} />
                 <Route key="admin-redirect" path="/admin" element={<Navigate to={getDefaultMenuPath(userData.menu ?? [])} replace />} />
@@ -150,6 +176,7 @@ const PageRouter = () => {
                 <Route key="404" path="*" element={<Page404 />} />
               </Routes>
             </Container>
+            <PageFooter />
           </RowContainer>
           <InternetStatusPopup />
         </MainContainer>

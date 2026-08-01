@@ -97,7 +97,7 @@ export const Login = () => {
             <div className="bg-white rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
               <div className="w-full">
                 <div className="mb-6 border-b border-gray-200 pb-4 flex flex-col gap-4 items-center justify-center">
-                  <img src={logo} alt="event-logo" className="h-8" />
+                  <img src={logo} alt="event-logo" className="h-16" />
                   <p className="text-xl font-semibold text-gray">Log in to your {projectSettings.title} Account.</p>
                 </div>
 

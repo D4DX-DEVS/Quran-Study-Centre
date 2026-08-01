@@ -184,97 +184,104 @@ export const Nav = styled.nav`
     color: white;
   }
   @media (max-width: 768px) {
-    border-top: 1px solid ${appTheme.stroke.soft};
-    position: fixed;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px);
-    left: 0;
-    right: 0;
-    height: 64px;
-    display: flex;
-    flex-direction: row;
-    padding: 4px 6px;
-    overflow: auto;
-    box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
-    gap: 0;
-    .menu-section {
+    &:not(.drawer-menu) {
+      border-top: 1px solid ${appTheme.stroke.soft};
+      position: fixed;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(14px);
+      left: 0;
+      right: 0;
+      height: 64px;
       display: flex;
       flex-direction: row;
-      align-items: stretch;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-    .menu-section + .menu-section {
-      margin-top: 0;
-      padding-top: 0;
-      padding-left: 8px;
-      border-top: 0;
-      position: relative;
-    }
-    .menu-section + .menu-section::before {
-      content: "";
-      display: block;
-      width: 1px;
-      align-self: stretch;
-      background: #dfe7f2;
-      border-radius: 999px;
-    }
-    .menu-item {
-      padding: 0;
-      margin: 0;
-      height: 56px;
-      width: auto;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-    }
-    a.main svg,
-    .open svg {
-      transition: all 0.02s;
-      margin-right: 0px;
-      width: 30px;
-      margin-left: inherit;
-    }
-    a.main,
-    .open {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 5px;
-      padding: 0 4px;
-      width: 70px;
-      overflow: hidden;
-      height: 100%;
-      border-radius: 14px;
-      svg {
+      padding: 4px 6px;
+      overflow: auto;
+      box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
+      gap: 0;
+      .menu-section {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 4px;
+        flex-shrink: 0;
       }
-      span {
+      .menu-section + .menu-section {
+        margin-top: 0;
+        padding-top: 0;
+        padding-left: 8px;
+        border-top: 0;
+        position: relative;
+      }
+      .menu-section + .menu-section::before {
+        content: "";
+        display: block;
+        width: 1px;
+        align-self: stretch;
+        background: #dfe7f2;
+        border-radius: 999px;
+      }
+      .menu-item {
         padding: 0;
+        margin: 0;
+        height: 56px;
+        width: auto;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+      }
+      a.main svg,
+      .open svg {
+        transition: all 0.02s;
+        margin-right: 0px;
+        width: 30px;
+        margin-left: inherit;
+      }
+      a.main,
+      .open {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+        padding: 0 4px;
+        width: 70px;
         overflow: hidden;
-        font-size: 10px;
-        white-space: nowrap;
-        text-align: center;
-        max-width: 95%;
-        text-overflow: ellipsis;
+        height: 100%;
+        border-radius: 14px;
+        svg {
+        }
+        span {
+          padding: 0;
+          overflow: hidden;
+          font-size: 10px;
+          white-space: nowrap;
+          text-align: center;
+          max-width: 95%;
+          text-overflow: ellipsis;
+        }
+      }
+      a.main.active:after {
+        content: "";
+        display: none;
+      }
+      a.main.active::before {
+        content: "";
+        display: block;
+        position: absolute;
+        left: 10px;
+        top: 4px;
+        right: 10px;
+        background: ${(props) => props.theme.theme};
+        width: auto;
+        height: 3px;
+        border-radius: 999px;
+        transition: all 0.02s;
       }
     }
-    a.main.active:after {
-      content: "";
-      display: none;
-    }
-    a.main.active::before {
-      content: "";
-      display: block;
-      position: absolute;
-      left: 10px;
-      top: 4px;
-      right: 10px;
-      background: ${(props) => props.theme.theme};
-      width: auto;
-      height: 3px;
-      border-radius: 999px;
-      transition: all 0.02s;
+    &.drawer-menu {
+      max-height: 100%;
+      overflow-y: auto;
+      padding-bottom: 12px;
     }
   }
 `;
@@ -288,14 +295,16 @@ export const SubMenuHead = styled.div`
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
   @media (max-width: 768px) {
-    min-height: 34px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: #f2f6fb;
-    color: #5f6d83;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
+    &:not(.drawer-menu) {
+      min-height: 34px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #f2f6fb;
+      color: #5f6d83;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
   }
 `;
 export const SubMenuOpen = styled.nav`

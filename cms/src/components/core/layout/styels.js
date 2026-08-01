@@ -119,24 +119,41 @@ export const SideBar = styled.div`
     }
   }
   @media screen and (max-width: 768px) {
-    position: absolute;
+    position: fixed;
+    top: 0;
     left: 0;
-    right: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 320px;
     display: flex;
-    visibility: collapse;
-    min-height: 60%;
-    max-height: 100%;
-    z-index: 1001;
-    box-shadow: none;
-    &.active {
-      visibility: visible;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 1501;
+    box-shadow: 0 0 30px rgba(15, 23, 42, 0.25);
+    .menus {
+      height: 100%;
     }
+    &.active {
+      transform: translateX(0);
+    }
+  }
+`;
+
+export const MobileMenuBackdrop = styled.div`
+  display: none;
+  @media screen and (max-width: 768px) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 1500;
   }
 `;
 
 export const SidebarBrand = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 4px 4px 20px 4px;
   margin-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);

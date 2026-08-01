@@ -14,17 +14,12 @@ import { useDispatch } from "react-redux";
 const Dashboard = (props) => {
   const dispatch = useDispatch();
   const menu = props.user?.menu ?? [];
-  const displayName = props.user?.fullName ?? props.user?.username ?? "admin";
   const addSyllabusEntry = findMenuLink(menu, (label) => /syllabus/i.test(label));
 
   return (
     <Container className="noshadow">
       <div className="w-full bg-bg-weak p-6 flex flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold text-text-main">Assalamu Alaikum, {displayName} 👋</h1>
-            <p className="text-sm text-text-sub mt-1">Welcome back to Quran Study Centre Kerala</p>
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-4">
           {addSyllabusEntry && (
             <Link
               to={addSyllabusEntry.path}

@@ -42,10 +42,10 @@ const QuickActions = ({ menu = [] }) => {
               key={key}
               to={entry.path}
               onClick={() => dispatchMenuSelection(dispatch, entry)}
-              className="flex flex-col items-start gap-2 p-4 rounded-xl border border-stroke-soft hover:border-primary-light hover:bg-primary-lightest transition-colors"
+              className="flex flex-col items-center text-center gap-2 p-4 rounded-xl border border-stroke-soft hover:border-primary-light hover:bg-primary-lightest transition-colors"
             >
-              <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary-lightest text-primary-base">
-                <Icon size={18} strokeWidth={2} />
+              <span className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary-lightest text-primary-base">
+                <Icon size={24} strokeWidth={2} />
               </span>
               <span className="text-sm font-medium text-text-main">{label}</span>
             </Link>
