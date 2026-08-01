@@ -117,7 +117,6 @@ const PageRouter = () => {
       </BrowserRouter>
     ) : (
       <BrowserRouter>
-        {!(selectedMenuItem.hideHeader ?? false) && <Header isMobile={isMobile} user={userData.user} onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}></Header>}
         <MainContainer>
           {isMobile ? (
             <Menu isMobile={isMobile} user={userData} menu={userData.menu}></Menu>
@@ -141,6 +140,7 @@ const PageRouter = () => {
             </MobileSubMenu>
           ) : null}
           <RowContainer className={`content ${selectedMenuItem.hideMenu ? "hidemenu" : ""} ${selectedSubMenuItem?.submenus?.length > 0 && isMobile ? "has-menu" : ""}`}>
+            {!(selectedMenuItem.hideHeader ?? false) && <Header isMobile={isMobile} user={userData.user} onToggleSidebar={() => setSidebarCollapsed((collapsed) => !collapsed)}></Header>}
             <Container className="nopadding" theme={themeColors}>
               <Routes>
                 <Route key="login" path="/" element={<Switch page="login" />} />

@@ -3,7 +3,7 @@ import { appTheme } from "../../project/brand/project";
 
 export const MainContainer = styled.div`
   display: flex;
-  height: calc(100vh - 80px);
+  height: 100vh;
   overflow: hidden;
   &.center {
     justify-content: center;
@@ -39,13 +39,12 @@ export const SideBar = styled.div`
     width: 100%;
     box-sizing: border-box;
     flex-direction: column;
-    background: white;
-    background-color: ${(props) => props.theme.background};
+    background: ${appTheme.primary.dark};
     order: 1;
     z-index: 1;
     padding: 20px 20px 16px 20px;
     /* box-shadow: rgb(237, 237, 237) 6px 0px 11px 3px; */
-    border-right: 1px solid #e2e4e9;
+    border-right: 1px solid ${appTheme.primary.dark};
     height: 100%;
     transition: all 0.2s ease-in;
     overflow-y: auto;
@@ -140,11 +139,12 @@ export const SidebarBrand = styled.div`
   align-items: center;
   padding: 4px 4px 20px 4px;
   margin-bottom: 12px;
-  border-bottom: 1px solid #eef2f8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   img {
     height: 40px;
     max-width: 100%;
     object-fit: contain;
+    filter: brightness(0) invert(1);
   }
 `;
 

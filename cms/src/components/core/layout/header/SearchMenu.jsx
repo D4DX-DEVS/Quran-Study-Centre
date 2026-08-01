@@ -134,7 +134,7 @@ const SearchMenu = ({ isMobile }) => {
     }
   };
 
-  return userData.menu.length > 5 ? (
+  return userData.menu.length > 0 ? (
     <div className="relative" ref={searchRef}>
       {isExpanded ? (
         <div className="flex items-center transition-all duration-200">
