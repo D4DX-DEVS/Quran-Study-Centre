@@ -70,13 +70,13 @@ const HighlightCards = memo(
 
     const renderedTiles = useMemo(() => {
       return mainData?.slice(0, 4).map((item, index) => (
-        <Tile key={index}>
+        <Tile key={index} style={item.color ? { borderTop: `3px solid ${item.color}` } : undefined}>
           <IconWrapper style={item.background || item.color ? { background: item.background, color: item.color } : undefined}>
             <GetIcon icon={item.icon} />
           </IconWrapper>
           <TitleBox>
             <TitleHead>{item.title}</TitleHead>
-            <Count>{item.count}</Count>
+            <Count style={item.color ? { color: item.color } : undefined}>{item.count}</Count>
           </TitleBox>
         </Tile>
       ));
