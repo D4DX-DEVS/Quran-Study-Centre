@@ -65,13 +65,13 @@ const StatsRow = () => {
         const Icon = stat.icon;
         const value = counts[index];
         return (
-          <Tile key={stat.key}>
+          <Tile key={stat.key} style={{ borderTop: `3px solid ${stat.color}` }}>
             <IconWrapper style={{ background: stat.background, color: stat.color }}>
               <Icon size={20} strokeWidth={2} />
             </IconWrapper>
             <TitleBox>
               <TitleHead>{stat.title}</TitleHead>
-              <Count>{value ?? "—"}</Count>
+              <Count style={{ color: stat.color }}>{value ?? "—"}</Count>
             </TitleBox>
           </Tile>
         );
