@@ -33,14 +33,15 @@ const Menu = (props) => {
   // };
 
   // console.log(selectedMenuItem)
+  const isDrawer = props.variant === "drawer";
   return (
     <>
-      <Nav theme={themeColors}>
+      <Nav theme={themeColors} className={isDrawer ? "drawer-menu" : ""}>
         {/* {!props.isMobile && <Search title={"Search"} className="menu active" theme={themeColors} placeholder="Search Menu" value={searchValue} onChange={handleChange}></Search>} */}
         {/* Link to the home page */}
         {groupedMenuSections.map((section) => (
           <div className="menu-section" key={section.key}>
-            {section.title ? <SubMenuHead className="sidebar-section-title">{section.title}</SubMenuHead> : null}
+            {section.title ? <SubMenuHead className={`sidebar-section-title ${isDrawer ? "drawer-menu" : ""}`}>{section.title}</SubMenuHead> : null}
             {section.items.map((menuItem) => {
               const firstSubMenu = menuItem?.submenus?.[0] ?? null;
               const hasSubMenus = Boolean(firstSubMenu);
@@ -69,7 +70,7 @@ const Menu = (props) => {
                         <div className="inline-submenus">
                           {getGroupedSubMenuSections(menuItem.submenus).map((section) => (
                             <div className="submenu-section" key={section.key}>
-                              {section.title ? <SubMenuHead className="submenu-section-title">{section.title}</SubMenuHead> : null}
+                              {section.title ? <SubMenuHead className={`submenu-section-title ${isDrawer ? "drawer-menu" : ""}`}>{section.title}</SubMenuHead> : null}
                               {section.items.map((submenu) =>
                                 submenu.menuType !== "title" ? (
                                   <Link

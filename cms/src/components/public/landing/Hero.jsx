@@ -204,7 +204,7 @@ function Hero() {
                 {content.landingDescription &&
                   content.landingDescription.split("\n\n").map((para, index) => (
                     <p className="landing-hero-description" key={index}>
-                      {para}
+                      {renderBold(para)}
                     </p>
                   ))}
               </div>

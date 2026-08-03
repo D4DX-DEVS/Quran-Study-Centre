@@ -42,7 +42,7 @@ export const Nav = styled.nav`
   .menu-section + .menu-section {
     margin-top: 8px;
     padding-top: 12px;
-    border-top: 1px solid #eef2f8;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
   .inline-submenus {
     display: flex;
@@ -50,7 +50,7 @@ export const Nav = styled.nav`
     gap: 2px;
     margin-left: 18px;
     padding-left: 12px;
-    border-left: 2px solid #e6ebf3;
+    border-left: 2px solid rgba(255, 255, 255, 0.15);
     margin-top: 2px;
     margin-bottom: 4px;
     .submenu-section {
@@ -61,12 +61,12 @@ export const Nav = styled.nav`
     .submenu-section + .submenu-section {
       margin-top: 6px;
       padding-top: 8px;
-      border-top: 1px solid #eef2f8;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
   }
   a.sub {
     text-decoration: none;
-    color: #627798;
+    color: rgba(255, 255, 255, 0.65);
     min-height: 34px;
     display: flex;
     justify-content: left;
@@ -80,26 +80,26 @@ export const Nav = styled.nav`
   }
   a.sub:hover,
   a.sub.active {
-    background: linear-gradient(135deg, #eef4ff 0%, #f8fbff 100%);
-    color: ${(props) => props.theme.theme};
-    box-shadow: inset 0 0 0 1px #dbe6f7;
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+    box-shadow: none;
     span {
-      color: #142749;
+      color: white;
     }
     svg {
-      color: ${(props) => props.theme.theme};
+      color: white;
     }
   }
   a.sub svg {
     margin-left: 6px;
     width: 16px;
     height: 16px;
-    color: #6d7f9e;
+    color: white;
   }
   a.main,
   .open {
     text-decoration: none;
-    color: #627798;
+    color: rgba(255, 255, 255, 0.75);
     min-height: 40px;
     width: 100%;
     box-sizing: border-box;
@@ -130,12 +130,12 @@ export const Nav = styled.nav`
   }
   a.main.active,
   a.main:hover {
-    background: linear-gradient(135deg, #eef4ff 0%, #f8fbff 100%);
-    color: ${(props) => props.theme.theme};
-    box-shadow: inset 0 0 0 1px #dbe6f7;
+    background: ${appTheme.primary.base};
+    color: white;
+    box-shadow: none;
     font-weight: normal;
     span {
-      color: #142749;
+      color: white;
     }
     opacity: 1;
   }
@@ -143,19 +143,19 @@ export const Nav = styled.nav`
   .open .menu-caret {
     margin-left: auto;
     flex-shrink: 0;
-    color: #9aa8c2;
+    color: rgba(255, 255, 255, 0.4);
     transition: all 0.2s ease-in;
   }
   a.main.active .menu-caret,
   a.main:hover .menu-caret {
-    color: ${(props) => props.theme.theme};
+    color: white;
   }
   a.main.active::before {
     content: "";
     display: block;
     position: absolute;
     left: 4px;
-    background: ${(props) => props.theme.theme};
+    background: white;
     width: 4px;
     height: 24px;
     border-radius: 999px;
@@ -176,105 +176,112 @@ export const Nav = styled.nav`
     transition: all 0.02s;
     margin-left: 14px;
     transition: all 0.2s ease-in;
-    color: #6d7f9e;
+    color: white;
   }
   a.main.active svg,
   a.main:hover svg {
     transform: scale(1.1);
-    color: ${(props) => props.theme.theme};
+    color: white;
   }
   @media (max-width: 768px) {
-    border-top: 1px solid ${appTheme.stroke.soft};
-    position: fixed;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px);
-    left: 0;
-    right: 0;
-    height: 64px;
-    display: flex;
-    flex-direction: row;
-    padding: 4px 6px;
-    overflow: auto;
-    box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
-    gap: 0;
-    .menu-section {
+    &:not(.drawer-menu) {
+      border-top: 1px solid ${appTheme.stroke.soft};
+      position: fixed;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(14px);
+      left: 0;
+      right: 0;
+      height: 64px;
       display: flex;
       flex-direction: row;
-      align-items: stretch;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-    .menu-section + .menu-section {
-      margin-top: 0;
-      padding-top: 0;
-      padding-left: 8px;
-      border-top: 0;
-      position: relative;
-    }
-    .menu-section + .menu-section::before {
-      content: "";
-      display: block;
-      width: 1px;
-      align-self: stretch;
-      background: #dfe7f2;
-      border-radius: 999px;
-    }
-    .menu-item {
-      padding: 0;
-      margin: 0;
-      height: 56px;
-      width: auto;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-    }
-    a.main svg,
-    .open svg {
-      transition: all 0.02s;
-      margin-right: 0px;
-      width: 30px;
-      margin-left: inherit;
-    }
-    a.main,
-    .open {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 5px;
-      padding: 0 4px;
-      width: 70px;
-      overflow: hidden;
-      height: 100%;
-      border-radius: 14px;
-      svg {
+      padding: 4px 6px;
+      overflow: auto;
+      box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
+      gap: 0;
+      .menu-section {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 4px;
+        flex-shrink: 0;
       }
-      span {
+      .menu-section + .menu-section {
+        margin-top: 0;
+        padding-top: 0;
+        padding-left: 8px;
+        border-top: 0;
+        position: relative;
+      }
+      .menu-section + .menu-section::before {
+        content: "";
+        display: block;
+        width: 1px;
+        align-self: stretch;
+        background: #dfe7f2;
+        border-radius: 999px;
+      }
+      .menu-item {
         padding: 0;
+        margin: 0;
+        height: 56px;
+        width: auto;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+      }
+      a.main svg,
+      .open svg {
+        transition: all 0.02s;
+        margin-right: 0px;
+        width: 30px;
+        margin-left: inherit;
+      }
+      a.main,
+      .open {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+        padding: 0 4px;
+        width: 70px;
         overflow: hidden;
-        font-size: 10px;
-        white-space: nowrap;
-        text-align: center;
-        max-width: 95%;
-        text-overflow: ellipsis;
+        height: 100%;
+        border-radius: 14px;
+        svg {
+        }
+        span {
+          padding: 0;
+          overflow: hidden;
+          font-size: 10px;
+          white-space: nowrap;
+          text-align: center;
+          max-width: 95%;
+          text-overflow: ellipsis;
+        }
+      }
+      a.main.active:after {
+        content: "";
+        display: none;
+      }
+      a.main.active::before {
+        content: "";
+        display: block;
+        position: absolute;
+        left: 10px;
+        top: 4px;
+        right: 10px;
+        background: ${(props) => props.theme.theme};
+        width: auto;
+        height: 3px;
+        border-radius: 999px;
+        transition: all 0.02s;
       }
     }
-    a.main.active:after {
-      content: "";
-      display: none;
-    }
-    a.main.active::before {
-      content: "";
-      display: block;
-      position: absolute;
-      left: 10px;
-      top: 4px;
-      right: 10px;
-      background: ${(props) => props.theme.theme};
-      width: auto;
-      height: 3px;
-      border-radius: 999px;
-      transition: all 0.02s;
+    &.drawer-menu {
+      max-height: 100%;
+      overflow-y: auto;
+      padding-bottom: 12px;
     }
   }
 `;
@@ -286,16 +293,18 @@ export const SubMenuHead = styled.div`
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7b879c;
+  color: rgba(255, 255, 255, 0.45);
   @media (max-width: 768px) {
-    min-height: 34px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: #f2f6fb;
-    color: #5f6d83;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
+    &:not(.drawer-menu) {
+      min-height: 34px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #f2f6fb;
+      color: #5f6d83;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
   }
 `;
 export const SubMenuOpen = styled.nav`

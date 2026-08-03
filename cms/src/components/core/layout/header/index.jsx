@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
-import { Container, HeaderMenu, Logo, Status, Title } from "./styels";
+import { Container, HeaderMenu, Status } from "./styels";
 import ProfileBar from "../profile";
-import headerLogo from "../../../../components/project/brand/logo-header.png";
 import { GetIcon } from "../../../../icons";
 import { avathar } from "../../../../images";
 import SearchMenu from "./SearchMenu";
@@ -33,21 +32,14 @@ const Header = (props) => {
   return (
     <Container className={isProfileBarOpen ? "profile-open" : ""}>
       <Status>
-        {!props.isMobile && (
-          <button
-            type="button"
-            aria-label="Toggle sidebar"
-            className="flex items-center justify-center w-9 h-9 rounded-lg border border-stroke-soft text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors mr-3 shrink-0"
-            onClick={() => props.onToggleSidebar?.()}
-          >
-            <GetIcon icon={"menu"} />
-          </button>
-        )}
-        {props.isMobile && (
-          <Title>
-            <Logo src={headerLogo} alt="logo" />
-          </Title>
-        )}
+        <button
+          type="button"
+          aria-label="Toggle sidebar"
+          className="flex items-center justify-center w-9 h-9 rounded-lg border border-stroke-soft text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors mr-3 shrink-0"
+          onClick={() => props.onToggleSidebar?.()}
+        >
+          <GetIcon icon={"menu"} />
+        </button>
         <div className="flex-1" />
         <SearchMenu isMobile={props.isMobile} />
         <div className="flex items-center gap-2 pl-4 pr-4">
