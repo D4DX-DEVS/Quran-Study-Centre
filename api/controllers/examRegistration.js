@@ -218,15 +218,16 @@ exports.getExamRegistration = async (req, res) => {
       parseInt(skip) === 0 &&
         ExamRegistration.aggregate([{ $group: { _id: "$mobileNumber" } }, { $count: "count" }]).then((r) => r[0]?.count || 0),
       ExamRegistration.find({ _id: { $in: pageIds } })
-        .populate("district")
-        .populate("area")
-        .populate("nameOfExamAppearingNow")
-        .populate("examCenter")
-        .populate("centerRegistration")
-        .populate("examDistrict")
-        .populate("outsideExamCenter")
+        .populate("district", "district")
+        .populate("area", "area")
+        .populate("nameOfExamAppearingNow", "examType")
+        .populate("examCenter", "centerName")
+        .populate("centerRegistration", "nameOfCenter")
+        .populate("examDistrict", "district")
+        .populate("outsideExamCenter", "centerName")
         .populate("assignedExamCenter", "nameOfCenter")
-        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter assignedExamCenter assignedByClubbing regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age"),
+        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter assignedExamCenter assignedByClubbing regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age")
+        .lean(),
     ]);
 
     const dataById = new Map(data.map((d) => [String(d._id), d]));

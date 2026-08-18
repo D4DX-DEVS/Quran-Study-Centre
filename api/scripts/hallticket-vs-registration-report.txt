@@ -1,4 +1,4 @@
-Total: 10911
+Total: 11694
 Centre mismatches: 0 (clubbed=0, unflagged=0)
 
 == ALL CENTRE MISMATCHES ==

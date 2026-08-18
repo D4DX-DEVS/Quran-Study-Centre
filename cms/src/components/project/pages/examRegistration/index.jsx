@@ -567,7 +567,7 @@ const ExamRegistration = (props) => {
       update: true,
       filter: true,
       search: false,
-      export: true,
+      export: false,
     },
     {
       // Exam-day venue printed on the hall ticket (assignedExamCenter — set by
