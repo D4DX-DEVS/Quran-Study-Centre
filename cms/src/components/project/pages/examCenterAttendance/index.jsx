@@ -7,7 +7,7 @@ import { Download } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { getData } from "../../../../backend/api";
-import { groupDataByDistrictAreaCenter, generateExcelFile, generatePdfFile } from "../../../../utils/attendanceExport";
+import { groupDataByDistrictAreaCenter, generateExcelFile, generatePdfFile, sanitizeFolderName } from "../../../../utils/attendanceExport";
 
 const ExamCenterAttendance = (props) => {
   // Any user scoped to a single district gets a locked district filter — no
@@ -104,18 +104,23 @@ const ExamCenterAttendance = (props) => {
       // directly. Without an area filter, zip the whole district with one
       // sub-folder per area.
       const areaKey = selectedArea ? Object.keys(areasInDistrict)[0] : null;
-      const rootFolder = areaKey ? zip.folder(areaKey) : zip.folder(districtKey);
+      const rootFolder = areaKey ? zip.folder(sanitizeFolderName(areaKey)) : zip.folder(sanitizeFolderName(districtKey));
 
+      // Folder/file names are sanitized (illegal-char stripped, trailing dot/space
+      // trimmed) so Windows' built-in zip extractor never collides two entries on
+      // the same real path — see sanitizeFolderName in attendanceExport.js. The
+      // original centerName is still passed to generateExcelFile/generatePdfFile
+      // so the sheet title and PDF header keep the human-readable name.
       const writeCenterFiles = (folder, centerName, data) => {
         const excelBuffer = generateExcelFile(data, centerName);
         const pdfBuffer = generatePdfFile(data, centerName);
 
-        const centerFolder = folder.folder(centerName);
+        const centerFolder = folder.folder(sanitizeFolderName(centerName));
         if (excelBuffer) {
-          centerFolder.file(`${centerName}.xlsx`, excelBuffer);
+          centerFolder.file(`${sanitizeFolderName(centerName)}.xlsx`, excelBuffer);
         }
         if (pdfBuffer) {
-          centerFolder.file(`${centerName}.pdf`, pdfBuffer);
+          centerFolder.file(`${sanitizeFolderName(centerName)}.pdf`, pdfBuffer);
         }
       };
 
@@ -125,7 +130,7 @@ const ExamCenterAttendance = (props) => {
         });
       } else {
         Object.entries(areasInDistrict).forEach(([area, centers]) => {
-          const areaFolder = rootFolder.folder(area);
+          const areaFolder = rootFolder.folder(sanitizeFolderName(area));
           Object.entries(centers).forEach(([centerName, data]) => {
             writeCenterFiles(areaFolder, centerName, data);
           });
