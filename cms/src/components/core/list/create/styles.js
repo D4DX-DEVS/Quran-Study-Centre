@@ -389,9 +389,11 @@ export const Footer = styled.div`
     position: inherit;
     bottom: 0;
     padding: 0;
-    &.put.disabled {
-      display: none;
-    }
+    /* Previously this hid the whole footer (Cancel included) whenever the put
+       form had no unsaved changes, trapping the user with no way to close it —
+       especially on mobile with no other visible close affordance. Submit stays
+       disabled on its own (see the submit FormInput's disabled prop); only that
+       button should reflect "nothing to save", not the whole footer. */
     width: 300px;
     margin-left: auto;
     margin-right: 0;

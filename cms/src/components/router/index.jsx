@@ -171,6 +171,7 @@ const PageRouter = () => {
               <Routes>
                 <Route key="login" path="/" element={<Switch page="login" />} />
                 <Route key="admin-redirect" path="/admin" element={<Navigate to={getDefaultMenuPath(userData.menu ?? [])} replace />} />
+                <Route key="mark-entry-report" path="/mark-entry-report" element={<Switch page="mark-entry-report" />} />
                 {menuRoutes}
                 <React.Fragment key="private-routes">{CustomPrivateRoute()}</React.Fragment>
                 <Route key="404" path="*" element={<Page404 />} />

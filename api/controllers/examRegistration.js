@@ -146,7 +146,7 @@ exports.addExamRegistration = async (req, res) => {
 // @access    public
 exports.getExamRegistration = async (req, res) => {
   try {
-    const { id, skip, limit, searchkey } = req.query;
+    const { id, skip, limit, searchkey, regnoSuffix } = req.query;
 
     if (id && mongoose.isValidObjectId(id)) {
       const response = await ExamRegistration.findById(id).populate("centerRegistration");
@@ -159,6 +159,8 @@ exports.getExamRegistration = async (req, res) => {
       ...(searchkey && {
         $or: [{ nameOfApplicant: { $regex: searchkey, $options: "i" } }, { regno: { $regex: searchkey, $options: "i" } }, { mobileNumber: !isNaN(searchkey) ? parseInt(searchkey) : null }].filter((cond) => Object.values(cond)[0] !== null), // Remove conditions with null values
       }),
+      // Mark Entry's "search by last digits" — regno ending with the typed value.
+      ...(regnoSuffix && { regno: { $regex: `${regnoSuffix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$` } }),
     };
 
     // Calculate counts when filters are applied or on first page load

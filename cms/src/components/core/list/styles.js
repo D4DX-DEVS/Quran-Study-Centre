@@ -1094,6 +1094,16 @@ export const Filters = styled.div`
         top: auto;
       }
     }
+    &.show-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      > * {
+        flex: 1 1 calc(50% - 5px);
+        max-width: calc(50% - 5px);
+        min-width: 0;
+      }
+    }
   }
 `;
 export const ToggleContainer = styled.label`
@@ -1383,6 +1393,11 @@ export const TableContaner = styled.div`
     margin: 0 0em 1em 0px;
     /* height: calc(100vh - 180px); */
   }
+  &.force-table-scroll {
+    @media screen and (max-width: 768px) {
+      overflow-x: auto;
+    }
+  }
 `;
 
 export const TableView = styled.table`
@@ -1426,6 +1441,27 @@ export const TableView = styled.table`
   }
   .table-theme-district & {
     min-width: 100%;
+  }
+  @media screen and (max-width: 768px) {
+    display: block;
+    thead {
+      display: none;
+    }
+    tbody {
+      display: block;
+    }
+  }
+  &.force-table-scroll {
+    @media screen and (max-width: 768px) {
+      display: table;
+      white-space: nowrap;
+      thead {
+        display: table-header-group;
+      }
+      tbody {
+        display: table-row-group;
+      }
+    }
   }
 `;
 export const ThView = styled.th`
@@ -1486,6 +1522,9 @@ export const ThView = styled.th`
       left: 0px;
       z-index: unset;
     }
+    &.hide-mobile {
+      display: none;
+    }
   }
 `;
 
@@ -1511,6 +1550,24 @@ export const TrView = styled.tr`
   }
   .table-theme-district &:hover {
     background: #fbfcff;
+  }
+  @media screen and (max-width: 768px) {
+    display: block;
+    border: 1px solid rgb(241 241 241);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.06);
+    &:last-child {
+      border-bottom: 1px solid rgb(241 241 241);
+    }
+    &.force-table-scroll {
+      display: table-row;
+      border: 0;
+      border-bottom: 1px solid rgb(241 241 241);
+      border-radius: 0;
+      margin-bottom: 0;
+      box-shadow: none;
+    }
   }
 `;
 export const CoutSelector = styled.td`
@@ -1618,6 +1675,49 @@ export const TdView = styled.td`
   }
   > span {
     margin-right: 10px;
+  }
+  @media screen and (max-width: 768px) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    text-align: right;
+    border-bottom: 1px solid rgb(241 241 241);
+    &:last-child {
+      border-bottom: 0;
+    }
+    &::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: #626262;
+      text-align: left;
+      flex-shrink: 0;
+    }
+    &.actions {
+      border-left: 0;
+      padding: 8px 10px;
+      &::before {
+        content: none;
+      }
+      > div {
+        margin-left: auto;
+      }
+    }
+    &.force-table-scroll {
+      display: table-cell;
+      text-align: left;
+      border-bottom: 0;
+      &::before {
+        content: none;
+      }
+      &.actions {
+        position: sticky;
+        right: 0;
+      }
+    }
+    &.hide-mobile {
+      display: none;
+    }
   }
 `;
 export const DescRow = styled.div`

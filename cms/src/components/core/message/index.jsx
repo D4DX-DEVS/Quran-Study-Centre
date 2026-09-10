@@ -24,14 +24,17 @@ const Message = (props) => {
   const proceedAction = async () => {
     try {
       if (typeof props.message.onProceed === "function") {
-        await props.message.onProceed(props.message?.data, props.message?.data?._id).then((status) => {
-          (status ?? true) && props.closeMessage();
-        });
+        const status = await props.message.onProceed(props.message?.data, props.message?.data?._id);
+        (status ?? true) && props.closeMessage();
       } else {
         props.closeMessage();
       }
     } catch (error) {
+      // Whatever onProceed does internally, the confirmation dialog itself must
+      // never get stuck open on an error the user (often on mobile, with no
+      // visible console) has no way to see.
       console.error("Error in onProceed:", error);
+      props.closeMessage();
     }
   };
 

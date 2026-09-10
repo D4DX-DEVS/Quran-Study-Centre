@@ -38,6 +38,7 @@ export const Footer = styled.div`
   width: 100%;
   padding: 16px 24px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 
   &.notification {
     border-top: none;
@@ -94,6 +95,7 @@ export const Page = styled.div`
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 500px;
+  max-height: 90vh;
   animation: ${fadeIn} 0.3s ease-out;
 
   &.notification {
@@ -106,9 +108,17 @@ export const Page = styled.div`
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1), 0 3px 3px rgba(0, 0, 0, 0.05);
   }
 
+  &.confirmation {
+    /* Content scrolls internally if it's ever long; the Footer (Cancel/Discard
+       buttons) stays a normal flex sibling so it's always visible and tappable,
+       never pushed out of the box's bounds on a short mobile viewport. */
+    overflow: hidden;
+  }
+
   @media (max-width: 768px) {
     width: 100%;
     margin: 0;
+    max-height: 85dvh;
   }
 `;
 
@@ -117,6 +127,8 @@ export const Content = styled.div`
   font-size: 16px;
   line-height: 1.5;
   color: #1a1a1a;
+  overflow-y: auto;
+  min-height: 0;
 
   &.notification {
     display: flex;
