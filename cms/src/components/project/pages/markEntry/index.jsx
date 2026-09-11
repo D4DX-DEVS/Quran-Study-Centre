@@ -426,13 +426,15 @@ const MarkEntry = (props) => {
     });
   };
 
-  const additionalButtons = [
-    {
-      label: "Report",
-      icon: "print",
-      onClick: () => navigate("/mark-entry-report"),
-    },
-  ];
+  const additionalButtons = isDistrictAdmin
+    ? []
+    : [
+        {
+          label: "Report",
+          icon: "print",
+          onClick: () => navigate("/mark-entry-report"),
+        },
+      ];
 
   const handleSubmit = () => {
     // Prepare the data to be sent to the backend
