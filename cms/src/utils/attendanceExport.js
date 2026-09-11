@@ -6,6 +6,23 @@ import "jspdf-autotable";
 // MaterialAccessGate (area-admin password gate) so both pages produce
 // identical Excel/PDF attendance sheets from the same grouping logic.
 
+// Collapses whitespace variants of the same name ("QSC Greensboro",
+// "QSC  Greensboro", "QSC Greensboro ") into one grouping key. Without this,
+// near-duplicate DB values produce separate zip folders that Windows Explorer's
+// extractor treats as the same path (it trims trailing spaces), and refuses
+// to create the second copy — "The destination file could not be created."
+const normalizeName = (name) => (name || "").toString().replace(/\s+/g, " ").trim();
+
+// Filesystem-safe version of a grouping key, for use as a zip folder/file
+// name. Strips characters Windows forbids in paths and trailing dots/spaces
+// (which Windows silently drops, causing the same collision described above).
+export const sanitizeFolderName = (name) => {
+  const cleaned = normalizeName(name)
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-")
+    .replace(/[. ]+$/g, "");
+  return cleaned || "Unknown";
+};
+
 export const groupDataByDistrictAreaCenter = (data) => {
   const grouped = {};
   data.forEach((item) => {
@@ -37,6 +54,10 @@ export const groupDataByDistrictAreaCenter = (data) => {
       area = "Unknown Area";
       center = "Unknown Center";
     }
+
+    district = normalizeName(district) || "Unknown District";
+    area = normalizeName(area) || "Unknown Area";
+    center = normalizeName(center) || "Unknown Center";
 
     if (!grouped[district]) grouped[district] = {};
     if (!grouped[district][area]) grouped[district][area] = {};

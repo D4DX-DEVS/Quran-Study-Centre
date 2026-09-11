@@ -225,7 +225,7 @@ export const getValue = (attribute, itemValue, display = false, isPrint = false,
           response = "--";
           break;
         case "object":
-          response = itemValue?.[attribute.showItem] ?? "--";
+          response = itemValue?.[attribute.showSubItem || attribute.showItem] ?? "--";
           break;
         case "boolean":
           response = itemValue.toString();

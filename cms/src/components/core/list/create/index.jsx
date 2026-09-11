@@ -1162,16 +1162,13 @@ const CrudForm = React.memo((props) => {
 
   const closeModal = () => {
     if (hasUnsavedChanges()) {
-      setMessage({
-        type: 2, // Using type 2 for confirmation
-        content: t("unsavedChanges", { defaultValue: "You have unsaved changes. Are you sure you want to discard them?" }),
-        proceed: "Discard",
-        cancel: "Cancel",
-        onProceed: async () => {
-          await props.isOpenHandler(false);
-          return true;
-        },
-      });
+      // The custom confirmation popup wasn't reliably showing/responding on
+      // mobile across several rounds of CSS/JS fixes — window.confirm is a
+      // native browser dialog, so it renders and works identically on every
+      // device without depending on any of our own overlay/CSS stacking.
+      if (window.confirm(t("unsavedChanges", { defaultValue: "You have unsaved changes. Are you sure you want to discard them?" }))) {
+        props.isOpenHandler(false);
+      }
     } else {
       props.isOpenHandler(false);
     }

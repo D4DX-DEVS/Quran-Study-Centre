@@ -146,7 +146,7 @@ exports.addExamRegistration = async (req, res) => {
 // @access    public
 exports.getExamRegistration = async (req, res) => {
   try {
-    const { id, skip, limit, searchkey } = req.query;
+    const { id, skip, limit, searchkey, regnoSuffix } = req.query;
 
     if (id && mongoose.isValidObjectId(id)) {
       const response = await ExamRegistration.findById(id).populate("centerRegistration");
@@ -159,6 +159,8 @@ exports.getExamRegistration = async (req, res) => {
       ...(searchkey && {
         $or: [{ nameOfApplicant: { $regex: searchkey, $options: "i" } }, { regno: { $regex: searchkey, $options: "i" } }, { mobileNumber: !isNaN(searchkey) ? parseInt(searchkey) : null }].filter((cond) => Object.values(cond)[0] !== null), // Remove conditions with null values
       }),
+      // Mark Entry's "search by last digits" — regno ending with the typed value.
+      ...(regnoSuffix && { regno: { $regex: `${regnoSuffix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$` } }),
     };
 
     // Calculate counts when filters are applied or on first page load
@@ -218,15 +220,16 @@ exports.getExamRegistration = async (req, res) => {
       parseInt(skip) === 0 &&
         ExamRegistration.aggregate([{ $group: { _id: "$mobileNumber" } }, { $count: "count" }]).then((r) => r[0]?.count || 0),
       ExamRegistration.find({ _id: { $in: pageIds } })
-        .populate("district")
-        .populate("area")
-        .populate("nameOfExamAppearingNow")
-        .populate("examCenter")
-        .populate("centerRegistration")
-        .populate("examDistrict")
-        .populate("outsideExamCenter")
+        .populate("district", "district")
+        .populate("area", "area")
+        .populate("nameOfExamAppearingNow", "examType")
+        .populate("examCenter", "centerName")
+        .populate("centerRegistration", "nameOfCenter")
+        .populate("examDistrict", "district")
+        .populate("outsideExamCenter", "centerName")
         .populate("assignedExamCenter", "nameOfCenter")
-        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter assignedExamCenter assignedByClubbing regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age"),
+        .select("nameOfApplicant examName examSyllabus district area nameOfExamAppearingNow examCenter centerRegistration examDistrict outsideExamCenter assignedExamCenter assignedByClubbing regno mobileNumber address educationalQualification affiliation whatsappNumber gender outsideCenter status feeDetails age")
+        .lean(),
     ]);
 
     const dataById = new Map(data.map((d) => [String(d._id), d]));

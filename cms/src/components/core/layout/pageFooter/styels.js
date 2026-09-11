@@ -20,9 +20,6 @@ export const PageFooterBar = styled.footer`
   }
 
   @media screen and (max-width: 600px) {
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
-    padding: 16px 20px;
+    display: none;
   }
 `;

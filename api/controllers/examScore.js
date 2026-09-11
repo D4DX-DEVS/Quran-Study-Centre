@@ -17,7 +17,7 @@ exports.addExamScore = async (req, res) => {
     });
 
     if (existingScore) {
-      return res.status(400).json({ success: false, customMessage: "Exam score already exists for this student and exam." });
+      return res.status(400).json({ success: false, customMessage: "Mark is already entered for this student in this exam. You can edit it from the list below." });
     }
 
     // Create the new exam score with grade
@@ -235,7 +235,7 @@ exports.getExamScore = async (req, res) => {
         .populate("exam")
         .lean()
         .skip(parseInt(skip) || 0)
-        .limit(parseInt(limit) || 10)
+        .limit(limit !== undefined && limit !== "" && !isNaN(parseInt(limit)) ? parseInt(limit) : 10)
         .sort({ _id: -1 }),
     ]);
 
@@ -309,6 +309,98 @@ const calculateGrade = (score) => {
     return "D+";
   } else {
     return "Grade Not Published"; // Handle invalid scores
+  }
+};
+
+// @desc      MARK ENTRY REPORT — state / district / exam-center wise counts of
+//            marks entered vs total registered. District Admins get the same
+//            district-lock other exam-score endpoints enforce.
+// @route     GET /api/v1/exam-score/mark-entry-report
+// @access    protect
+exports.getMarkEntryReport = async (req, res) => {
+  try {
+    const userDistrictId = req.user.districts;
+    const { district, area } = req.query;
+
+    const registrationFilter = {};
+    // District Admin lock takes precedence over any district passed in the query.
+    if (userDistrictId) {
+      registrationFilter.district = userDistrictId;
+    } else if (district && mongoose.isValidObjectId(district)) {
+      registrationFilter.district = district;
+    }
+    if (area && mongoose.isValidObjectId(area)) {
+      registrationFilter.area = area;
+    }
+
+    const registrations = await examRegistration
+      .find(registrationFilter)
+      .populate("district", "district")
+      .populate("area", "area")
+      .populate("centerRegistration", "nameOfCenter")
+      .select("_id district area centerRegistration")
+      .lean();
+
+    const regIds = registrations.map((r) => r._id);
+    const scoredIds = new Set((await ExamScore.find({ student: { $in: regIds } }).distinct("student")).map(String));
+
+    const districtMap = new Map();
+    for (const r of registrations) {
+      const districtName = r.district?.district || "Unknown District";
+      const areaName = r.area?.area || "Unknown Area";
+      const centerName = r.centerRegistration?.nameOfCenter || "Unknown Center";
+      const entered = scoredIds.has(String(r._id));
+
+      if (!districtMap.has(districtName)) {
+        districtMap.set(districtName, { district: districtName, total: 0, entered: 0, areas: new Map() });
+      }
+      const d = districtMap.get(districtName);
+      d.total += 1;
+      if (entered) d.entered += 1;
+
+      if (!d.areas.has(areaName)) {
+        d.areas.set(areaName, { area: areaName, total: 0, entered: 0, centers: new Map() });
+      }
+      const a = d.areas.get(areaName);
+      a.total += 1;
+      if (entered) a.entered += 1;
+
+      if (!a.centers.has(centerName)) {
+        a.centers.set(centerName, { center: centerName, total: 0, entered: 0 });
+      }
+      const c = a.centers.get(centerName);
+      c.total += 1;
+      if (entered) c.entered += 1;
+    }
+
+    const districts = [...districtMap.values()]
+      .map((d) => ({
+        district: d.district,
+        total: d.total,
+        entered: d.entered,
+        areas: [...d.areas.values()]
+          .map((a) => ({
+            area: a.area,
+            total: a.total,
+            entered: a.entered,
+            centers: [...a.centers.values()].sort((x, y) => x.center.localeCompare(y.center)),
+          }))
+          .sort((x, y) => x.area.localeCompare(y.area)),
+      }))
+      .sort((x, y) => x.district.localeCompare(y.district));
+
+    res.status(200).json({
+      success: true,
+      message: "Retrieved mark entry report",
+      response: {
+        total: registrations.length,
+        entered: scoredIds.size ? registrations.filter((r) => scoredIds.has(String(r._id))).length : 0,
+        districts,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "An error occurred while generating the mark entry report.", error: err.message });
   }
 };
 

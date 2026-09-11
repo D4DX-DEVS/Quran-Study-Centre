@@ -25,6 +25,7 @@ const CenterRegistration = lazy(() => import("../pages/centerRegistration/index.
 const DistrictAdmin = lazy(() => import("../pages/district/districtAdmin.jsx"));
 const FloatingMenuSettings = lazy(() => import("../pages/floatingMenuSettings/index.jsx"));
 const MarkEntry = lazy(() => import("../pages/markEntry/index.jsx"));
+const MarkEntryReport = lazy(() => import("../pages/markEntryReport/index.jsx"));
 const ResultPublish = lazy(() => import("../pages/resultPublish/index.jsx"));
 const ExamScore = lazy(() => import("../pages/examScore/index.jsx"));
 const Syllabus = lazy(() => import("../pages/syllabus/index.jsx"));
@@ -107,6 +108,8 @@ const RenderPage = (page, key, privileges) => {
       return renderComponent(FloatingMenuSettings);
     case "mark-entry":
       return renderComponent(MarkEntry);
+    case "mark-entry-report":
+      return renderComponent(MarkEntryReport);
     case "result-publish":
       return renderComponent(ResultPublish);
     case "exam-score":

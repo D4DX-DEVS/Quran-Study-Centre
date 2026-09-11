@@ -421,8 +421,8 @@ export const Switch = ({ align, label, switchValue, switchChange = () => {}, ico
   );
 };
 
-export const TextBox = ({ info, error, icon = null, align = "", isDisabled = false, value = "", onChange = () => {}, label = "primary" }) => {
-  return <FormInput info={info} error={error} label={label} placeholder={label} icon={icon} customClass={`custom ${align}`} disabled={isDisabled} type="text" name="submit" value={value} onChange={(e) => onChange(e.target.value)} />;
+export const TextBox = ({ info, error, icon = null, align = "", isDisabled = false, value = "", onChange = () => {}, onClear = null, label = "primary" }) => {
+  return <FormInput info={info} error={error} label={label} placeholder={label} icon={icon} customClass={`custom ${align}`} disabled={isDisabled} type="text" name="submit" value={value} onChange={(e) => onChange(e.target.value)} onClear={onClear} />;
 };
 export const ColorPicker = ({ info, error, icon = null, align = "", isDisabled = false, value = "", onChange = () => {}, label = "primary" }) => {
   return <FormInput info={info} error={error} label={label} placeholder={label} icon={icon} customClass={`custom ${align}`} disabled={isDisabled} type="color" name="submit" value={value} onChange={(e) => onChange(e.target.value)} />;

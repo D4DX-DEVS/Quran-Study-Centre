@@ -142,6 +142,7 @@ const ListItems = React.memo(
     headerActions = [],
     enableFullScreen = false,
     surfaceTheme = "",
+    mobileScrollTable = false,
   }) => {
     // console.log(parentReference, referenceId, parents, preFilter);
     const toast = useToast();
@@ -562,6 +563,17 @@ const ListItems = React.memo(
 
     const isEditingHandler = (value, callback, titleValue, clone = false, view = false) => {
       setLoaderBox(true);
+      // `value === false` is the explicit "close" signal (e.g. Cancel/Discard calling
+      // isOpenHandler(false)) — handle it directly instead of relying on `isEditing`
+      // still matching what the caller expects, which can go stale and crash below
+      // trying to read `value._id` off `false`.
+      if (value === false) {
+        setUpdateId("");
+        navigate({}, "", window.location.pathname);
+        setIsEditing(false);
+        setLoaderBox(false);
+        return;
+      }
       if (!isEditing) {
         if (!clone) {
           setUpdateView(() => callback);
@@ -1012,6 +1024,7 @@ const ListItems = React.memo(
               }}
               // style={{ zIndex: users?.response?.length - slNo }}
               key={`${shortName}-${slNo}`}
+              className={mobileScrollTable ? "force-table-scroll" : undefined}
             >
               {/* <TdView className={sticky} key={-1}>
                 {slNo + 1 + currentIndex}
@@ -1044,8 +1057,9 @@ const ListItems = React.memo(
                     const value = getValue(attribute, itemValue);
                     const result = (
                       <TdView
-                        className={sticky}
+                        className={[sticky, mobileScrollTable && "force-table-scroll", attribute.hideOnMobile && "hide-mobile"].filter(Boolean).join(" ")}
                         key={index}
+                        data-label={attribute.label}
                         onClick={() => {
                           if (attribute.editable === true) {
                             alert("yes");
@@ -1151,7 +1165,9 @@ const ListItems = React.memo(
                     sticky = false;
                     return result;
                   } catch (error) {
-                    const result = <TdView className={sticky} key={index}>{`--`}</TdView>;
+                    const result = (
+                      <TdView className={sticky} key={index} data-label={attribute.label}>{`--`}</TdView>
+                    );
                     sticky = false;
                     return result;
                   }
@@ -1159,7 +1175,7 @@ const ListItems = React.memo(
 
                 return null;
               })}
-              <TdView style={{ border: 0 }} key={`actions-${shortName}-${data._id}`} className="actions">
+              <TdView style={{ border: 0 }} key={`actions-${shortName}-${data._id}`} className="actions" data-label="">
                 <div>{ActionDiv}</div>
               </TdView>
             </TrView>
@@ -1945,15 +1961,15 @@ const ListItems = React.memo(
                 <ListContainer className={`${popupMenu} ${popupMode} ${overflow} ${listThemeClass}`}>
                   <ListContainerData>
                     {viewMode === "table" ? (
-                      <TableContaner className={tableThemeClass}>
-                        <TableView theme={themeColors}>
+                      <TableContaner className={`${tableThemeClass} ${mobileScrollTable ? "force-table-scroll" : ""}`.trim()}>
+                        <TableView theme={themeColors} className={mobileScrollTable ? "force-table-scroll" : undefined}>
                           {showHeaderRow && (
                             <thead>
                               <tr>
                                 {[...attributes].map((attribute, index) => {
                                   if (attribute.view && (attribute.tag ?? false)) {
                                     const item = (
-                                      <ThView className={headerSticky} key={`list_header_${api}_${shortName}_${attribute.name}_${attribute.label}_${index}`}>
+                                      <ThView className={[headerSticky, attribute.hideOnMobile && "hide-mobile"].filter(Boolean).join(" ")} key={`list_header_${api}_${shortName}_${attribute.name}_${attribute.label}_${index}`}>
                                         <div>
                                           <span>{attribute.label}</span>
                                           {attribute.sort && (

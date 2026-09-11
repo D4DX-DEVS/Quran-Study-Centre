@@ -1,4 +1,4 @@
-const META_FILTER_KEYS = new Set(["startDate", "endDate", "skip", "limit", "searchkey", "id", "_id", "sort", "sortBy", "sortOrder", "sorting", "page", "pageSize"]);
+const META_FILTER_KEYS = new Set(["startDate", "endDate", "skip", "limit", "searchkey", "id", "_id", "sort", "sortBy", "sortOrder", "sorting", "page", "pageSize", "regnoSuffix"]);
 
 const sanitizeFilterValue = (value) => {
   if (value === "" || value === null || typeof value === "undefined") {

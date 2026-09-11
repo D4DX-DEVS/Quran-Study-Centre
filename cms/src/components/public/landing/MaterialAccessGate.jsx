@@ -7,7 +7,7 @@ import styled from "styled-components";
 import { postData } from "../../../backend/api";
 import { buildApiUrl } from "../../../backend/baseUrl";
 import { FormContainer } from "./registrationForm";
-import { groupDataByDistrictAreaCenter, generateExcelFile, generatePdfFile } from "../../../utils/attendanceExport";
+import { groupDataByDistrictAreaCenter, generateExcelFile, generatePdfFile, sanitizeFolderName } from "../../../utils/attendanceExport";
 
 const SESSION_KEY = "qsc-material-access";
 
@@ -328,9 +328,10 @@ const MaterialAccessGate = ({ onClose }) => {
     Object.entries(grouped[districtKey][areaKey]).forEach(([centerName, data]) => {
       const excelBuffer = generateExcelFile(data, centerName);
       const pdfBuffer = generatePdfFile(data, centerName);
-      const centerFolder = zip.folder(centerName);
-      if (excelBuffer) centerFolder.file(`${centerName}.xlsx`, excelBuffer);
-      if (pdfBuffer) centerFolder.file(`${centerName}.pdf`, pdfBuffer);
+      const safeName = sanitizeFolderName(centerName);
+      const centerFolder = zip.folder(safeName);
+      if (excelBuffer) centerFolder.file(`${safeName}.xlsx`, excelBuffer);
+      if (pdfBuffer) centerFolder.file(`${safeName}.pdf`, pdfBuffer);
     });
 
     const content = await zip.generateAsync({ type: "blob" });
