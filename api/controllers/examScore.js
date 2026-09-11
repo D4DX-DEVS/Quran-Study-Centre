@@ -10,6 +10,15 @@ const District = require("../models/district");
 // @access    public
 exports.addExamScore = async (req, res) => {
   try {
+    // A district admin may only enter marks for students registered in their own
+    // district — mirrors the read-side scoping in getExamScore/getExamRegistration.
+    if (req.user.districts) {
+      const registration = await examRegistration.findById(req.body.student);
+      if (!registration || String(registration.district) !== String(req.user.districts)) {
+        return res.status(403).json({ success: false, customMessage: "You are not authorized to enter marks for a student outside your district." });
+      }
+    }
+
     // Check if the exam score already exists
     const existingScore = await ExamScore.findOne({
       student: req.body.student, // Update this according to your schema
@@ -256,6 +265,18 @@ exports.getExamScore = async (req, res) => {
 exports.updateExamScore = async (req, res) => {
   try {
     const { id } = req.body;
+
+    if (req.user.districts) {
+      const existing = await ExamScore.findById(id);
+      if (!existing) {
+        return res.status(404).json({ success: false, message: "Exam score not found." });
+      }
+      const registration = await examRegistration.findById(existing.student);
+      if (!registration || String(registration.district) !== String(req.user.districts)) {
+        return res.status(403).json({ success: false, customMessage: "You are not authorized to update marks for a student outside your district." });
+      }
+    }
+
     const response = await ExamScore.findByIdAndUpdate(id, req.body);
     res.status(200).json({ success: true, message: `updated specific exam score`, response });
   } catch (err) {
@@ -270,6 +291,18 @@ exports.updateExamScore = async (req, res) => {
 exports.deleteExamScore = async (req, res) => {
   try {
     const { id } = req.query;
+
+    if (req.user.districts) {
+      const existing = await ExamScore.findById(id);
+      if (!existing) {
+        return res.status(404).json({ success: false, message: "Exam score not found." });
+      }
+      const registration = await examRegistration.findById(existing.student);
+      if (!registration || String(registration.district) !== String(req.user.districts)) {
+        return res.status(403).json({ success: false, customMessage: "You are not authorized to delete marks for a student outside your district." });
+      }
+    }
+
     const response = await ExamScore.findByIdAndDelete(id);
     res.status(200).json({ success: true, message: `deleted specific exam score`, response });
   } catch (err) {
