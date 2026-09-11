@@ -1869,7 +1869,7 @@ const ListItems = React.memo(
                   ))}
                 </React.Fragment>
               )}
-              {count > 0 && (additionalButtons.length > 0 || addPrivilege || bulkUplaod) && (
+              {(additionalButtons.length > 0 || (count > 0 && (addPrivilege || bulkUplaod))) && (
                 <>
                   {/* Desktop View */}
                   <div className="hidden sm:flex gap-2">
