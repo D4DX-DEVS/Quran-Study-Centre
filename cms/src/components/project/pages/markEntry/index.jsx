@@ -326,6 +326,7 @@ const MarkEntry = (props) => {
       view: true,
       add: true,
       update: true,
+      disabled: true,
       filter: true,
       export: true,
     },
