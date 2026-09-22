@@ -226,93 +226,37 @@ exports.login = async (req, res) => {
     }
     const checkPassword = await user.matchPassword(password);
     if (!checkPassword) {
-      if (user.blocked) {
-        const ipAddress = req.ip;
-        const userAgent = req.get("User-Agent");
-        await LoginLog.create({
-          status: "blocked",
-          user: user._id,
-          ipAddress,
-          userAgent,
-        });
-        return res.status(200).json({
-          success: false,
-          message:
-            "Your account has been blocked. Please contact support for assistance.",
-        });
-      } else {
-        const ipAddress = req.ip;
-        const userAgent = req.get("User-Agent");
-        await LoginLog.create({
-          status: "failed",
-          user: user._id,
-          ipAddress,
-          userAgent,
-        });
-
-        const loginLogs = await LoginLog.find({ user: user._id })
-          .sort({ loginTime: -1 })
-          .limit(5);
-
-        let consecutiveFailedAttempts = 0;
-        let breaked = false;
-        loginLogs.forEach(async (log) => {
-          if (log.status === "failed") {
-            if (!breaked) {
-              consecutiveFailedAttempts++;
-            }
-          } else {
-            breaked = true;
-          }
-        });
-
-        const remainingAttempts = Math.max(0, 5 - consecutiveFailedAttempts);
-        console.log(loginLogs, consecutiveFailedAttempts, remainingAttempts);
-        let message = `Incorrect password. You have ${remainingAttempts} attempts remaining before your account is blocked.`;
-        if (consecutiveFailedAttempts === 5) {
-          await User.findByIdAndUpdate(user._id, { blocked: true });
-          message =
-            "Your account has been blocked due to multiple failed login attempts. Please contact support for assistance.";
-        }
-        return res.status(200).json({
-          success: false,
-          message,
-        });
-      }
-    }
-    if (user.blocked) {
       const ipAddress = req.ip;
       const userAgent = req.get("User-Agent");
       await LoginLog.create({
-        status: "blocked",
+        status: "failed",
         user: user._id,
         ipAddress,
         userAgent,
       });
       return res.status(200).json({
         success: false,
-        message:
-          "Your account has been blocked. Please contact support for assistance.",
+        message: "Wrong password",
       });
-    } else {
-      // Check the role (userType) and handle login accordingly
-      if (user.userType.role === "patient") {
-        // For patient login, use additional criteria (e.g., CPR number)
-        // Modify this condition based on your actual authentication criteria
-        const isPatientAuthenticated = await user.matchCprNumber(
-          req.body.cprNumber
-        );
-        if (!isPatientAuthenticated) {
-          return res.status(200).json({
-            success: false,
-            message: "Invalid CPR number for patient login.",
-          });
-        }
-      }
-
-      // If the user is not a patient or the patient is authenticated, proceed with login
-      sendTokenResponse(user, res, req);
     }
+
+    // Check the role (userType) and handle login accordingly
+    if (user.userType.role === "patient") {
+      // For patient login, use additional criteria (e.g., CPR number)
+      // Modify this condition based on your actual authentication criteria
+      const isPatientAuthenticated = await user.matchCprNumber(
+        req.body.cprNumber
+      );
+      if (!isPatientAuthenticated) {
+        return res.status(200).json({
+          success: false,
+          message: "Invalid CPR number for patient login.",
+        });
+      }
+    }
+
+    // If the user is not a patient or the patient is authenticated, proceed with login
+    sendTokenResponse(user, res, req);
   } catch (err) {
     console.log(err);
     res.status(200).json({
@@ -495,10 +439,6 @@ exports.studentLogin = async (req, res) => {
         .select("+pin +password");
     }
 
-    if (user.blocked) {
-      return res.status(200).json({ success: false, message: "Your account has been blocked. Please contact support." });
-    }
-
     // If user has no pin set, default to last 4 digits of mobile
     if (!user.pin) {
       const bcrypt = require("bcryptjs");
@@ -513,19 +453,7 @@ exports.studentLogin = async (req, res) => {
       const ipAddress = req.ip;
       const userAgent = req.get("User-Agent");
       await LoginLog.create({ status: "failed", user: user._id, ipAddress, userAgent });
-
-      const recentLogs = await LoginLog.find({ user: user._id }).sort({ loginTime: -1 }).limit(5);
-      let consecutiveFails = 0;
-      for (const log of recentLogs) {
-        if (log.status === "failed") consecutiveFails++;
-        else break;
-      }
-      const remaining = Math.max(0, 5 - consecutiveFails);
-      if (consecutiveFails >= 5) {
-        await User.findByIdAndUpdate(user._id, { blocked: true });
-        return res.status(200).json({ success: false, message: "Account blocked due to multiple failed attempts. Contact support." });
-      }
-      return res.status(200).json({ success: false, message: `Incorrect PIN. ${remaining} attempts remaining.` });
+      return res.status(200).json({ success: false, message: "Incorrect PIN." });
     }
 
     sendTokenResponse(user, res, req, {
