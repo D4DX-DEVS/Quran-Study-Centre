@@ -1359,6 +1359,10 @@ const CrudForm = React.memo((props) => {
                         disabled = true;
                       }
 
+                      if (props.formType === "put" && item.disabledOnUpdate) {
+                        disabled = true;
+                      }
+
                       let updateValue = {};
                       if (item.type === "select" || item.type === "multiSelect") {
                         if (Array.isArray(item.updateOn)) {

@@ -326,7 +326,7 @@ const MarkEntry = (props) => {
       view: true,
       add: true,
       update: true,
-      disabled: true,
+      disabledOnUpdate: true,
       filter: true,
       export: true,
     },
@@ -366,20 +366,21 @@ const MarkEntry = (props) => {
       showSubItem: "nameOfCenter",
     },
     {
-      // Grade isn't verified yet — hidden from the UI until later. Backend still
-      // computes and stores it on submit (see addExamScore), this only hides display.
+      // Auto-computed server-side by calculateGrade() on submit — read-only here.
       type: "text",
       placeholder: "Grade",
       name: "grade",
       validation: "",
       default: "",
       label: "Grade",
-      tag: false,
+      tag: true,
       required: false,
-      view: false,
+      view: true,
       add: false,
       update: false,
-      export: false,
+      disabled: true,
+      filter: false,
+      export: true,
     },
   ]);
 

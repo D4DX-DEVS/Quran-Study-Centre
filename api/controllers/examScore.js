@@ -277,7 +277,14 @@ exports.updateExamScore = async (req, res) => {
       }
     }
 
-    const response = await ExamScore.findByIdAndUpdate(id, req.body);
+    // Recompute grade from score whenever score changes, so an edited mark
+    // never leaves a stale grade behind (mirrors addExamScore's behavior).
+    const updateBody = { ...req.body };
+    if (updateBody.score !== undefined && updateBody.score !== null && updateBody.score !== "") {
+      updateBody.grade = calculateGrade(updateBody.score);
+    }
+
+    const response = await ExamScore.findByIdAndUpdate(id, updateBody, { new: true });
     res.status(200).json({ success: true, message: `updated specific exam score`, response });
   } catch (err) {
     console.log(err);
@@ -324,22 +331,20 @@ exports.select = async (req, res) => {
   }
 };
 
-// Grading function based on score
+// Grading function based on score (out of 50)
 const calculateGrade = (score) => {
-  if (score >= 90 && score <= 100) {
+  if (score >= 45 && score <= 50) {
     return "A+";
-  } else if (score >= 80 && score <= 89) {
+  } else if (score >= 40 && score <= 44) {
     return "A";
-  } else if (score >= 70 && score <= 79) {
+  } else if (score >= 35 && score <= 39) {
     return "B+";
-  } else if (score >= 60 && score <= 69) {
+  } else if (score >= 30 && score <= 34) {
     return "B";
-  } else if (score >= 50 && score <= 59) {
+  } else if (score >= 25 && score <= 29) {
     return "C+";
-  } else if (score >= 40 && score <= 49) {
+  } else if (score >= 0 && score <= 24) {
     return "C";
-  } else if (score >= 1 && score <= 39) {
-    return "D+";
   } else {
     return "Grade Not Published"; // Handle invalid scores
   }

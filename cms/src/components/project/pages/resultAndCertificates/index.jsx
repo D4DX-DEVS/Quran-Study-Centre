@@ -13,22 +13,58 @@ const ResultAndCertificates = (props) => {
 
   const [attributes] = useState([
     {
-      type: "select",
-      apiType: "API",
-      selectApi: "hall-ticket/select",
-      placeholder: "Hall Ticket",
-      name: "hallTicket",
+      // Registration number of the linked student — read-only.
+      type: "text",
+      placeholder: "Registration number",
+      name: "studentRegNo",
       validation: "",
-      collection: "hallTicket",
-      showItem: "hallTicket",
       default: "",
-      label: "Hall Ticket",
+      label: "Registration number",
+      required: false,
       tag: true,
+      view: true,
+      add: false,
+      update: false,
+      export: true,
+      collection: "student",
+      showItem: "regno",
+    },
+    {
+      // Name of the linked student — read-only.
+      type: "text",
+      placeholder: "Name",
+      name: "student",
+      validation: "",
+      showItem: "nameOfApplicant",
+      collection: "student",
+      default: "",
+      tag: true,
+      label: "Name",
       required: false,
       view: true,
-      add: true,
-      update: true,
-      filter: false,
+      add: false,
+      update: false,
+      export: true,
+    },
+    {
+      type: "select",
+      apiType: "API",
+      selectApi: "exam-type/select",
+      placeholder: "Name of Exam",
+      name: "exam",
+      validation: "",
+      collection: "exam",
+      showItem: "examType",
+      search: true,
+      default: "",
+      tag: true,
+      label: "Name of Exam",
+      required: false,
+      view: true,
+      add: false,
+      update: false,
+      filter: true,
+      export: true,
     },
     {
       type: "number",
@@ -37,12 +73,15 @@ const ResultAndCertificates = (props) => {
       validation: "",
       default: "",
       label: "Score",
+      tag: true,
       required: false,
       view: true,
-      add: true,
-      update: true,
+      add: false,
+      update: false,
+      export: true,
     },
     {
+      // Auto-computed server-side by calculateGrade() — same source as Mark Entry.
       type: "text",
       placeholder: "Grade",
       name: "grade",
@@ -52,26 +91,27 @@ const ResultAndCertificates = (props) => {
       tag: true,
       required: false,
       view: true,
-      add: true,
-      update: true,
+      add: false,
+      update: false,
+      export: true,
     },
   ]);
 
   return (
     <Container className="noshadow">
       <ListTable
-        // actions={actions}
-        api={`result-certificates`}
-        // itemTitle={`label`}
+        api={`exam-score`}
         itemTitle={{
-          name: "score",
-          type: "number",
-          collection: "",
+          name: "nameOfApplicant",
+          type: "text",
+          collection: "student",
         }}
         shortName={`Result`}
         formMode={`single`}
         surfaceTheme={"district"}
         attributes={attributes}
+        addPrivilege={false}
+        delPrivilege={false}
         {...props}
       ></ListTable>
     </Container>
