@@ -1,13 +1,16 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import axios from "axios";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import ExcelJS from "exceljs";
 import { Download, LogOut, MapPin } from "lucide-react";
 import styled from "styled-components";
 import { postData } from "../../../backend/api";
 import { buildApiUrl } from "../../../backend/baseUrl";
 import { FormContainer } from "./registrationForm";
-import { groupDataByDistrictAreaCenter, generateExcelFile, generatePdfFile, sanitizeFolderName } from "../../../utils/attendanceExport";
+import { sanitizeFolderName } from "../../../utils/attendanceExport";
 
 const SESSION_KEY = "qsc-material-access";
 
@@ -191,6 +194,34 @@ const DownloadButton = styled.button`
   }
 `;
 
+const FilterSelect = styled.select`
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--landing-line, rgba(15, 39, 67, 0.14));
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: "Manrope", sans-serif;
+  color: var(--landing-ink, #0f2743);
+  background: #ffffff;
+
+  &:focus {
+    outline: none;
+    border-color: var(--landing-blue, #1d4ed8);
+  }
+`;
+
+const DownloadRow = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+
+  button {
+    flex: 1;
+    margin-bottom: 0;
+  }
+`;
+
 const CentersList = styled.div`
   max-height: 320px;
   overflow-y: auto;
@@ -247,13 +278,14 @@ const MaterialAccessGate = ({ onClose }) => {
   const [session, setSession] = useState(() => readSession());
   const [rows, setRows] = useState(null);
   const [centers, setCenters] = useState([]);
-  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [selectedCenter, setSelectedCenter] = useState("");
+  const [loadingResults, setLoadingResults] = useState(false);
 
-  const fetchAttendance = async (token) => {
-    setLoadingAttendance(true);
+  const fetchResults = async (token) => {
+    setLoadingResults(true);
     setError("");
     try {
-      const response = await axios.get(buildApiUrl("material-access/attendance"), {
+      const response = await axios.get(buildApiUrl("material-access/results"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response?.data?.success) {
@@ -269,16 +301,22 @@ const MaterialAccessGate = ({ onClose }) => {
       clearSession();
       setSession(null);
     } finally {
-      setLoadingAttendance(false);
+      setLoadingResults(false);
     }
   };
 
   React.useEffect(() => {
     if (session?.token) {
-      fetchAttendance(session.token);
+      fetchResults(session.token);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.token]);
+
+  const filteredRows = useMemo(() => {
+    if (!rows) return [];
+    if (!selectedCenter) return rows;
+    return rows.filter((r) => r.student?.centerRegistration?.nameOfCenter === selectedCenter);
+  }, [rows, selectedCenter]);
 
   const submitPassword = async (event) => {
     event.preventDefault();
@@ -313,30 +351,160 @@ const MaterialAccessGate = ({ onClose }) => {
     setSession(null);
     setRows(null);
     setCenters([]);
+    setSelectedCenter("");
     setPassword("");
   };
 
-  const downloadZip = async () => {
-    if (!rows || rows.length === 0) return;
+  // Exam names are stored as "Preliminary I: <syllabus text>" — only the short
+  // name before the colon is used for folder names / display.
+  const examName = (text) => String(text || "Unknown Exam").split(":")[0].trim();
 
-    const grouped = groupDataByDistrictAreaCenter(rows);
-    const districtKey = Object.keys(grouped)[0];
-    const areaKey = districtKey ? Object.keys(grouped[districtKey])[0] : null;
-    if (!districtKey || !areaKey) return;
+  // Nests result rows Exam -> Private/Regular, each leaf sorted by score
+  // descending — matches the admin Result page's ZIP layout exactly.
+  const groupResultsByExamStatus = (data) => {
+    const grouped = {};
+    data.forEach((item) => {
+      const exam = examName(item.exam?.examType);
+      const status = item.student?.status === "Private" ? "Private" : "Regular";
 
-    const zip = new JSZip();
-    Object.entries(grouped[districtKey][areaKey]).forEach(([centerName, data]) => {
-      const excelBuffer = generateExcelFile(data, centerName);
-      const pdfBuffer = generatePdfFile(data, centerName);
-      const safeName = sanitizeFolderName(centerName);
-      const centerFolder = zip.folder(safeName);
-      if (excelBuffer) centerFolder.file(`${safeName}.xlsx`, excelBuffer);
-      if (pdfBuffer) centerFolder.file(`${safeName}.pdf`, pdfBuffer);
+      if (!grouped[exam]) grouped[exam] = {};
+      if (!grouped[exam][status]) grouped[exam][status] = [];
+      grouped[exam][status].push(item);
     });
 
-    const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, `${areaKey} - Attendance Sheet.zip`);
+    Object.values(grouped).forEach((statuses) =>
+      Object.values(statuses).forEach((list) => list.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0)))
+    );
+
+    return grouped;
   };
+
+  const MAIN_TITLE = "QSC ANNUAL EXAM RESULT - 2026";
+  const upper = (text) => (text === undefined || text === null || text === "" ? "-" : String(text).toUpperCase());
+
+  const buildResultExcel = async (data, title, scope, showCentre) => {
+    const today = new Date().toLocaleDateString("en-GB");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(title.substring(0, 31));
+
+    const columns = [
+      { header: "#", key: "sl", width: 6 },
+      { header: "REG NO", key: "regno", width: 14 },
+      { header: "NAME", key: "name", width: 28 },
+      { header: "PHONE NUMBER", key: "phone", width: 18 },
+      { header: "SCORE", key: "score", width: 10 },
+      { header: "GRADE", key: "grade", width: 10 },
+    ];
+    if (showCentre) columns.push({ header: "CENTRE", key: "centre", width: 26 });
+    sheet.columns = columns.map((c) => ({ key: c.key, width: c.width }));
+
+    sheet.spliceRows(1, 0, [MAIN_TITLE], [scope.toUpperCase()], [title.toUpperCase()], []);
+    sheet.mergeCells(1, 1, 1, columns.length);
+    sheet.mergeCells(2, 1, 2, columns.length);
+    sheet.mergeCells(3, 1, 3, columns.length);
+    sheet.getCell("A1").font = { bold: true, size: 14 };
+    sheet.getCell("A1").alignment = { horizontal: "center" };
+    sheet.getCell("A2").font = { bold: true, size: 12 };
+    sheet.getCell("A2").alignment = { horizontal: "center" };
+    sheet.getCell("A3").font = { bold: true, size: 11 };
+    sheet.getCell("A3").alignment = { horizontal: "center" };
+
+    const headerRow = sheet.addRow(columns.map((c) => c.header));
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center" };
+    headerRow.eachCell((cell) => {
+      cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+    });
+
+    data.forEach((r, i) => {
+      const row = [i + 1, upper(r.student?.regno), upper(r.student?.nameOfApplicant), upper(r.student?.mobileNumber), r.score ?? "-", upper(r.grade)];
+      if (showCentre) row.push(upper(r.student?.centerRegistration?.nameOfCenter));
+      const dataRow = sheet.addRow(row);
+      dataRow.alignment = { horizontal: "center" };
+    });
+
+    sheet.addRow([]);
+    const printedRow = sheet.addRow([`Printed: ${today}`]);
+    sheet.mergeCells(printedRow.number, 1, printedRow.number, columns.length);
+    sheet.getCell(printedRow.number, 1).alignment = { horizontal: "right" };
+
+    return workbook.xlsx.writeBuffer();
+  };
+
+  const buildResultPdf = (data, title, scope, showCentre) => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const w = doc.internal.pageSize.getWidth();
+    const hpage = doc.internal.pageSize.getHeight();
+    const today = new Date().toLocaleDateString("en-GB");
+
+    doc.setFontSize(16);
+    doc.text(MAIN_TITLE, w / 2, 26, { align: "center" });
+    doc.setFontSize(11);
+    doc.text(scope.toUpperCase(), w / 2, 44, { align: "center" });
+    doc.setFontSize(13);
+    doc.text(title.toUpperCase(), w / 2, 62, { align: "center" });
+
+    const head = [["#", "REG NO", "NAME", "PHONE NUMBER", "SCORE", "GRADE"]];
+    if (showCentre) head[0].push("CENTRE");
+
+    doc.autoTable({
+      startY: 76,
+      head,
+      body: data.map((r, i) => {
+        const row = [
+          i + 1,
+          upper(r.student?.regno),
+          upper(r.student?.nameOfApplicant),
+          upper(r.student?.mobileNumber),
+          r.score ?? "-",
+          upper(r.grade),
+        ];
+        if (showCentre) row.push(upper(r.student?.centerRegistration?.nameOfCenter));
+        return row;
+      }),
+      styles: { fontSize: 8, cellPadding: 3, lineColor: 0, lineWidth: 0.2, textColor: 0 },
+      headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold" },
+      theme: "grid",
+      didDrawPage: () => {
+        doc.setFontSize(8);
+        doc.text(`Printed: ${today}`, w - 20, hpage - 16, { align: "right" });
+      },
+    });
+
+    return doc.output("arraybuffer");
+  };
+
+  const downloadZip = async (dataForZip, zipName, scope, showCentre) => {
+    if (!dataForZip || dataForZip.length === 0) return;
+
+    const grouped = groupResultsByExamStatus(dataForZip);
+    const zip = new JSZip();
+
+    for (const [examLabel, statuses] of Object.entries(grouped)) {
+      const examFolder = zip.folder(sanitizeFolderName(examLabel));
+      for (const [status, rowsForGroup] of Object.entries(statuses)) {
+        if (!rowsForGroup.length) continue;
+        const statusFolder = examFolder.folder(status);
+        const title = `${examLabel} — ${status}`;
+        const baseName = `${sanitizeFolderName(examLabel)}-${status}`;
+        statusFolder.file(`${baseName}.xlsx`, await buildResultExcel(rowsForGroup, title, scope, showCentre));
+        statusFolder.file(`${baseName}.pdf`, buildResultPdf(rowsForGroup, title, scope, showCentre));
+      }
+    }
+
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, zipName);
+  };
+
+  const downloadAllResults = () =>
+    downloadZip(rows, `${session.area} - Results.zip`, `Area-wise: ${session.area}`, true);
+  const downloadFilteredResults = () =>
+    downloadZip(
+      filteredRows,
+      `${session.area} - ${selectedCenter || "All Centers"} - Results.zip`,
+      selectedCenter ? `Exam Center-wise: ${selectedCenter}` : `Area-wise: ${session.area}`,
+      !selectedCenter
+    );
 
   if (!session?.token) {
     return (
@@ -344,7 +512,7 @@ const MaterialAccessGate = ({ onClose }) => {
         <Card>
           <TitleBox>
             <h2>Area Material Access</h2>
-            <p>Enter your area's material password to view attendance and exam centers.</p>
+            <p>Enter your area's material password to view exam results and centers.</p>
           </TitleBox>
           <form onSubmit={submitPassword}>
             <PasswordInput
@@ -381,21 +549,33 @@ const MaterialAccessGate = ({ onClose }) => {
           </ExitButton>
         </SessionHeader>
 
-        {loadingAttendance ? (
-          <SummaryText>Loading attendance...</SummaryText>
+        {loadingResults ? (
+          <SummaryText>Loading results...</SummaryText>
         ) : (
           <>
             <SummaryText>
-              {rows?.length || 0} registrations across {centers.length} exam centre(s).
+              {rows?.length || 0} results across {centers.length} exam centre(s).
             </SummaryText>
-            <DownloadButton
-              type="button"
-              onClick={downloadZip}
-              disabled={!rows || rows.length === 0}
-            >
-              <Download size={16} />
-              Download Attendance (Excel + PDF)
-            </DownloadButton>
+
+            <FilterSelect value={selectedCenter} onChange={(e) => setSelectedCenter(e.target.value)}>
+              <option value="">All exam centres</option>
+              {centers.map((centerName) => (
+                <option key={centerName} value={centerName}>
+                  {centerName}
+                </option>
+              ))}
+            </FilterSelect>
+
+            <DownloadRow>
+              <DownloadButton type="button" onClick={downloadAllResults} disabled={!rows || rows.length === 0}>
+                <Download size={16} />
+                Download All
+              </DownloadButton>
+              <DownloadButton type="button" onClick={downloadFilteredResults} disabled={!filteredRows.length}>
+                <Download size={16} />
+                Download Filtered
+              </DownloadButton>
+            </DownloadRow>
 
             <CentersList>
               {centers.map((centerName) => (

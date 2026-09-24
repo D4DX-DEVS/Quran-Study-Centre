@@ -43,27 +43,6 @@ const StudentResult = (props) => {
       });
   };
 
-  // Calculate the grade based on the score
-  const calculateGrade = (score) => {
-    if (score >= 90 && score <= 100) {
-      return "A+";
-    } else if (score >= 80 && score <= 89) {
-      return "A";
-    } else if (score >= 70 && score <= 79) {
-      return "B+";
-    } else if (score >= 60 && score <= 69) {
-      return "B";
-    } else if (score >= 50 && score <= 59) {
-      return "C+";
-    } else if (score >= 40 && score <= 49) {
-      return "C";
-    } else if (score >= 1 && score <= 39) {
-      return "D+";
-    } else {
-      return "Grade Not Published"; // Handle invalid scores
-    }
-  };
-
   return (
     <ElementContainer
       className="dashboard"
@@ -171,7 +150,7 @@ const StudentResult = (props) => {
                   marginTop: "10px",
                 }}
               >
-                <b>Grade :</b> {calculateGrade(result?.score)}
+                <b>Grade :</b> {result?.grade}
               </p>
             )}
           </>

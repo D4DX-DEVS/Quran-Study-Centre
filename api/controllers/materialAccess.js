@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const MaterialAccess = require("../models/materialAccess");
 const ExamRegistration = require("../models/examRegistration");
+const ExamScore = require("../models/examScore");
 
 // Simple in-memory per-IP rate limit for the public verify endpoint — the
 // password space is only 4 characters, so this needs to slow down guessing.
@@ -208,6 +209,47 @@ exports.getAttendance = async (req, res) => {
       message: "Attendance for area retrieved successfully",
       response: data,
       centers: Array.from(centerNames),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// @desc     Exam results (score + grade) for the verified area only, with the
+//           list of exam centers in that area for the frontend's filter.
+// @route    GET /api/v1/material-access/results
+// @access   protected (material-access scoped token — see protectMaterialAccess)
+exports.getResults = async (req, res) => {
+  try {
+    const areaId = req.materialArea;
+    if (!areaId || !mongoose.Types.ObjectId.isValid(areaId)) {
+      return res.status(400).json({ success: false, message: "Invalid area" });
+    }
+
+    const studentIds = await ExamRegistration.find({ area: areaId }).distinct("_id");
+
+    const data = await ExamScore.find({ student: { $in: studentIds } })
+      .populate({
+        path: "student",
+        populate: [
+          { path: "centerRegistration", select: "nameOfCenter centerCode" },
+        ],
+      })
+      .populate("exam", "examType")
+      .lean();
+
+    const centerNames = new Set();
+    data.forEach((item) => {
+      const name = item.student?.centerRegistration?.nameOfCenter;
+      if (name) centerNames.add(name);
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Results for area retrieved successfully",
+      response: data,
+      centers: Array.from(centerNames).sort(),
     });
   } catch (err) {
     console.error(err);

@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import JSZip from "jszip";
+import ExcelJS from "exceljs";
 
 // Module-level cache so the font is only fetched once per session.
 let _malayalamFontB64 = null;
@@ -56,15 +58,15 @@ import { buildApiUrl } from "../../../../backend/baseUrl";
 // inline row actions.
 
 const PAGE_SIZE = 12;
+const MAX_SCORE = 50;
 
 const GRADES = [
-  { min: 90, max: 100, grade: "A+", tone: "bg-emerald-100 text-emerald-700 ring-emerald-200" },
-  { min: 80, max: 89, grade: "A", tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
-  { min: 70, max: 79, grade: "B+", tone: "bg-sky-50 text-sky-700 ring-sky-100" },
-  { min: 60, max: 69, grade: "B", tone: "bg-indigo-50 text-indigo-700 ring-indigo-100" },
-  { min: 50, max: 59, grade: "C", tone: "bg-amber-50 text-amber-700 ring-amber-100" },
-  { min: 35, max: 49, grade: "D", tone: "bg-orange-50 text-orange-700 ring-orange-100" },
-  { min: 0, max: 34, grade: "F", tone: "bg-rose-50 text-rose-700 ring-rose-100" },
+  { min: 45, max: 50, grade: "A+", tone: "bg-emerald-100 text-emerald-700 ring-emerald-200" },
+  { min: 40, max: 44, grade: "A", tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
+  { min: 35, max: 39, grade: "B+", tone: "bg-sky-50 text-sky-700 ring-sky-100" },
+  { min: 30, max: 34, grade: "B", tone: "bg-indigo-50 text-indigo-700 ring-indigo-100" },
+  { min: 25, max: 29, grade: "C+", tone: "bg-amber-50 text-amber-700 ring-amber-100" },
+  { min: 0, max: 24, grade: "C", tone: "bg-rose-50 text-rose-700 ring-rose-100" },
 ];
 
 const gradeInfo = (score) => {
@@ -72,6 +74,13 @@ const gradeInfo = (score) => {
   if (Number.isNaN(n)) return GRADES[GRADES.length - 1];
   return GRADES.find((g) => n >= g.min && n <= g.max) || GRADES[GRADES.length - 1];
 };
+
+// Exam names are stored as "Preliminary I: <syllabus text>" — only the short
+// name before the colon should ever be shown in the UI or exports.
+const examName = (text) => String(text || "").split(":")[0].trim();
+
+const MAIN_TITLE = "QSC ANNUAL EXAM RESULT - 2026";
+const upper = (text) => (text === undefined || text === null || text === "" ? "-" : String(text).toUpperCase());
 
 const ExamScore = (props) => {
   useEffect(() => {
@@ -256,7 +265,7 @@ const ExamScore = (props) => {
     const parts = [];
     if (selExam) {
       const e = examTypes.find((x) => (x.id || x._id) === selExam);
-      if (e) parts.push(e.value || e.examType);
+      if (e) parts.push(examName(e.value || e.examType));
     }
     if (selDistrict) {
       const d = districts.find((x) => (x.id || x._id) === selDistrict);
@@ -274,6 +283,36 @@ const ExamScore = (props) => {
     if (selStatus) parts.push(selStatus);
     return parts.length ? parts.join(" · ") : "All";
   }, [selExam, examTypes, selDistrict, districts, selArea, areas, selCenter, centers, selGender, selStatus]);
+
+  // Describes the geographic scope of the currently applied filters — used in
+  // the PDF/Excel heading so it's clear whether a report is state-wide,
+  // district-wide, area-wide, or a single exam centre.
+  const scopeLabel = useMemo(() => {
+    if (selCenter) {
+      const c = centers.find((x) => (x.id || x._id) === selCenter);
+      return `Exam Center-wise: ${c?.value || c?.nameOfCenter || "Selected Center"}`;
+    }
+    if (selArea) {
+      const a = areas.find((x) => (x.id || x._id) === selArea);
+      return `Area-wise: ${a?.value || a?.area || "Selected Area"}`;
+    }
+    if (selDistrict) {
+      const d = districts.find((x) => (x.id || x._id) === selDistrict);
+      return `District-wise: ${d?.value || d?.district || "Selected District"}`;
+    }
+    return "State-wise";
+  }, [selCenter, centers, selArea, areas, selDistrict, districts]);
+
+  // Which geo columns (Centre / Area / District) to show in exports, based on
+  // how specific the active filter scope already is — a column is dropped
+  // once the scope itself pins that value (e.g. Center-wise exports don't
+  // need a Centre column repeating the same value on every row).
+  const geoColumns = useMemo(() => {
+    if (selCenter) return { centre: false, area: false, district: false };
+    if (selArea) return { centre: true, area: false, district: false };
+    if (selDistrict) return { centre: true, area: true, district: false };
+    return { centre: true, area: true, district: true };
+  }, [selCenter, selArea, selDistrict]);
 
   const generatePdf = async (data, title) => {
     const fontB64 = await loadMalayalamFont();
@@ -297,40 +336,55 @@ const ExamScore = (props) => {
       else doc.setFont("helvetica", "normal");
     };
 
+    const hpage = doc.internal.pageSize.getHeight();
+
+    doc.setFontSize(16);
+    setDocFont(MAIN_TITLE);
+    doc.text(MAIN_TITLE, w / 2, 26, { align: "center" });
     doc.setFontSize(14);
     setDocFont("Results Report");
-    doc.text("Results Report", w / 2, 28, { align: "center" });
+    doc.text("Results Report", w / 2, 44, { align: "center" });
     doc.setFontSize(11);
-    setDocFont(title);
-    doc.text(title, w / 2, 46, { align: "center" });
+    setDocFont(scopeLabel);
+    doc.text(scopeLabel.toUpperCase(), w / 2, 60, { align: "center" });
     doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total: ${data.length}  |  Printed: ${today}`, w / 2, 62, { align: "center" });
+    setDocFont(title);
+    doc.text(title.toUpperCase(), w / 2, 74, { align: "center" });
+
+    const head = [["#", "REG NO", "NAME", "PHONE NUMBER", "P/R", "SCORE", "GRADE"]];
+    if (geoColumns.centre) head[0].push("CENTRE");
+    if (geoColumns.area) head[0].push("AREA");
+    if (geoColumns.district) head[0].push("DISTRICT");
+    head[0].push("EXAM");
 
     doc.autoTable({
-      startY: 76,
-      head: [["#", "Reg No", "Name", "P/R", "Score", "Grade", "Centre", "Area", "District", "Exam"]],
-      body: data.map((r, i) => [
-        i + 1,
-        r.student?.regno || "-",
-        r.student?.nameOfApplicant || "-",
-        r.student?.status ? r.student.status.charAt(0) : "-",
-        r.score ?? "-",
-        r.grade || "-",
-        r.student?.centerRegistration?.nameOfCenter || "-",
-        r.student?.area?.area || "-",
-        r.student?.district?.district || "-",
-        r.exam?.examType || "-",
-      ]),
+      startY: 88,
+      head,
+      body: data.map((r, i) => {
+        const row = [
+          i + 1,
+          upper(r.student?.regno),
+          upper(r.student?.nameOfApplicant),
+          upper(r.student?.mobileNumber),
+          r.student?.status ? r.student.status.charAt(0) : "-",
+          r.score ?? "-",
+          upper(r.grade),
+        ];
+        if (geoColumns.centre) row.push(upper(r.student?.centerRegistration?.nameOfCenter));
+        if (geoColumns.area) row.push(upper(r.student?.area?.area));
+        if (geoColumns.district) row.push(upper(r.student?.district?.district));
+        row.push(upper(examName(r.exam?.examType)));
+        return row;
+      }),
       // Default all cells to helvetica so Latin/numeric text always renders
       styles: { fontSize: 8, cellPadding: 3, lineColor: 0, lineWidth: 0.2, textColor: 0, font: "helvetica" },
       headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold", font: "helvetica" },
       theme: "grid",
       columnStyles: {
         0: { halign: "center", cellWidth: 28 },
-        3: { halign: "center", cellWidth: 24 },
-        4: { halign: "center", cellWidth: 40 },
-        5: { halign: "center", cellWidth: 36 },
+        4: { halign: "center", cellWidth: 24 },
+        5: { halign: "center", cellWidth: 40 },
+        6: { halign: "center", cellWidth: 36 },
       },
       // Per-cell font switch: use Malayalam font only for cells that contain Malayalam text
       didParseCell: (hookData) => {
@@ -342,12 +396,235 @@ const ExamScore = (props) => {
           }
         }
       },
+      didDrawPage: () => {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Printed: ${today}`, w - 20, hpage - 16, { align: "right" });
+      },
     });
 
     const filename = `Results-${title.replace(/[\s·/]+/g, "-")}-${today.replace(/\//g, "-")}.pdf`;
     doc.save(filename);
   };
 
+  // Builds a single-table PDF for one exam+status group and returns it as a Blob
+  // (does not save to disk) — used when packing the results ZIP.
+  const buildGroupPdfBlob = async (rows, title, scope = "State-wise", geo = { centre: true, area: true, district: true }) => {
+    const fontB64 = await loadMalayalamFont();
+    const FONT_NAME = "NotoSansMalayalam";
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const w = doc.internal.pageSize.getWidth();
+    const hpage = doc.internal.pageSize.getHeight();
+    const today = new Date().toLocaleDateString("en-GB");
+
+    if (fontB64) {
+      doc.addFileToVFS(`${FONT_NAME}-Regular.ttf`, fontB64);
+      doc.addFont(`${FONT_NAME}-Regular.ttf`, FONT_NAME, "normal");
+    }
+
+    const hasMalayalam = (text) => /[ഀ-ൿ]/.test(String(text ?? ""));
+    const setDocFont = (text) => {
+      if (fontB64 && hasMalayalam(text)) doc.setFont(FONT_NAME, "normal");
+      else doc.setFont("helvetica", "normal");
+    };
+
+    doc.setFontSize(16);
+    setDocFont(MAIN_TITLE);
+    doc.text(MAIN_TITLE, w / 2, 26, { align: "center" });
+    doc.setFontSize(11);
+    setDocFont(scope);
+    doc.text(scope.toUpperCase(), w / 2, 44, { align: "center" });
+    doc.setFontSize(14);
+    setDocFont(title);
+    doc.text(title.toUpperCase(), w / 2, 62, { align: "center" });
+
+    const head = [["#", "REG NO", "NAME", "PHONE NUMBER", "SCORE", "GRADE"]];
+    if (geo.centre) head[0].push("CENTRE");
+    if (geo.area) head[0].push("AREA");
+    if (geo.district) head[0].push("DISTRICT");
+
+    doc.autoTable({
+      startY: 76,
+      head,
+      body: rows.map((r, i) => {
+        const row = [
+          i + 1,
+          upper(r.student?.regno),
+          upper(r.student?.nameOfApplicant),
+          upper(r.student?.mobileNumber),
+          r.score ?? "-",
+          upper(r.grade),
+        ];
+        if (geo.centre) row.push(upper(r.student?.centerRegistration?.nameOfCenter));
+        if (geo.area) row.push(upper(r.student?.area?.area));
+        if (geo.district) row.push(upper(r.student?.district?.district));
+        return row;
+      }),
+      styles: { fontSize: 8, cellPadding: 3, lineColor: 0, lineWidth: 0.2, textColor: 0, font: "helvetica" },
+      headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold", font: "helvetica" },
+      theme: "grid",
+      columnStyles: {
+        0: { halign: "center", cellWidth: 28 },
+        4: { halign: "center", cellWidth: 40 },
+        5: { halign: "center", cellWidth: 36 },
+      },
+      didParseCell: (hookData) => {
+        if (fontB64 && hookData.section === "body") {
+          const text = String(hookData.cell.raw ?? "");
+          if (hasMalayalam(text)) {
+            hookData.cell.styles.font = FONT_NAME;
+            hookData.cell.styles.fontStyle = "normal";
+          }
+        }
+      },
+      didDrawPage: () => {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Printed: ${today}`, w - 20, hpage - 16, { align: "right" });
+      },
+    });
+
+    return doc.output("blob");
+  };
+
+  // Builds a single-sheet Excel workbook for one exam+status group and returns
+  // it as a Blob — used when packing the results ZIP.
+  const buildGroupExcelBlob = async (rows, title, scope = "State-wise", geo = { centre: true, area: true, district: true }) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Results");
+    const today = new Date().toLocaleDateString("en-GB");
+
+    const columns = [
+      { header: "#", key: "sl", width: 6 },
+      { header: "REG NO", key: "regno", width: 14 },
+      { header: "NAME", key: "name", width: 28 },
+      { header: "PHONE NUMBER", key: "phone", width: 18 },
+      { header: "SCORE", key: "score", width: 10 },
+      { header: "GRADE", key: "grade", width: 10 },
+    ];
+    if (geo.centre) columns.push({ header: "CENTRE", key: "centre", width: 26 });
+    if (geo.area) columns.push({ header: "AREA", key: "area", width: 18 });
+    if (geo.district) columns.push({ header: "DISTRICT", key: "district", width: 18 });
+    sheet.columns = columns.map((c) => ({ key: c.key, width: c.width }));
+
+    // Main title + scope + group title rows above the table header.
+    sheet.spliceRows(1, 0, [MAIN_TITLE], [scope.toUpperCase()], [title.toUpperCase()], []);
+    sheet.mergeCells(1, 1, 1, columns.length);
+    sheet.mergeCells(2, 1, 2, columns.length);
+    sheet.mergeCells(3, 1, 3, columns.length);
+    sheet.getCell("A1").font = { bold: true, size: 14 };
+    sheet.getCell("A1").alignment = { horizontal: "center" };
+    sheet.getCell("A2").font = { bold: true, size: 12 };
+    sheet.getCell("A2").alignment = { horizontal: "center" };
+    sheet.getCell("A3").font = { bold: true, size: 11 };
+    sheet.getCell("A3").alignment = { horizontal: "center" };
+
+    const headerRow = sheet.addRow(columns.map((c) => c.header));
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center" };
+    headerRow.eachCell((cell) => {
+      cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+    });
+
+    rows.forEach((r, i) => {
+      const row = [i + 1, upper(r.student?.regno), upper(r.student?.nameOfApplicant), upper(r.student?.mobileNumber), r.score ?? "-", upper(r.grade)];
+      if (geo.centre) row.push(upper(r.student?.centerRegistration?.nameOfCenter));
+      if (geo.area) row.push(upper(r.student?.area?.area));
+      if (geo.district) row.push(upper(r.student?.district?.district));
+      const dataRow = sheet.addRow(row);
+      dataRow.alignment = { horizontal: "center" };
+    });
+
+    // Printed date — bottom right, after a blank spacer row.
+    sheet.addRow([]);
+    const printedRow = sheet.addRow([`Printed: ${today}`]);
+    sheet.mergeCells(printedRow.number, 1, printedRow.number, columns.length);
+    sheet.getCell(printedRow.number, 1).alignment = { horizontal: "right" };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  };
+
+  // Groups exam-score rows by (exam, Private/Regular), sorted by exam-type list
+  // order then Regular-before-Private, with each group's rows sorted by score
+  // descending. Groups with zero rows are simply absent from the map.
+  const groupRowsByExamAndStatus = (data) => {
+    const examOrder = examTypes.map((e) => e.id || e._id);
+    const orderIndex = (examId) => {
+      const idx = examOrder.indexOf(examId);
+      return idx === -1 ? examOrder.length : idx;
+    };
+    const statusOrder = { Regular: 0, Private: 1 };
+
+    const groupsMap = new Map();
+    data.forEach((r) => {
+      const examId = r.exam?._id || r.exam;
+      const status = r.student?.status === "Private" ? "Private" : "Regular";
+      const key = `${examId}__${status}`;
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, {
+          examId,
+          examLabel: examName(r.exam?.examType) || "Unknown Exam",
+          status,
+          rows: [],
+        });
+      }
+      groupsMap.get(key).rows.push(r);
+    });
+
+    return Array.from(groupsMap.values())
+      .map((g) => ({ ...g, rows: [...g.rows].sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0)) }))
+      .sort((a, b) => {
+        const examDiff = orderIndex(a.examId) - orderIndex(b.examId);
+        if (examDiff !== 0) return examDiff;
+        return (statusOrder[a.status] ?? 2) - (statusOrder[b.status] ?? 2);
+      });
+  };
+
+  // Sanitizes a label for use as a filesystem/zip path segment.
+  const safePathSegment = (text) =>
+    String(text || "Unknown")
+      .replace(/[\\/:*?"<>|]/g, "-")
+      .trim() || "Unknown";
+
+  // Builds a ZIP with one folder per exam, each containing a Private/ and
+  // Regular/ subfolder, each holding a sorted-by-score PDF + Excel of that
+  // group's results. Groups with no students are skipped entirely.
+  const buildResultsZip = async (data, scope = "State-wise", geo = { centre: true, area: true, district: true }) => {
+    const groups = groupRowsByExamAndStatus(data);
+    const zip = new JSZip();
+    for (const group of groups) {
+      const examFolder = safePathSegment(group.examLabel);
+      const statusFolder = group.status;
+      const title = `${group.examLabel} — ${group.status}`;
+      const baseName = `${safePathSegment(group.examLabel)}-${group.status}`;
+
+      const [pdfBlob, excelBlob] = await Promise.all([
+        buildGroupPdfBlob(group.rows, title, scope, geo),
+        buildGroupExcelBlob(group.rows, title, scope, geo),
+      ]);
+
+      const folder = zip.folder(examFolder).folder(statusFolder);
+      folder.file(`${baseName}.pdf`, pdfBlob);
+      folder.file(`${baseName}.xlsx`, excelBlob);
+    }
+    return zip;
+  };
+
+  const saveZip = async (zip, filename) => {
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // "Download Filtered" — same ZIP layout as "Download All" (exam / status /
+  // PDF + Excel, sorted by mark), but scoped to the currently applied filters.
   const downloadFiltered = async () => {
     props.setLoaderBox?.(true);
     try {
@@ -365,7 +642,10 @@ const ExamScore = (props) => {
         props.setMessage?.({ type: 1, content: "No results to download.", proceed: "Okay" });
         return;
       }
-      await generatePdf(data, filterLabel);
+
+      const zip = await buildResultsZip(data, scopeLabel, geoColumns);
+      const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
+      await saveZip(zip, `Results-${filterLabel.replace(/[\s·/]+/g, "-")}-${today}.zip`);
     } catch (e) {
       props.setMessage?.({ type: 1, content: e?.response?.data?.message || e.message, proceed: "Okay" });
     } finally {
@@ -373,6 +653,7 @@ const ExamScore = (props) => {
     }
   };
 
+  // "Download All" — same ZIP layout, covering every result (no filters).
   const downloadAll = async () => {
     props.setLoaderBox?.(true);
     try {
@@ -382,7 +663,10 @@ const ExamScore = (props) => {
         props.setMessage?.({ type: 1, content: "No results to download.", proceed: "Okay" });
         return;
       }
-      await generatePdf(data, "All Results");
+
+      const zip = await buildResultsZip(data);
+      const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
+      await saveZip(zip, `Results-All-${today}.zip`);
     } catch (e) {
       props.setMessage?.({ type: 1, content: e?.response?.data?.message || e.message, proceed: "Okay" });
     } finally {
@@ -421,7 +705,7 @@ const ExamScore = (props) => {
               type="button"
               onClick={downloadFiltered}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-              title="Download PDF with current filters applied"
+              title="Download a ZIP (PDF + Excel per exam/status) with current filters applied"
             >
               <FileDown size={14} />
               Download Filtered
@@ -430,10 +714,10 @@ const ExamScore = (props) => {
               type="button"
               onClick={downloadAll}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
-              title="Download PDF with all results (no filters)"
+              title="Download a ZIP with a PDF + Excel per exam, split into Private/Regular folders"
             >
               <FileDown size={14} />
-              Download All
+              Download All (ZIP)
             </button>
             <button
               type="button"
@@ -448,7 +732,7 @@ const ExamScore = (props) => {
 
         {/* Filter bar */}
         <div className="bg-white rounded-lg border border-slate-200 p-3 mb-5 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -460,20 +744,20 @@ const ExamScore = (props) => {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Filter size={14} className="hidden sm:block text-slate-400 shrink-0" />
             <select
               value={selExam}
               onChange={(e) => {
                 setPage(1);
                 setSelExam(e.target.value);
               }}
-              className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+              className="w-full sm:w-auto sm:max-w-[160px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
             >
               <option value="">All exams</option>
               {examTypes.map((e) => (
                 <option key={e.id || e._id} value={e.id || e._id}>
-                  {e.value || e.examType}
+                  {examName(e.value || e.examType)}
                 </option>
               ))}
             </select>
@@ -486,7 +770,7 @@ const ExamScore = (props) => {
               setSelDistrict(e.target.value);
               setSelArea("");
             }}
-            className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
           >
             <option value="">All districts</option>
             {districts.map((d) => (
@@ -504,7 +788,7 @@ const ExamScore = (props) => {
                 setSelArea(e.target.value);
                 setSelCenter("");
               }}
-              className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+              className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
             >
               <option value="">All areas</option>
               {areas.map((a) => (
@@ -522,7 +806,7 @@ const ExamScore = (props) => {
                 setPage(1);
                 setSelCenter(e.target.value);
               }}
-              className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+              className="w-full sm:w-auto sm:max-w-[160px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
             >
               <option value="">All exam centers</option>
               {centers.map((c) => (
@@ -539,7 +823,7 @@ const ExamScore = (props) => {
               setPage(1);
               setSelGender(e.target.value);
             }}
-            className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            className="w-full sm:w-auto sm:max-w-[130px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
           >
             <option value="">All genders</option>
             <option value="Male">Male</option>
@@ -552,7 +836,7 @@ const ExamScore = (props) => {
               setPage(1);
               setSelStatus(e.target.value);
             }}
-            className="px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
           >
             <option value="">Private + Regular</option>
             <option value="Regular">Regular only</option>
@@ -562,12 +846,12 @@ const ExamScore = (props) => {
           <button
             type="button"
             onClick={onSearchSubmit}
-            className="px-3 py-2 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-800"
+            className="w-full sm:w-auto px-3 py-2 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-800"
           >
             Apply
           </button>
 
-          <div className="ml-auto text-xs text-slate-500">
+          <div className="w-full sm:w-auto sm:ml-auto text-xs text-slate-500">
             Showing <span className="font-semibold text-slate-700">{rows.length}</span> of{" "}
             <span className="font-semibold text-slate-700">{filterCount}</span>
             {filterCount !== totalCount && (
@@ -600,29 +884,32 @@ const ExamScore = (props) => {
         )}
 
         {/* Pagination */}
-        {filterCount > PAGE_SIZE && (
+        {rows.length > 0 && (
           <div className="flex items-center justify-between mt-5 text-sm">
             <div className="text-slate-500">
-              Page <span className="font-semibold text-slate-700">{page}</span> of {totalPages}
+              <span className="font-semibold text-slate-700">{filterCount}</span> Records • Page{" "}
+              <span className="font-semibold text-slate-700">{page}</span> of {totalPages}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-              >
-                <ChevronLeft size={14} /> Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || loading}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
+            {filterCount > PAGE_SIZE && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || loading}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -663,7 +950,7 @@ const ResultCard = ({ row, onEdit, onDelete, onDownload }) => {
   const exam = row.exam || {};
   const center = student.centerRegistration || {};
   const g = gradeInfo(row.score);
-  const percent = Math.max(0, Math.min(100, Number(row.score) || 0));
+  const percent = Math.max(0, Math.min(100, ((Number(row.score) || 0) / MAX_SCORE) * 100));
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition p-4 flex flex-col">
@@ -717,7 +1004,7 @@ const ResultCard = ({ row, onEdit, onDelete, onDownload }) => {
 
       <div className="mt-3 space-y-1.5 text-sm text-slate-600">
         <InfoRow icon={<GraduationCap size={13} />} label="Exam">
-          {exam.examType || "—"}
+          {examName(exam.examType) || "—"}
         </InfoRow>
         <InfoRow icon={<Building2 size={13} />} label="Study centre">
           {center.nameOfCenter || "—"}
@@ -966,7 +1253,7 @@ const ScoreDrawer = ({ editing, examTypes, onClose, onSaved, setMessage }) => {
               <option value="">Select exam…</option>
               {examTypes.map((e) => (
                 <option key={e.id || e._id} value={e.id || e._id}>
-                  {e.value || e.examType}
+                  {examName(e.value || e.examType)}
                 </option>
               ))}
             </select>
@@ -975,16 +1262,16 @@ const ScoreDrawer = ({ editing, examTypes, onClose, onSaved, setMessage }) => {
           {/* Score */}
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">
-              Score (0–100) <span className="text-rose-500">*</span>
+              Score (0–50) <span className="text-rose-500">*</span>
             </label>
             <input
               type="number"
               min={0}
-              max={100}
+              max={50}
               value={form.score}
               onChange={(e) => setForm((f) => ({ ...f, score: e.target.value }))}
               className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-              placeholder="e.g. 86"
+              placeholder="e.g. 42"
             />
           </div>
 

@@ -68,27 +68,6 @@ const Results = (props) => {
       });
   };
 
-  // Calculate the grade based on the score
-  const calculateGrade = (score) => {
-    if (score >= 90 && score <= 100) {
-      return "A+";
-    } else if (score >= 80 && score <= 89) {
-      return "A";
-    } else if (score >= 70 && score <= 79) {
-      return "B+";
-    } else if (score >= 60 && score <= 69) {
-      return "B";
-    } else if (score >= 50 && score <= 59) {
-      return "C+";
-    } else if (score >= 40 && score <= 49) {
-      return "C";
-    } else if (score >= 1 && score <= 39) {
-      return "D+";
-    } else {
-      return "Grade Not Published"; // Handle invalid scores
-    }
-  };
-
   const renderGradeTable = () => {
     return (
       <div style={{ marginTop: "20px", textAlign: "left" }}>
@@ -117,32 +96,28 @@ const Results = (props) => {
           </thead>
           <tbody>
             <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>90 - 100</td>
+              <td style={{ border: "1px solid #ddd", padding: "8px" }}>45 - 50</td>
               <td style={{ border: "1px solid #ddd", padding: "8px" }}>A+</td>
             </tr>
             <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>80 - 89</td>
+              <td style={{ border: "1px solid #ddd", padding: "8px" }}>40 - 44</td>
               <td style={{ border: "1px solid #ddd", padding: "8px" }}>A</td>
             </tr>
             <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>70 - 79</td>
+              <td style={{ border: "1px solid #ddd", padding: "8px" }}>35 - 39</td>
               <td style={{ border: "1px solid #ddd", padding: "8px" }}>B+</td>
             </tr>
             <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>60 - 69</td>
+              <td style={{ border: "1px solid #ddd", padding: "8px" }}>30 - 34</td>
               <td style={{ border: "1px solid #ddd", padding: "8px" }}>B</td>
             </tr>
             <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>50 - 59</td>
+              <td style={{ border: "1px solid #ddd", padding: "8px" }}>25 - 29</td>
               <td style={{ border: "1px solid #ddd", padding: "8px" }}>C+</td>
             </tr>
             <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>40 - 49</td>
+              <td style={{ border: "1px solid #ddd", padding: "8px" }}>Below 24</td>
               <td style={{ border: "1px solid #ddd", padding: "8px" }}>C</td>
-            </tr>
-            <tr>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>30 - 39</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>D+</td>
             </tr>
           </tbody>
         </Table>
@@ -167,7 +142,7 @@ const Results = (props) => {
           >
       <div>
         <h2 style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
-        <h4 style={{ marginTop: "10px", color: "Red" }}>ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള 2025 വാർഷിക പരീക്ഷ എഴുതിയ ,എല്ലാ വിഭാഗങ്ങളിലുമുള്ള പഠിതാക്കളുടെ റിസൽട്ട് പബ്ലിഷ് ചെയ്തിട്ടുണ്ട്. പഠിതാക്കളുടെ രജിസ്റ്റർ നമ്പർ അല്ലെങ്കിൽ മൊബൈൽ നമ്പർ താഴെ നൽകി, Search Result ക്ലിക്ക് ചെയ്താൽ ലഭിച്ച ഗ്രേഡ് കാണാം. Download Certificate click ചെയ്താൽ ഗ്രേഡ് രേഖപ്പെടുത്തിയ സർട്ടിഫിക്കറ്റ് pdf ഫയൽ ആയി ലഭിക്കുന്നതാണ്. </h4>
+        <h4 style={{ marginTop: "10px", color: "Red", fontFamily: "'Noto Sans Malayalam', sans-serif" }}>ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള 2026 വാർഷിക പരീക്ഷ എഴുതിയ ,എല്ലാ വിഭാഗങ്ങളിലുമുള്ള പഠിതാക്കളുടെ റിസൽട്ട് പബ്ലിഷ് ചെയ്തിട്ടുണ്ട്. പഠിതാക്കളുടെ രജിസ്റ്റർ നമ്പർ അല്ലെങ്കിൽ മൊബൈൽ നമ്പർ താഴെ നൽകി, Search Result ക്ലിക്ക് ചെയ്താൽ ലഭിച്ച മാർക്കും ഗ്രേഡും കാണാം. Download Certificate click ചെയ്താൽ ഗ്രേഡ് രേഖപ്പെടുത്തിയ സർട്ടിഫിക്കറ്റ് pdf ഫയൽ ആയി ലഭിക്കുന്നതാണ്. </h4>
         <TextDiv>
           <TextBox
             className="text-box"
@@ -255,7 +230,7 @@ const Results = (props) => {
             >
               <b>Exam :</b> {exam?.split(":")[0]}{" "}
             </p>
-            {status && (
+            {result && result.score && (
               <p
                 style={{
                   textAlign: "left",
@@ -263,19 +238,7 @@ const Results = (props) => {
                   marginTop: "10px",
                 }}
               >
-                <b>Status :</b>{" "}
-                <span
-                  style={{
-                    display: "inline-block",
-                    padding: "2px 10px",
-                    borderRadius: 4,
-                    background: status === "Private" ? "#FEF3C7" : "#DCFCE7",
-                    color: status === "Private" ? "#92400E" : "#166534",
-                    fontWeight: 600,
-                  }}
-                >
-                  {status}
-                </span>
+                <b>Mark :</b> {result.score}
               </p>
             )}
             {result && result.score && result.grade && (
@@ -286,7 +249,7 @@ const Results = (props) => {
                   marginTop: "10px",
                 }}
               >
-                <b>Grade :</b> {calculateGrade(result?.score)}
+                <b>Grade :</b> {result?.grade}
               </p>
             )}
             {result && result.score && result.rank && (
@@ -308,9 +271,11 @@ const Results = (props) => {
             )}
           </>
         )}
-        <ButtonDiv style={{ marginTop: "20px" }}>
-          <Button key={""} className="btn-download" icon={"download"} value={"Download Certificate"} ClickEvent={() => getApproved(regNo)} />
-        </ButtonDiv>
+        {name && result && result.score && (
+          <ButtonDiv style={{ marginTop: "20px" }}>
+            <Button key={""} className="btn-download" icon={"download"} value={"Download Certificate"} ClickEvent={() => getApproved(regNo)} />
+          </ButtonDiv>
+        )}
         <div>{renderGradeTable()}</div>
       </div>
           </ElementContainer>
