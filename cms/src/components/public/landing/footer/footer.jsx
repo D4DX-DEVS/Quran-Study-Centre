@@ -76,25 +76,31 @@ const Footer = () => {
 
         <div className="landing-footer-block landing-footer-links">
           <span className="landing-footer-label">{copy.footerLinksLabel}</span>
-          <a href="/question-papers" className="landing-footer-link">
-            Downloads
-          </a>
+          {landingSettings.downloads !== false && (
+            <a href="/question-papers" className="landing-footer-link">
+              Downloads
+            </a>
+          )}
           {landingSettings.syllabus !== false && (
             <a href="/syllabus" className="landing-footer-link">
               Syllabus
             </a>
           )}
-          <a href="/about-us" className="landing-footer-link">
-            About us
-          </a>
+          {landingSettings.about !== false && (
+            <a href="/about-us" className="landing-footer-link">
+              About us
+            </a>
+          )}
           {landingSettings.leadership !== false && (
             <a href="/leadership" className="landing-footer-link">
               Leadership
             </a>
           )}
-          <a href="/result" className="landing-footer-link">
-            Result
-          </a>
+          {landingSettings.result === true && (
+            <a href="/result" className="landing-footer-link">
+              Result
+            </a>
+          )}
         </div>
 
         <div className="landing-footer-block">
