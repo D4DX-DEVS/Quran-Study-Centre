@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, ElementContainer, TextBox } from "../../../core/elements";
 import styled from "styled-components";
 import { getData } from "../../../../backend/api"; // Assuming you have a getData function for fetching data
@@ -46,6 +46,33 @@ const Results = (props) => {
   const [status, setStatus] = useState("");
   const [result, setResult] = useState([]);
   const [published, setPublished] = useState(false);
+  // null = still checking, then true/false from Landing Page Settings "Result" toggle
+  const [resultEnabled, setResultEnabled] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getData({}, "floating-menu-settings")
+      .then((response) => {
+        if (cancelled) return;
+        setResultEnabled(response?.data?.response?.[0]?.result === true);
+      })
+      .catch(() => {
+        if (!cancelled) setResultEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Keep search engines from indexing the page while results are hidden
+  useEffect(() => {
+    if (resultEnabled !== false) return;
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, [resultEnabled]);
 
   const getApproved = (regno, refreshView) => {
     console.log({ regno });
@@ -140,6 +167,12 @@ const Results = (props) => {
               flexWrap: "nowrap",
             }}
           >
+      {resultEnabled === null ? null : !resultEnabled ? (
+      <div>
+        <h2 style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
+        <h4 style={{ marginTop: "10px", color: "Red" }}>The result is not published yet</h4>
+      </div>
+      ) : (
       <div>
         <h2 style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
         <h4 style={{ marginTop: "10px", color: "Red", fontFamily: "'Noto Sans Malayalam', sans-serif" }}>ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള 2026 വാർഷിക പരീക്ഷ എഴുതിയ ,എല്ലാ വിഭാഗങ്ങളിലുമുള്ള പഠിതാക്കളുടെ റിസൽട്ട് പബ്ലിഷ് ചെയ്തിട്ടുണ്ട്. പഠിതാക്കളുടെ രജിസ്റ്റർ നമ്പർ അല്ലെങ്കിൽ മൊബൈൽ നമ്പർ താഴെ നൽകി, Search Result ക്ലിക്ക് ചെയ്താൽ ലഭിച്ച മാർക്കും ഗ്രേഡും കാണാം. Download Certificate click ചെയ്താൽ ഗ്രേഡ് രേഖപ്പെടുത്തിയ സർട്ടിഫിക്കറ്റ് pdf ഫയൽ ആയി ലഭിക്കുന്നതാണ്. </h4>
@@ -278,6 +311,7 @@ const Results = (props) => {
         )}
         <div>{renderGradeTable()}</div>
       </div>
+      )}
           </ElementContainer>
         </div>
       </main>
