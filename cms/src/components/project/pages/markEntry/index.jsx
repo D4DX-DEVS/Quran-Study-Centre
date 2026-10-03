@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Button, ElementContainer, TextBox } from "../../../core/elements";
@@ -7,6 +7,7 @@ import styled from "styled-components";
 import { getData, postData } from "../../../../backend/api"; // Assuming you have a postData function for posting data
 import ListTable from "../../../core/list/list";
 import { useToast } from "../../../core/toast";
+import { useDistrictResultsDownload } from "../examScore/districtResults";
 //src/components/styles/page/index.js
 //if you want to write custom style wirte in above file
 
@@ -428,6 +429,14 @@ const MarkEntry = (props) => {
     });
   };
 
+  // District-wise bulk result download (District / Area / Exam Centre /
+  // Private + Regular) for this page's district: the District Admin's own, or
+  // the District picked in the filter.
+  const currentFilterRef = useRef({});
+  const districtResults = useDistrictResultsDownload({
+    getDistrictId: () => adminDistrictId || currentFilterRef.current?.district,
+  });
+
   const additionalButtons = isDistrictAdmin
     ? []
     : [
@@ -552,11 +561,16 @@ const MarkEntry = (props) => {
         attributes={attributes}
         {...props}
         additionalButtons={additionalButtons}
+        toolbarButtons={[districtResults.toolbarButton]}
+        onFilterChange={(filter) => {
+          currentFilterRef.current = filter;
+        }}
         addPrivilege={false}
         delPrivilege={true}
         printPrivilege={false}
         preFilter={isDistrictAdmin && adminDistrictId ? { district: adminDistrictId } : {}}
       ></ListTable>
+      {districtResults.dialog}
     </ElementContainer>
   );
 };

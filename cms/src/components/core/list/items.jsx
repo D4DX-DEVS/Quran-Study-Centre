@@ -124,6 +124,9 @@ const ListItems = React.memo(
     popupMenu = "horizontal",
     bulkUplaod = false,
     additionalButtons = [],
+    // Extra buttons shown in the left toolbar, after the Filter / reload /
+    // search / export icons: [{ label, icon, onClick, title, disabled }]
+    toolbarButtons = [],
     submitButtonText = "Submit",
     updateButtonText = "Update",
     parents = {},
@@ -1853,6 +1856,24 @@ const ListItems = React.memo(
                   <GetIcon icon={"print"} />
                 </Filter>
               )}
+              {toolbarButtons.map((btn) => (
+                <Filter
+                  key={btn.label}
+                  theme={themeColors}
+                  title={btn.title || btn.label}
+                  disabled={btn.disabled}
+                  style={btn.disabled ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    btn.onClick();
+                  }}
+                >
+                  <div className="flex items-center gap-2  justify-end">
+                    <GetIcon icon={btn.icon} />
+                    <span className="text-sm">{btn.label}</span>
+                  </div>
+                </Filter>
+              ))}
               {filterElements?.left?.length > 0 && (
                 <React.Fragment>
                   {filterElements?.left?.map((item, index) => (

@@ -89,9 +89,10 @@ exports.getExamScore = async (req, res) => {
     }
 
     // Add the district condition if req.user.districts exists
+    let districtStudentIds = null;
     if (userDistrictId) {
       // Find student IDs within the specific district
-      const districtStudentIds = await examRegistration.find({ district: userDistrictId }).distinct("_id");
+      districtStudentIds = await examRegistration.find({ district: userDistrictId }).distinct("_id");
 
       // Enforce district scoping on student
       if (query.$or) {
@@ -227,6 +228,13 @@ exports.getExamScore = async (req, res) => {
       }
     }
     if (query.studentStatus) delete query.studentStatus;
+
+    // Re-apply the district admin's scope last: the district/area filters above
+    // assign query.student directly, which would otherwise replace it and expose
+    // another district's results.
+    if (districtStudentIds) {
+      query = { $and: [query, { student: { $in: districtStudentIds } }] };
+    }
 
     // Execute the queries
     const [totalCount, filterCount, data] = await Promise.all([
