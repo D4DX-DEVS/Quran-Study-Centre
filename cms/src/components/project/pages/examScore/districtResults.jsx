@@ -11,7 +11,7 @@ import { loadMalayalamFont, registerMalayalamFont, drawGroupPdfPage, hasMalayala
 // "All Exam Centre's Results" — result PDFs for every exam centre of a
 // district, in one ZIP:
 //
-//   District/ Area/ Exam Centre/ Private Result.pdf + Regular Result.pdf
+//   District/ Area/ Exam Centre/ <Centre> - Private Result.pdf + <Centre> - Regular Result.pdf
 //
 // Each PDF has one section per exam (Preliminary I, II, …), drawn exactly like
 // the Results page's per-centre PDF export. Results come from the same
@@ -141,7 +141,7 @@ const buildDistrictResultsZip = async (district, onProgress) => {
             if (i > 0) doc.addPage();
             drawGroupPdfPage(doc, sec.rows, sec.title, scope, geo, font);
           });
-          files.push({ name: `${status} Result.pdf`, buffer: doc.output("arraybuffer") });
+          files.push({ name: `${safeZipName(centre.value)} - ${status} Result.pdf`, buffer: doc.output("arraybuffer") });
         }
 
         const centreFolder = areaFolder.folder(uniqueName(safeZipName(centre.value), centreNames));
@@ -187,7 +187,8 @@ export const useDistrictResultsDownload = ({ getDistrictId }) => {
   const [job, setJob] = useState({ status: "idle" });
   const running = job.status === "running";
 
-  const zipName = (name, suffix = "") => `${safeZipName(name)}${suffix}.zip`;
+  // e.g. "KOZHIKKODE ALL CENTRE'S.zip"
+  const zipName = (name, suffix = "") => `${safeZipName(name).toUpperCase()} ALL CENTRE'S${suffix}.zip`;
 
   const start = async () => {
     if (running) return;
