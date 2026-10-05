@@ -27,11 +27,38 @@
   --landing-blue: #1d4ed8;
   --landing-teal: #1e3a8a;
   --landing-footer: #0a2a6b;
-  --landing-shadow: 0 24px 80px rgba(13, 32, 58, 0.12);
+  --landing-shadow: 0 8px 30px rgba(13, 32, 58, 0.08);
+
+  /* Shared layout scale for every public page — keep pages in step. */
+  --landing-shell-max: 1200px;
+  --landing-gutter: 32px;
+  --landing-section-gap: 32px;
+  --landing-page-pad-top: 32px;
+  --landing-page-pad-bottom: 48px;
+  --landing-grid-gap: 16px;
+  --landing-card-radius: 18px;
+  --landing-card-radius-sm: 14px;
+  --landing-card-pad: 24px 28px;
+  --landing-card-shadow: 0 6px 24px rgba(26, 73, 147, 0.08);
+  --landing-card-shadow-hover: 0 12px 32px rgba(26, 73, 147, 0.14);
+  --landing-h1: clamp(1.5rem, 2.6vw, 2rem);
+  --landing-h2: clamp(1.25rem, 2vw, 1.6rem);
+  --landing-body: 15px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --landing-section-gap: 22px;
+    --landing-page-pad-top: 20px;
+    --landing-page-pad-bottom: 32px;
+    --landing-grid-gap: 12px;
+    --landing-card-radius: 16px;
+    --landing-card-pad: 18px 16px;
+  }
 }
 
 .landing-page-shell {
-  width: min(1280px, calc(100% - 32px));
+  width: min(var(--landing-shell-max), calc(100% - var(--landing-gutter)));
   margin: 0 auto;
 }
 
@@ -48,7 +75,7 @@
 }
 
 .landing-header-shell {
-  width: min(1280px, calc(100% - 32px));
+  width: min(var(--landing-shell-max), calc(100% - var(--landing-gutter)));
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -141,6 +168,17 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Header action buttons (Hall Ticket, Login, …) share one exact size. */
+.landing-header-actions .landing-header-btn {
+  box-sizing: border-box;
+  height: 46px;
+  min-width: 136px;
+  padding: 0 24px;
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .landing-header-btn,
@@ -294,9 +332,23 @@
 
 .landing-hamburger {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
   cursor: pointer;
   color: var(--landing-ink);
   font-size: 28px;
+}
+
+.landing-hamburger:focus-visible {
+  outline: 3px solid rgba(29, 78, 216, 0.4);
+  outline-offset: 2px;
 }
 
 .landing-mobile-nav {
@@ -353,32 +405,179 @@
   padding: 24px 0;
 }
 
-.landing-hero-loading {
-  min-height: 60vh;
-}
-
-/* ─── Welcome hero: single full-bleed image, no copy ─── */
-.landing-hero-full {
+/* ─── Welcome hero: full-bleed scene, hadith on the left, Quran on the right ─── */
+.landing-hero-shell.landing-hero-full {
+  /* Where the scene is anchored when it has to be cropped — keeps the
+     Quran + rehal (right third of the image) in frame. */
+  --hero-focus: 72% 50%;
+  --hero-cream: #f8f5f1;
+  display: flex;
+  align-items: center;
   width: 100%;
+  aspect-ratio: 2452 / 782;
+  min-height: 380px;
+  max-height: 640px;
   padding: 0;
+  overflow: hidden;
+  background: var(--hero-cream);
+  isolation: isolate;
+  border-bottom: 1px solid rgba(29, 78, 216, 0.08);
 }
 
 .landing-hero-full-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   display: block;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  height: min(50vh, 460px);
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: var(--hero-focus);
 }
 
+/* Soft light wash behind the copy + gentle depth at the edges. */
+.landing-hero-full::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+      90deg,
+      rgba(248, 245, 241, 0.5) 0%,
+      rgba(248, 245, 241, 0.32) 42%,
+      rgba(248, 245, 241, 0) 62%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(15, 39, 67, 0.06) 0%,
+      transparent 18%,
+      transparent 82%,
+      rgba(15, 39, 67, 0.1) 100%
+    );
+}
+
+.landing-hero-hadith {
+  position: relative;
+  z-index: 2;
+  width: 46%;
+  margin: 0 0 0 10.5%;
+  padding: 24px 0;
+  text-align: center;
+  color: #1e3a8a;
+}
+
+.landing-hero-hadith blockquote {
+  margin: 0;
+}
+
+.landing-hero-hadith-ar {
+  display: block;
+  width: min(92%, 720px);
+  height: auto;
+  margin: 0 auto 1.1em;
+  filter: drop-shadow(0 2px 14px rgba(255, 255, 255, 0.85));
+}
+
+.landing-hero-hadith-ml {
+  margin: 0;
+  font-family: "Noto Sans Malayalam", sans-serif;
+  font-size: clamp(1.05rem, 1.55vw, 1.8rem);
+  font-weight: 700;
+  line-height: 1.6;
+  color: #1a347f;
+  text-wrap: balance;
+}
+
+.landing-hero-hadith-ml span {
+  display: block;
+}
+
+.landing-hero-hadith-source {
+  margin-top: 0.9em;
+  font-family: "Noto Sans Malayalam", sans-serif;
+  font-size: clamp(0.8rem, 0.95vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #3b4f7a;
+}
+
+/* Tablet: same composition, scene shifted right, copy given more room. */
+@media (max-width: 1024px) {
+  .landing-hero-shell.landing-hero-full {
+    --hero-focus: 82% 50%;
+    min-height: 360px;
+  }
+
+  .landing-hero-full::after {
+    background: linear-gradient(
+      90deg,
+      rgba(248, 245, 241, 0.82) 0%,
+      rgba(248, 245, 241, 0.6) 46%,
+      rgba(248, 245, 241, 0) 66%
+    );
+  }
+
+  .landing-hero-hadith {
+    width: 54%;
+    margin-left: 2%;
+  }
+
+  .landing-hero-hadith-ar {
+    width: min(94%, 460px);
+  }
+
+  .landing-hero-hadith-ml {
+    font-size: clamp(0.95rem, 1.9vw, 1.15rem);
+  }
+}
+
+@media (max-width: 820px) {
+  .landing-hero-shell.landing-hero-full {
+    --hero-focus: 96% 50%;
+  }
+}
+
+/* Mobile: copy on top, Quran scene underneath — not a squeezed desktop crop. */
 @media (max-width: 640px) {
+  .landing-hero-shell.landing-hero-full {
+    --hero-focus: 86% 62%;
+    flex-direction: column;
+    align-items: stretch;
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
+    background: linear-gradient(180deg, #fbf9f6 0%, var(--hero-cream) 100%);
+  }
+
+  .landing-hero-full::after {
+    display: none;
+  }
+
+  .landing-hero-hadith {
+    order: 1;
+    width: auto;
+    margin: 0;
+    padding: 28px 20px 4px;
+  }
+
+  .landing-hero-hadith-ar {
+    width: min(100%, 360px);
+    margin-bottom: 0.9em;
+  }
+
+  .landing-hero-hadith-ml {
+    font-size: clamp(0.98rem, 4.4vw, 1.15rem);
+  }
+
   .landing-hero-full-img {
-    /* the image has text baked in — cover crops it off narrow screens,
-       so show it uncropped at its natural aspect ratio instead */
-    height: auto;
-    max-height: 70vh;
-    object-fit: contain;
-    background: var(--landing-cream);
+    order: 2;
+    position: relative;
+    inset: auto;
+    height: clamp(200px, 62vw, 300px);
+    /* fade the top of the scene into the copy area */
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 28%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 28%);
   }
 }
 
@@ -433,21 +632,22 @@
 
 .landing-hero-title {
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: 30px;
+  font-size: var(--landing-h2);
+  line-height: 1.35;
 }
 
 .landing-section-title {
-  font-size: 45px;
-  line-height: 1.1;
+  font-size: var(--landing-h2);
+  line-height: 1.25;
 }
 
 .landing-hero-description {
   margin: 0;
   color: #444444;
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: clamp(0.95rem, 2.6vw, 1.0625rem);
+  font-size: var(--landing-body);
   font-weight: 400;
-  line-height: 1.65;
+  line-height: 1.7;
   overflow-wrap: anywhere;
   text-align: left;
   white-space: pre-line;
@@ -482,12 +682,12 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 16px;
-  padding: 0 0 32px;
+  gap: 12px;
+  padding: 0 0 8px;
   border-radius: 0;
   /* full-bleed: cancel the centered shell margins on both sides */
-  margin-left: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
-  margin-right: calc((min(1280px, 100vw - 32px) - 100vw) / 2);
+  margin-left: calc((min(var(--landing-shell-max), 100vw - var(--landing-gutter)) - 100vw) / 2);
+  margin-right: calc((min(var(--landing-shell-max), 100vw - var(--landing-gutter)) - 100vw) / 2);
   background: transparent;
   box-shadow: none;
 }
@@ -676,16 +876,16 @@
 }
 
 .landing-section {
-  padding: 34px 0 0;
+  padding: var(--landing-section-gap) 0 0;
 }
 
 .landing-section-tight {
-  padding-bottom: 56px;
+  padding-bottom: 28px;
 }
 
 .landing-footer-shell {
-  margin-top: 24px;
-  padding: 36px 0 24px;
+  margin-top: 0;
+  padding: 32px 0 20px;
   background: var(--landing-footer);
 }
 
@@ -732,13 +932,17 @@
 .landing-footer-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .landing-footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
   text-decoration: none;
   font-family: "Manrope", sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -825,14 +1029,14 @@
 }
 
 .help-content {
-  padding: 28px;
+  padding: 24px 28px;
 }
 
 .help-content h3 {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   color: var(--landing-ink);
   font-family: "Fraunces", serif;
-  font-size: 32px;
+  font-size: var(--landing-h1);
 }
 
 .help-content p {
@@ -855,7 +1059,7 @@
   }
 
   .landing-hamburger {
-    display: block;
+    display: inline-flex;
   }
 
   .landing-header-actions .landing-header-btn {
@@ -878,9 +1082,6 @@
 }
 
 @media (max-width: 640px) {
-  .landing-page-shell {
-    width: min(100%, calc(100% - 20px));
-  }
 
   .landing-brand img {
     width: 53px;
@@ -906,8 +1107,8 @@
   }
 
   .landing-video-logo {
-    width: 52px;
-    height: 52px;
+    width: 40px;
+    height: 40px;
   }
 
   .landing-video-head .landing-chip-button {
@@ -918,9 +1119,6 @@
     padding: 12px 0;
   }
 
-  .landing-section {
-    padding-top: 24px;
-  }
 
   .landing-hero-actions {
     flex-direction: column;
@@ -939,41 +1137,37 @@
     top: 86px;
   }
 
-  .landing-intro-card {
-    padding: 28px 20px;
-    border-radius: 20px;
-  }
 
 }
 
 /* ─── Hero highlights: eyebrow + story card + stat numbers ─── */
 .landing-highlights-shell .landing-eyebrow {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .landing-highlights-grid {
   display: grid;
   /* TEMP: story card full width (was: minmax(0, 3fr) minmax(240px, 1fr)) */
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: var(--landing-grid-gap);
   align-items: stretch;
 }
 
 .landing-story-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
   background: var(--landing-surface-strong);
-  border-radius: 28px;
-  box-shadow: var(--landing-shadow);
-  padding: 32px 36px;
+  border-radius: var(--landing-card-radius);
+  box-shadow: var(--landing-card-shadow);
+  padding: var(--landing-card-pad);
 }
 
 .landing-story-card-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 240px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 200px);
+  gap: 20px;
   align-items: center;
 }
 
@@ -984,12 +1178,12 @@
 .landing-story-card-copy {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
 .landing-story-card-visual {
-  border-radius: 20px;
+  border-radius: var(--landing-card-radius-sm);
   overflow: hidden;
 }
 
@@ -1026,31 +1220,31 @@
 }
 
 .landing-story-card .landing-section-title {
-  font-size: clamp(1.5rem, 2.6vw, 2rem);
-  line-height: 1.3;
+  font-size: var(--landing-h2);
+  line-height: 1.35;
 }
 
 .landing-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--landing-grid-gap);
 }
 
 .landing-stat-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   justify-content: center;
-  border-radius: 20px;
+  border-radius: var(--landing-card-radius-sm);
   background: var(--landing-surface-strong);
-  box-shadow: var(--landing-shadow);
-  padding: 20px;
+  box-shadow: var(--landing-card-shadow);
+  padding: 16px;
   text-align: center;
 }
 
 .landing-stat-value {
   font-family: "Fraunces", serif;
-  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
   font-weight: 600;
   color: var(--landing-blue);
 }
@@ -1069,39 +1263,30 @@
 }
 
 @media (max-width: 640px) {
-  .landing-story-card {
-    padding: 24px 20px;
-  }
-
-  .landing-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
   .landing-stat-card {
-    padding: 14px;
+    padding: 12px;
   }
 }
 
 /* ─── QSC intro section (heading + copy + Read More, logo mark right) ─── */
 .landing-intro-card {
   background: var(--landing-surface-strong);
-  border-radius: 28px;
-  box-shadow: var(--landing-shadow);
-  padding: 40px 44px;
+  border-radius: var(--landing-card-radius);
+  box-shadow: var(--landing-card-shadow);
+  padding: var(--landing-card-pad);
 }
 
 .landing-intro-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  gap: 28px;
   align-items: center;
 }
 
 .landing-intro-copy {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .landing-intro-mark {
@@ -1110,9 +1295,9 @@
   justify-content: center;
   aspect-ratio: 1;
   width: 100%;
-  max-width: 300px;
+  max-width: 220px;
   margin: 0 auto;
-  border-radius: 28px;
+  border-radius: var(--landing-card-radius);
   background: #dce9fb;
   box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.08);
 }
@@ -1127,17 +1312,17 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 28px;
+  border-radius: var(--landing-card-radius);
 }
 
 /* ─── App promo banner: ready-made Thafheem creative ─── */
 .landing-app-banner {
   display: block;
-  margin-bottom: 28px;
-  border-radius: 24px;
+  margin-bottom: 18px;
+  border-radius: var(--landing-card-radius);
   overflow: hidden;
   line-height: 0;
-  box-shadow: 0 18px 40px rgba(15, 39, 67, 0.14);
+  box-shadow: var(--landing-card-shadow);
   transition: transform 0.2s ease;
 }
 
@@ -1157,13 +1342,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .landing-video-head h2 {
   margin: 0;
-  font-size: 28px;
-  line-height: 1.15;
+  font-size: var(--landing-h2);
+  line-height: 1.2;
 }
 
 .landing-video-title-group {
@@ -1173,8 +1358,8 @@
 }
 
 .landing-video-logo {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   border-radius: 8px;
 }
@@ -1182,7 +1367,11 @@
 .landing-video-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 20px var(--landing-grid-gap);
+}
+
+.landing-video-item {
+  min-width: 0;
 }
 
 .landing-video-card {
@@ -1192,24 +1381,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
-  background: linear-gradient(160deg, #1c2733, #101822);
+  border-radius: var(--landing-card-radius-sm);
+  background: #0f1b2d;
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(15, 39, 67, 0.16);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-button.landing-video-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 32px rgba(15, 39, 67, 0.22);
-}
-
-.landing-video-card img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  box-shadow: 0 6px 18px rgba(15, 39, 67, 0.14);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 button.landing-video-card {
@@ -1217,6 +1393,66 @@ button.landing-video-card {
   padding: 0;
   cursor: pointer;
   font: inherit;
+}
+
+/* Thumbnail fills the 16:9 frame (feed thumbnails are 4:3 with bars). */
+.landing-video-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+/* Dark wash — faint at rest so titles in the art stay readable,
+   deeper on hover so the play button stands out. */
+button.landing-video-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 18, 36, 0) 40%, rgba(8, 18, 36, 0.35) 100%);
+  transition: background-color 0.25s ease;
+}
+
+.landing-video-play {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding-left: 3px; /* optically centre the triangle */
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1e3a8a;
+  box-shadow: 0 6px 18px rgba(8, 18, 36, 0.3);
+  transition: transform 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Hover: slight lift + scale, darker wash, play button grows and turns brand blue. */
+button.landing-video-card:hover,
+button.landing-video-card:focus-visible {
+  transform: scale(1.02);
+  box-shadow: 0 14px 30px rgba(15, 39, 67, 0.22);
+}
+
+button.landing-video-card:hover::after,
+button.landing-video-card:focus-visible::after {
+  background-color: rgba(8, 18, 36, 0.28);
+}
+
+button.landing-video-card:hover .landing-video-play,
+button.landing-video-card:focus-visible .landing-video-play {
+  transform: scale(1.1);
+  background: var(--landing-blue);
+  color: #ffffff;
+}
+
+button.landing-video-card:focus-visible {
+  outline: 3px solid rgba(29, 78, 216, 0.5);
+  outline-offset: 3px;
 }
 
 .landing-video-card-playing {
@@ -1233,9 +1469,10 @@ button.landing-video-card {
 }
 
 .landing-video-title {
-  margin: 12px 2px 0;
-  font-size: 15px;
-  font-weight: 600;
+  margin: 10px 2px 0;
+  font-family: "Manrope", "Noto Sans Malayalam", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.4;
   color: #1a2733;
   display: -webkit-box;
@@ -1245,15 +1482,103 @@ button.landing-video-card {
   overflow: hidden;
 }
 
-.landing-video-play {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(15, 39, 67, 0.55);
-  color: #ffffff;
+.landing-video-date {
+  display: block;
+  margin: 4px 2px 0;
+  font-family: "Manrope", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--landing-muted);
+}
+
+.landing-video-error {
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--landing-card-radius-sm);
+  background: #ffffff;
+  box-shadow: var(--landing-card-shadow);
+  text-align: center;
+  font-family: "Manrope", sans-serif;
+  font-size: 14px;
+  color: var(--landing-muted);
+}
+
+.landing-video-error a,
+.videos-page-empty a {
+  color: var(--landing-blue);
+  font-weight: 700;
+}
+
+/* Loading skeleton — same footprint as a real card, so nothing jumps. */
+.landing-video-skeleton .landing-video-card,
+.landing-video-skeleton-line {
+  background: linear-gradient(90deg, #e3eaf5 0%, #f1f5fb 50%, #e3eaf5 100%);
+  background-size: 200% 100%;
+  animation: landing-shimmer 1.4s ease-in-out infinite;
+  box-shadow: none;
+}
+
+.landing-video-skeleton-line {
+  display: block;
+  height: 12px;
+  margin: 12px 2px 0;
+  border-radius: 6px;
+}
+
+.landing-video-skeleton-line.short {
+  width: 45%;
+  margin-top: 8px;
+}
+
+@keyframes landing-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Pop-in: cards fade in from 95% scale as their grid scrolls into view
+   (see usePopIn). Transform + opacity only, so nothing around them shifts.
+   Skeletons are excluded — only real videos "pop" into place. */
+@keyframes landing-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.landing-pop-grid[data-pop="pending"] > :not(.landing-video-skeleton) {
+  opacity: 0;
+}
+
+.landing-pop-grid[data-pop="in"] > :not(.landing-video-skeleton) {
+  animation: landing-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(min(var(--pop-i, 0), 8) * 90ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-pop-grid[data-pop] > * {
+    opacity: 1;
+    animation: none;
+  }
+
+  .landing-video-skeleton .landing-video-card,
+  .landing-video-skeleton-line {
+    animation: none;
+  }
+
+  button.landing-video-card:hover,
+  button.landing-video-card:focus-visible,
+  button.landing-video-card:hover .landing-video-play,
+  button.landing-video-card:focus-visible .landing-video-play {
+    transform: none;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1265,17 +1590,7 @@ button.landing-video-card {
 @media (max-width: 560px) {
   .landing-video-grid {
     grid-template-columns: 1fr;
-  }
-
-  .landing-video-card {
-    width: 80%;
-    margin: 0 auto;
-  }
-
-  .landing-video-title {
-    width: 80%;
-    margin-left: auto;
-    margin-right: auto;
+    gap: 18px;
   }
 }
 
@@ -1290,8 +1605,8 @@ button.landing-video-card {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
@@ -1404,8 +1719,8 @@ button.landing-video-card {
   /* 4 — Typography: headings 22px, body copy 14px */
   .landing-hero-title,
   .landing-section-title {
-    font-size: 22px;
-    line-height: 1.3;
+    font-size: 20px;
+    line-height: 1.35;
   }
 
   .landing-video-head h2 {
@@ -1438,41 +1753,44 @@ button.landing-video-card {
 
   .landing-thafheem-actions {
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: stretch;
-    gap: 6px;
+    gap: 8px;
   }
 
   .landing-store-badge {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 1 140px;
+    max-width: 200px;
+    min-height: 48px;
     width: auto;
-    padding: 7px 8px;
-    gap: 6px;
+    padding: 7px 12px;
+    gap: 8px;
     justify-content: center;
   }
 
-  .landing-store-badge-text {
-    min-width: 0;
-  }
-
   .landing-store-badge-eyebrow {
-    font-size: 8px;
+    font-size: 10px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .landing-store-badge-title {
-    font-size: 12px;
+    font-size: 14px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .landing-store-badge-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .landing-thafheem-copy {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  .landing-footer-link {
+    min-height: 40px;
   }
 
   /* 6 — Videos: heading aligned with the grid, arrow-only "More Videos" */
