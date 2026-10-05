@@ -8,13 +8,13 @@ import Footer from "../footer/footer";
 
 const AboutSection = styled.section`
   margin: 0 auto;
-  padding: 48px 20px 40px;
+  padding: var(--landing-page-pad-top) 0 var(--landing-page-pad-bottom);
 `;
 
 const Card = styled.div`
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(26, 73, 147, 0.08);
+  border-radius: var(--landing-card-radius);
+  box-shadow: var(--landing-card-shadow);
   overflow: hidden;
   text-align: center;
 `;
@@ -35,37 +35,37 @@ const ImageFrame = styled.div`
 `;
 
 const CardBody = styled.div`
-  padding: 32px 32px 40px;
+  padding: 28px 32px 32px;
 
   @media only screen and (max-width: 768px) {
-    padding: 24px 20px 32px;
+    padding: 20px 18px 24px;
   }
 `;
 
 const Title = styled.h1`
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  font-size: var(--landing-h1);
   color: #1a4993;
   font-weight: 700;
   letter-spacing: -0.02em;
   text-align: center;
-  margin: 0 0 16px;
+  margin: 0 0 14px;
 
   &::after {
     content: "";
     display: block;
-    width: 64px;
-    height: 4px;
+    width: 56px;
+    height: 3px;
     background: linear-gradient(90deg, #1a4993, #4f8fe8);
-    margin: 14px auto 0;
+    margin: 10px auto 0;
     border-radius: 4px;
   }
 `;
 
 const Description = styled.div`
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: var(--landing-body);
+  line-height: 1.7;
   color: #444444;
   text-align: justify;
   text-justify: inter-word;

@@ -8,19 +8,25 @@ import Footer from "../footer/footer";
 const CDN = import.meta.env.VITE_APP_CDN || "";
 
 const HeroSection = styled.section`
-  padding: 40px 20px 48px;
+  padding: 28px 32px 30px;
   background: linear-gradient(135deg, rgba(29, 78, 216, 0.08), rgba(59, 111, 240, 0.04));
-  border-radius: 28px;
-  margin: 0 auto 48px;
+  border-radius: var(--landing-card-radius);
+  margin: var(--landing-page-pad-top) auto 32px;
+
+  @media (max-width: 640px) {
+    padding: 20px 18px 22px;
+  }
 `;
 
 const Breadcrumb = styled.div`
   font-family: "Manrope", sans-serif;
   font-size: 13px;
   color: #5b6b85;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 
   a {
+    display: inline-block;
+    padding: 8px 0;
     color: #5b6b85;
     text-decoration: none;
   }
@@ -37,15 +43,15 @@ const Eyebrow = styled.span`
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #1d4ed8;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 `;
 
 const HeroTitle = styled.h1`
   font-family: "Fraunces", serif;
-  font-size: clamp(2rem, 4vw, 2.9rem);
+  font-size: var(--landing-h1);
   font-weight: 700;
   color: #0f2743;
-  margin: 0 0 14px;
+  margin: 0 0 10px;
 `;
 
 const HeroDescription = styled.p`
@@ -58,12 +64,12 @@ const HeroDescription = styled.p`
 `;
 
 const SectionWrap = styled.section`
-  margin: 0 auto 56px;
+  margin: 0 auto 36px;
 `;
 
 const SectionHead = styled.div`
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 `;
 
 const SectionEyebrow = styled.span`
@@ -74,12 +80,12 @@ const SectionEyebrow = styled.span`
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #1d4ed8;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 `;
 
 const SectionTitle = styled.h2`
   font-family: "Fraunces", serif;
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: var(--landing-h2);
   font-weight: 700;
   color: #0f2743;
   margin: 0;
@@ -90,7 +96,7 @@ const SectionTitle = styled.h2`
     width: 56px;
     height: 3px;
     background: linear-gradient(90deg, #1d4ed8, #3b6ff0);
-    margin: 14px auto 0;
+    margin: 10px auto 0;
     border-radius: 4px;
   }
 `;
@@ -98,7 +104,7 @@ const SectionTitle = styled.h2`
 const StateGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  gap: var(--landing-grid-gap);
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -107,23 +113,23 @@ const StateGrid = styled.div`
 
 const StateCard = styled.div`
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(26, 73, 147, 0.08);
-  padding: 32px 24px;
+  border-radius: var(--landing-card-radius);
+  box-shadow: var(--landing-card-shadow);
+  padding: 24px 20px;
   text-align: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 36px rgba(26, 73, 147, 0.16);
+    transform: translateY(-2px);
+    box-shadow: var(--landing-card-shadow-hover);
   }
 `;
 
 const StatePhoto = styled.div`
-  width: 96px;
-  height: 96px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  margin: 0 auto 18px;
+  margin: 0 auto 14px;
   overflow: hidden;
   background: #eef3fc;
   display: flex;
@@ -155,7 +161,7 @@ const StatePosition = styled.div`
 const CoordGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
 
   @media (max-width: 1100px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -170,9 +176,9 @@ const CoordGrid = styled.div`
 
 const CoordCard = styled.div`
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: var(--landing-card-radius-sm);
   overflow: hidden;
-  box-shadow: 0 4px 18px rgba(26, 73, 147, 0.08);
+  box-shadow: var(--landing-card-shadow);
 `;
 
 const CoordHeader = styled.div`
@@ -185,10 +191,10 @@ const CoordHeader = styled.div`
 `;
 
 const CoordBody = styled.div`
-  padding: 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 `;
 
 const CoordRow = styled.div`
@@ -208,12 +214,12 @@ const CoordRow = styled.div`
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 32px;
+  padding: 22px;
   color: #6b7d9e;
   font-family: "Manrope", sans-serif;
   font-size: 14px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: var(--landing-card-radius-sm);
   border: 1px dashed #d4ddeb;
 `;
 

@@ -124,9 +124,6 @@ const ListItems = React.memo(
     popupMenu = "horizontal",
     bulkUplaod = false,
     additionalButtons = [],
-    // Extra buttons shown in the left toolbar, after the Filter / reload /
-    // search / export icons: [{ label, icon, onClick, title, disabled }]
-    toolbarButtons = [],
     submitButtonText = "Submit",
     updateButtonText = "Update",
     parents = {},
@@ -1787,13 +1784,16 @@ const ListItems = React.memo(
       )
     ) : viewMode === "list" || viewMode === "subList" || viewMode === "table" || viewMode === "files" || viewMode === "gallery" ? (
         <RowContainer theme={themeColors} className={"data-layout " + viewMode + " " + surfaceThemeClass + (fullScreen ? " !fixed top-0 left-0 right-0 bottom-0 z-50 bg-white transition-all duration-300" : " transition-all duration-300")}>
-        {showTitle && <PageHeader dynamicClass={headerStyle} title={shortName} line={false} description={generateDescription()}></PageHeader>}
+        {showTitle && <PageHeader dynamicClass={`page-title ${headerStyle ?? ""}`} title={shortName} line={false} description={generateDescription()}></PageHeader>}
         <ButtonPanel className={viewMode + " " + toolbarThemeClass + " " + (scrolled ? "scrolled" : "")} theme={themeColors}>
           <div className="flex flex-wrap gap-2 justify-between w-full overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
             <div className="flex left gap-2 min-w-max">
               {filterElements?.openbox?.length > 0 && (
                 <Filter
-                  className={"filter-button" + (showFilterStatus ? "active" : "")}
+                  type="button"
+                  className={"filter-button" + (showFilterStatus ? " active" : "")}
+                  aria-expanded={showFilterStatus}
+                  title={showFilterStatus ? "Hide filters" : "Show filters"}
                   theme={themeColors}
                   onClick={() => {
                     setShowFilterStatus(!showFilterStatus);
@@ -1806,6 +1806,9 @@ const ListItems = React.memo(
                 </Filter>
               )}
               <Filter
+                type="button"
+                aria-label="Refresh list"
+                title="Refresh list"
                 theme={themeColors}
                 onClick={() => {
                   refreshView(currentIndex);
@@ -1818,6 +1821,9 @@ const ListItems = React.memo(
 
               {exportPrivilege && (
                 <Filter
+                  type="button"
+                  aria-label="Export to Excel"
+                  title="Export to Excel"
                   theme={themeColors}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1838,6 +1844,9 @@ const ListItems = React.memo(
               )}
               {printPrivilege && (
                 <Filter
+                  type="button"
+                  aria-label="Print"
+                  title="Print"
                   theme={themeColors}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1856,24 +1865,6 @@ const ListItems = React.memo(
                   <GetIcon icon={"print"} />
                 </Filter>
               )}
-              {toolbarButtons.map((btn) => (
-                <Filter
-                  key={btn.label}
-                  theme={themeColors}
-                  title={btn.title || btn.label}
-                  disabled={btn.disabled}
-                  style={btn.disabled ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    btn.onClick();
-                  }}
-                >
-                  <div className="flex items-center gap-2  justify-end">
-                    <GetIcon icon={btn.icon} />
-                    <span className="text-sm">{btn.label}</span>
-                  </div>
-                </Filter>
-              ))}
               {filterElements?.left?.length > 0 && (
                 <React.Fragment>
                   {filterElements?.left?.map((item, index) => (
@@ -1895,7 +1886,7 @@ const ListItems = React.memo(
                   {/* Desktop View */}
                   <div className="hidden sm:flex gap-2">
                     {additionalButtons.map((btn) => (
-                      <AddButton theme={themeColors} onClick={() => btn.onClick(referenceId)}>
+                      <AddButton key={btn.label} theme={themeColors} title={btn.label} onClick={() => btn.onClick(referenceId)}>
                         <GetIcon icon={btn.icon} />
                         <span>{btn.label}</span>
                       </AddButton>
@@ -1927,7 +1918,7 @@ const ListItems = React.memo(
                   {additionalButtons.length > 0 && (
                     <div className="flex sm:hidden gap-2">
                       {additionalButtons.map((btn) => (
-                        <AddButton key={btn.label} theme={themeColors} onClick={() => btn.onClick(referenceId)}>
+                        <AddButton key={btn.label} theme={themeColors} aria-label={btn.label} title={btn.label} onClick={() => btn.onClick(referenceId)}>
                           <GetIcon icon={btn.icon} />
                           <span>{btn.label}</span>
                         </AddButton>
@@ -2051,16 +2042,25 @@ const ListItems = React.memo(
             currentIndex={currentIndex}
           ></Pagination>
         )}
+        {/* Room below the list on phones so the floating action button never covers the last rows. */}
+        {count > 0 && (additionalButtons.length > 0 || addPrivilege || bulkUplaod) && <div className="h-20 sm:hidden" aria-hidden="true" />}
         {count > 0 && (additionalButtons.length > 0 || addPrivilege || bulkUplaod) && (
           <div ref={mobileMenuRef} className={`fixed bottom-[70px] right-4 sm:hidden z-50 ${mobileActionsThemeClass}`}>
             {/* If only add button is available, directly trigger add action */}
             {additionalButtons.length === 0 && addPrivilege && !bulkUplaod ? (
-              <button onClick={() => isCreatingHandler(true, refreshView)} className="w-12 h-12 bg-primary-base text-white rounded-full shadow-lg flex items-center justify-center">
+              <button type="button" aria-label={`Add ${addLabel?.label ?? shortName}`} title={`Add ${addLabel?.label ?? shortName}`} onClick={() => isCreatingHandler(true, refreshView)} className="w-12 h-12 bg-primary-base text-white rounded-full shadow-lg flex items-center justify-center">
                 <Plus />
               </button>
             ) : (
               <>
-                <button onClick={() => setShowMobileActions((prev) => !prev)} className="w-12 h-12 bg-primary-base text-white rounded-full shadow-lg flex items-center justify-center">
+                <button
+                  type="button"
+                  aria-label={showMobileActions ? "Close actions" : "More actions"}
+                  aria-expanded={showMobileActions}
+                  title={showMobileActions ? "Close actions" : "More actions"}
+                  onClick={() => setShowMobileActions((prev) => !prev)}
+                  className="w-12 h-12 bg-primary-base text-white rounded-full shadow-lg flex items-center justify-center"
+                >
                   {showMobileActions ? <X /> : <Plus />}
                 </button>
 
@@ -2138,7 +2138,7 @@ const ListItems = React.memo(
             }}
           />
         ) : (
-          <CrudForm formStyle={formStyle} setMessage={setMessage} setLoaderBox={setLoaderBox} formTabTheme={formTabTheme} formLayout={formLayout} parentReference={parentReference} referenceId={referenceId} formMode={formMode} api={api} formType={"post"} header={`Add a ${shortName ? shortName : "Form"}`} button={submitButtonText} formInput={formInput} formValues={addValues} formErrors={errroInput} submitHandler={submitHandler} isOpenHandler={isCreatingHandler} isOpen={isCreating} />
+          <CrudForm formStyle={formStyle} setMessage={setMessage} setLoaderBox={setLoaderBox} formTabTheme={formTabTheme} formLayout={formLayout} parentReference={parentReference} referenceId={referenceId} formMode={formMode} api={api} formType={"post"} header={`Add ${/^[aeiou]/i.test(shortName || "") ? "an" : "a"} ${shortName ? shortName : "Form"}`} button={submitButtonText} formInput={formInput} formValues={addValues} formErrors={errroInput} submitHandler={submitHandler} isOpenHandler={isCreatingHandler} isOpen={isCreating} />
         )}
 
         {action.data && <Manage setMessage={setMessage} setLoaderBox={setLoaderBox} onClose={closeManage} {...action}></Manage>}

@@ -19,4 +19,9 @@ const ExamScoreSchema = new mongoose.Schema({
   },
 });
 
+// One result per candidate per exam. addExamScore already checks for an
+// existing mark, but that check alone lets a double-submit slip through.
+// scripts/dedupe-exam-scores.js removes existing duplicates and builds this index.
+ExamScoreSchema.index({ student: 1, exam: 1 }, { unique: true });
+
 module.exports = mongoose.model("ExamScore", ExamScoreSchema);

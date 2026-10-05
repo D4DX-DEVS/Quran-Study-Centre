@@ -7,7 +7,6 @@ import { getData } from "../../../../backend/api";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { registerMalayalamFont, malayalamCellHooks } from "./malayalamFont";
-import { useDistrictResultsDownload } from "../examScore/districtResults";
 //src/components/styles/page/index.js
 //if you want to write custom style wirte in above file
 const ExamRegistration = (props) => {
@@ -279,14 +278,6 @@ const ExamRegistration = (props) => {
       setVerifyLoading(false);
     }
   };
-
-  // District-wise bulk result download (District / Area / Exam Centre /
-  // Private + Regular) for this page's district: the District Admin's own, or
-  // the District picked in the filter.
-  const districtResults = useDistrictResultsDownload({
-    getDistrictId: () => adminDistrictId || currentFilterRef.current?.district,
-  });
-  const toolbarButtons = [districtResults.toolbarButton];
 
   const additionalButtons = [
     {
@@ -685,10 +676,8 @@ const ExamRegistration = (props) => {
         {...props}
         attributes={attributes}
         additionalButtons={additionalButtons}
-        toolbarButtons={toolbarButtons}
         addPrivilege={props.addPrivilege}
       ></ListTable>
-      {districtResults.dialog}
     </Container>
   );
 };

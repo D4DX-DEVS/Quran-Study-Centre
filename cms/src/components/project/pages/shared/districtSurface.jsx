@@ -29,9 +29,11 @@ const HeaderBar = styled.div`
 const HeaderCopy = styled.div`
   h2 {
     margin: 0;
-    color: #142749;
-    font-size: 24px;
-    line-height: 1.1;
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
   }
 
   p {

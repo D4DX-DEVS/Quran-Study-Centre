@@ -105,16 +105,21 @@ export const Nav = styled.nav`
     box-sizing: border-box;
     display: flex;
     justify-content: left;
-    align-items: flex-start;
-    padding-top: 10px;
-    transition: all 0.02s;
+    align-items: center;
+    padding: 8px 10px 8px 0;
     position: relative;
     margin: 0px;
-    border-radius: 14px;
+    border-radius: 10px;
     font-size: 14px;
-    gap: 8px;
-    transition: all 0.2s ease-in;
-    padding-right: 10px;
+    line-height: 1.3;
+    gap: 10px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  /* White ring on the dark sidebar (overrides the global blue focus ring). */
+  a.main:focus-visible,
+  a.sub:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.9) !important;
+    outline-offset: -2px !important;
   }
   && {
     .down {
@@ -128,12 +133,18 @@ export const Nav = styled.nav`
   a.open {
     cursor: unset;
   }
-  a.main.active,
   a.main:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    span {
+      color: white;
+    }
+  }
+  a.main.active {
     background: ${appTheme.primary.base};
     color: white;
     box-shadow: none;
-    font-weight: normal;
+    font-weight: 600;
     span {
       color: white;
     }
@@ -173,15 +184,22 @@ export const Nav = styled.nav`
   }
   a.main svg,
   .open svg {
-    transition: all 0.02s;
+    flex-shrink: 0;
     margin-left: 14px;
-    transition: all 0.2s ease-in;
-    color: white;
+    width: 18px;
+    height: 18px;
+    color: rgba(255, 255, 255, 0.85);
   }
   a.main.active svg,
   a.main:hover svg {
-    transform: scale(1.1);
     color: white;
+  }
+  a.main .menu-caret {
+    width: 15px;
+    height: 15px;
+  }
+  a.main.open-submenu .menu-caret {
+    transform: rotate(90deg);
   }
   @media (max-width: 768px) {
     &:not(.drawer-menu) {
@@ -205,6 +223,8 @@ export const Nav = styled.nav`
         align-items: stretch;
         gap: 4px;
         flex-shrink: 0;
+        /* Size each group to its items (the desktop rule makes it full width). */
+        width: auto;
       }
       .menu-section + .menu-section {
         margin-top: 0;
@@ -242,15 +262,22 @@ export const Nav = styled.nav`
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 5px;
+        gap: 4px;
         padding: 0 4px;
         width: 70px;
         overflow: hidden;
         height: 100%;
-        border-radius: 14px;
+        border-radius: 12px;
+        /* The bottom bar is light, unlike the dark sidebar these links are styled for. */
+        color: ${appTheme.text.sub};
         svg {
+          color: ${appTheme.text.sub};
+          width: 20px;
+          height: 20px;
+          margin: 0;
         }
         span {
+          color: inherit;
           padding: 0;
           overflow: hidden;
           font-size: 10px;
@@ -259,6 +286,25 @@ export const Nav = styled.nav`
           max-width: 95%;
           text-overflow: ellipsis;
         }
+      }
+      a.main:hover {
+        background: ${appTheme.bg.weak};
+        color: ${appTheme.text.main};
+        span,
+        svg {
+          color: ${appTheme.text.main};
+        }
+      }
+      a.main.active {
+        background: ${appTheme.primary.lightest};
+        color: ${appTheme.primary.base};
+        span,
+        svg {
+          color: ${appTheme.primary.base};
+        }
+      }
+      a.main:focus-visible {
+        outline-color: ${appTheme.primary.base} !important;
       }
       a.main.active:after {
         content: "";
@@ -295,6 +341,10 @@ export const SubMenuHead = styled.div`
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
   @media (max-width: 768px) {
+    /* Section titles don't fit the phone bottom bar; groups are already divided. */
+    &.sidebar-section-title:not(.drawer-menu) {
+      display: none;
+    }
     &:not(.drawer-menu) {
       min-height: 34px;
       padding: 0 10px;

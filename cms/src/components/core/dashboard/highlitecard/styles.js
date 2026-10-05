@@ -33,6 +33,14 @@ export const Tile = styled.div`
   background: ${appTheme.bg.white};
   display: flex;
   align-items: center;
+  min-width: 0;
+  /* Two compact tiles per row on phones: icon above the label and number. */
+  @media (max-width: 640px) {
+    padding: 14px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
 `;
 
 export const TitleBox = styled.div`
@@ -85,6 +93,7 @@ export const TileContainer = styled.div`
     grid-template-columns: repeat(2, 1fr);
   }
   @media (max-width: 640px) {
-    grid-template-columns: repeat(1, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 `;

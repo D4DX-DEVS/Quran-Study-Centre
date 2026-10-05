@@ -37,74 +37,73 @@ const Title = styled.div`
   display: flex;
   align-items: center;
   justify-content: start;
-  font-size: 16px;
-  color: #1a4993;
-  // padding: 10px;
-  margin-top: 20px;
-  width: 85%;
-  @media (max-width: 768px) {
-    width: 92%;
-    font-size: 15px;
-  }
+  font-family: "Fraunces", serif;
+  font-size: var(--landing-h2);
+  font-weight: 700;
+  color: #0f2743;
+  margin-top: var(--landing-page-pad-top);
+  width: 100%;
 `;
 
 const StyledButton = styled.button`
-  background-image: linear-gradient(#fcfcfc, #f9f9f9 50%, #e9e9e9 50%, #fcfcfc);
-  border: 1px solid #ddd;
-  color: black;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid ${({ $active }) => ($active ? "transparent" : "rgba(29, 78, 216, 0.16)")};
+  background: ${({ $active }) => ($active ? "linear-gradient(135deg, #1d4ed8, #3b6ff0)" : "#ffffff")};
+  color: ${({ $active }) => ($active ? "#ffffff" : "#0f2743")};
+  font-family: "Manrope", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.3s;
-  width: 80px;
-  cursor: pointer;
-  margin: 3px 3px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    background-image: linear-gradient(to bottom, #f5f2f2 50%, #fff 50%); /* Gradient colors on hover */
+    border-color: rgba(29, 78, 216, 0.4);
   }
 `;
 
 const ContentBox = styled.div`
   display: flex;
   flex-direction: column;
-  border: 1px solid #d3d2d2;
-  width: 85%;
-  border-radius: 3px;
-  margin: 20px 0;
-  padding-top: 30px;
-  padding-bottom: 150px;
-  @media (max-width: 768px) {
-    width: 92%;
-    padding-top: 16px;
-    padding-bottom: 40px;
-  }
+  width: 100%;
+  background: #ffffff;
+  border-radius: var(--landing-card-radius);
+  box-shadow: var(--landing-card-shadow);
+  margin: 14px 0 var(--landing-page-pad-bottom);
+  padding: 18px 0;
 `;
 
 const ListItem = styled.div`
   display: flex;
   align-items: center;
-  padding-left: 30px;
+  padding: 0 24px;
   color: #005ca3;
-  font-weight: 800;
-  transition: color 0.3s;
-  font-size: 16px;
+  font-weight: 700;
+  transition: color 0.2s;
+  font-size: 15px;
 
   &:hover {
-    color: brown;
+    color: #1d4ed8;
+  }
+
+  a {
+    display: block;
+    flex: 1;
+    min-width: 0;
   }
 
   p {
-    margin: 5px;
+    margin: 0;
+    padding: 9px 4px;
     word-break: break-word;
   }
 
   @media (max-width: 768px) {
-    padding-left: 14px;
+    padding: 0 14px;
     font-size: 14px;
   }
 `;
@@ -118,11 +117,9 @@ const TabBox = styled.div`
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: flex-start;
-  width: 85%;
-  margin-top: 10px;
-  @media (max-width: 768px) {
-    width: 92%;
-  }
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
 `;
 
 const QuestionPapersComponent = (props) => {
@@ -164,7 +161,7 @@ const QuestionPapersComponent = (props) => {
               <Title>Download Question Banks Now!</Title>
               <TabBox>
                 {tabs.map((tab, index) => (
-                  <StyledButton key={index} onClick={() => handleTabClick(index)}>
+                  <StyledButton key={index} $active={index === activeTab} onClick={() => handleTabClick(index)}>
                     {tab.year}
                   </StyledButton>
                 ))}

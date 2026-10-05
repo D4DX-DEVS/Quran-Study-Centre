@@ -35,6 +35,7 @@ const Header = (props) => {
         <button
           type="button"
           aria-label="Toggle sidebar"
+          title="Toggle sidebar"
           className="flex items-center justify-center w-9 h-9 rounded-lg border border-stroke-soft text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors mr-3 shrink-0"
           onClick={() => props.onToggleSidebar?.()}
         >
@@ -43,14 +44,29 @@ const Header = (props) => {
         <div className="flex-1" />
         <SearchMenu isMobile={props.isMobile} />
         <div className="flex items-center gap-2 pl-4 pr-4">
-          <button type="button" aria-label="Notifications" className="hidden md:flex items-center justify-center w-9 h-9 rounded-full text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors">
+          <button type="button" aria-label="Notifications" title="Notifications" className="hidden md:flex items-center justify-center w-9 h-9 rounded-full text-icon-sub hover:bg-bg-weak hover:text-icon-strong transition-colors">
             <Bell size={18} strokeWidth={2} />
           </button>
         </div>
         <HeaderMenu
           ref={profileRef}
+          role="button"
+          tabIndex={0}
+          aria-haspopup="menu"
+          aria-expanded={isProfileBarOpen}
+          aria-label="Account menu"
+          title="Account menu"
           onClick={() => {
             handleProfileClick();
+          }}
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleProfileClick();
+            } else if (event.key === "Escape") {
+              setIsProfileBarOpen(false);
+            }
           }}
         >
           <div className="flex items-center gap-2 p-2 rounded-md">

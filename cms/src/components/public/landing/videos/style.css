@@ -1,11 +1,11 @@
 .videos-page-shell {
-  padding: 48px 20px 64px;
+  padding: var(--landing-page-pad-top) 0 var(--landing-page-pad-bottom);
 }
 
 .videos-page-head {
   position: relative;
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .videos-page-all-link {
@@ -18,27 +18,28 @@
   .videos-page-all-link {
     position: static;
     display: inline-flex;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 }
 
 .videos-page-head h1 {
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  font-size: var(--landing-h1);
   color: #1a4993;
   font-weight: 700;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .videos-page-head p {
   color: #5a6472;
+  font-size: 14px;
   margin: 0;
 }
 
 .videos-page-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px 28px;
+  gap: 22px var(--landing-grid-gap);
 }
 
 @media (max-width: 980px) {
@@ -56,19 +57,6 @@
 .videos-page-empty,
 .videos-page-loading {
   text-align: center;
-  padding: 40px 0;
+  padding: 32px 0;
   color: #5a6472;
-}
-
-.videos-page-card-title {
-  margin: 12px 2px 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #1a2733;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }

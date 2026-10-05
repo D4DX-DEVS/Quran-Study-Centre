@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Globe, Play, ArrowRight } from "lucide-react";
+import { Globe, ArrowRight } from "lucide-react";
 import "./style.css";
 import { getData } from "../../../backend/api";
 import { normalizeLandingSettings } from "./defaults";
 import { thafheem } from "../../project/brand";
 import { AppleLogo, PlayStoreLogo, StoreBadge } from "./storeBadges";
-import quranHeroPhoto from "./assets/home.png.avif";
+import heroScene from "./assets/hero-scene.webp";
+import heroCalligraphy from "./assets/hero-calligraphy.svg";
+import usePopIn from "./usePopIn";
+import useLatestVideos from "./useLatestVideos";
+import { VideoCard, VideoCardSkeleton } from "./VideoCard";
 import qscLogo from "./assets/qsc-icon-mark.png";
 import aayathLogo from "./assets/aayath-logo.png";
 
@@ -44,6 +48,52 @@ const defaultContent = {
   welcomeImage: "",
 };
 
+// Welcome hero copy — the hadith that used to be baked into the banner image.
+// The Arabic is the original calligraphy traced to SVG (hero-calligraphy.svg);
+// `arabic` is its alt text. The Malayalam is live text so it reflows on phones.
+const HERO_HADITH = {
+  arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ",
+  malayalam: [
+    "നിങ്ങളിൽ ഉത്തമർ ഖുർആൻ പഠിക്കുകയും",
+    "പഠിപ്പിക്കുകയും ചെയ്യുന്നവരാണ്",
+  ],
+  source: "(നബിവചനം)",
+};
+
+function WelcomeHero() {
+  return (
+    <section className="landing-hero-shell landing-hero-full">
+      <img
+        src={heroScene}
+        alt="Open Holy Quran on a wooden rehal with prayer beads"
+        className="landing-hero-full-img"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+      <figure className="landing-hero-hadith">
+        <blockquote>
+          <img
+            src={heroCalligraphy}
+            alt={HERO_HADITH.arabic}
+            lang="ar"
+            className="landing-hero-hadith-ar"
+            loading="eager"
+          />
+          <p className="landing-hero-hadith-ml" lang="ml">
+            {HERO_HADITH.malayalam.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </p>
+        </blockquote>
+        <figcaption className="landing-hero-hadith-source" lang="ml">
+          {HERO_HADITH.source}
+        </figcaption>
+      </figure>
+    </section>
+  );
+}
+
 const resolveAssetUrl = (value) => {
   if (!value) return "";
   if (/^https?:\/\//i.test(value)) return value;
@@ -57,8 +107,9 @@ function Hero() {
   );
   const [loading, setLoading] = useState(true);
   const [introImageFailed, setIntroImageFailed] = useState(false);
-  const [videos, setVideos] = useState([]);
+  const { videos, status: videoStatus } = useLatestVideos(3);
   const [playingVideoId, setPlayingVideoId] = useState(null);
+  const [videoGridRef, videoGridPop] = usePopIn();
 
   useEffect(() => {
     let cancelled = false;
@@ -84,34 +135,24 @@ function Hero() {
       }
     };
 
-    const loadVideos = async () => {
-      const videoResponse = await getData({ limit: 3 }, "youtube-videos");
-      if (cancelled) return;
-      setVideos(videoResponse?.data?.response || []);
-    };
-
     loadLandingData();
-    loadVideos();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Don't render the hero copy (English placeholders) until the real content
-  // (Malayalam, from the DB) has arrived — otherwise the English defaults
-  // flash on screen for a moment before this effect's setContent/setLandingSettings
-  // swap them out.
+  // The welcome hero is static, so it shows immediately. The DB-driven sections
+  // below wait for the real content (Malayalam) — otherwise the English
+  // defaults flash on screen before setContent/setLandingSettings swap them out.
   if (loading) {
     return (
-      <main className="landing-home">
-        <section className="landing-page-shell landing-hero-shell landing-hero-loading" aria-busy="true" />
+      <main className="landing-home" aria-busy="true">
+        <WelcomeHero />
       </main>
     );
   }
 
-  const welcomeImage =
-    resolveAssetUrl(content.welcomeImage) || quranHeroPhoto;
   const storyImageUrl = resolveAssetUrl(content.landingStoryImage);
 
   const hasIntroSection = Boolean(
@@ -124,14 +165,8 @@ function Hero() {
 
   return (
     <main className="landing-home">
-      {/* ── Welcome hero: full-width image, no title/description ── */}
-      <section className="landing-hero-shell landing-hero-full">
-        <img
-          src={welcomeImage}
-          alt="Illuminated Holy Quran"
-          className="landing-hero-full-img"
-        />
-      </section>
+      {/* ── Welcome hero: full-width scene + hadith ── */}
+      <WelcomeHero />
 
       {/* ── Hero highlights: eyebrow + story card + stat numbers, admin-controlled ── */}
       {(landingSettings.copy.heroEyebrow ||
@@ -282,44 +317,32 @@ function Hero() {
             <ArrowRight size={18} className="landing-more-videos-arrow" />
           </a>
         </div>
-        <div className="landing-video-grid">
-          {(videos.length ? videos : [0, 1, 2]).map((video, index) =>
-            video?.videoId ? (
-              <div key={video.videoId}>
-                {playingVideoId === video.videoId ? (
-                  <div className="landing-video-card landing-video-card-playing">
-                    <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1`}
-                      title={video.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      frameBorder="0"
-                    />
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setPlayingVideoId(video.videoId)}
-                    className="landing-video-card"
-                    title={video.title}
-                  >
-                    <img src={video.thumbnail} alt={video.title} loading="lazy" />
-                    <span className="landing-video-play">
-                      <Play size={22} fill="currentColor" />
-                    </span>
-                  </button>
-                )}
-                <p className="landing-video-title">{video.title}</p>
-              </div>
-            ) : (
-              <div key={index} className="landing-video-card">
-                <span className="landing-video-play">
-                  <Play size={22} fill="currentColor" />
-                </span>
-              </div>
-            )
-          )}
+        <div
+          className="landing-video-grid landing-pop-grid"
+          ref={videoGridRef}
+          data-pop={videoGridPop}
+        >
+          {videoStatus === "ready" &&
+            videos.map((video, index) => (
+              <VideoCard
+                key={video.videoId}
+                video={video}
+                index={index}
+                playing={playingVideoId === video.videoId}
+                onPlay={() => setPlayingVideoId(video.videoId)}
+              />
+            ))}
+          {videoStatus === "loading" &&
+            [0, 1, 2].map((index) => <VideoCardSkeleton key={index} />)}
         </div>
+        {videoStatus === "error" && (
+          <p className="landing-video-error">
+            Videos couldn't load right now.{" "}
+            <a href="https://www.youtube.com/@aayathdarsequran/streams" target="_blank" rel="noopener noreferrer">
+              Watch on YouTube
+            </a>
+          </p>
+        )}
       </section>
     </main>
   );

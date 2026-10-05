@@ -11,9 +11,9 @@ function Search({ className = "", theme, placeholder, value, onChange, active = 
   return (
     <SearchInput theme={theme} className={(value.length > 0 || active ? "active " : " ") + className}>
       <GetIcon icon="search" />
-      <input onClick={(event) => event.stopPropagation()} name={"search-1"} type="text" autoComplete="off" placeholder={placeholder} value={value} onChange={onChange} />
+      <input onClick={(event) => event.stopPropagation()} name={"search-1"} type="text" aria-label={placeholder || "Search"} autoComplete="off" placeholder={placeholder} value={value} onChange={onChange} />
       {value.length > 0 && (
-        <button className="clear-button" onClick={handleClear}>
+        <button type="button" className="clear-button" aria-label="Clear search" title="Clear search" onClick={handleClear}>
           <GetIcon icon="close" />
         </button>
       )}

@@ -5,6 +5,8 @@ const ExamType = require("../models/examtype");
 const Area = require("../models/area");
 const District = require("../models/district");
 
+const DUPLICATE_SCORE_MESSAGE = "Mark is already entered for this student in this exam. You can edit it from the list below.";
+
 // @desc      ADD EXAM SCORE
 // @route     POST /api/v1/exam-score
 // @access    public
@@ -26,7 +28,7 @@ exports.addExamScore = async (req, res) => {
     });
 
     if (existingScore) {
-      return res.status(400).json({ success: false, customMessage: "Mark is already entered for this student in this exam. You can edit it from the list below." });
+      return res.status(400).json({ success: false, customMessage: DUPLICATE_SCORE_MESSAGE });
     }
 
     // Create the new exam score with grade
@@ -39,6 +41,11 @@ exports.addExamScore = async (req, res) => {
 
     res.status(201).json({ success: true, message: "Successfully added exam score", response });
   } catch (err) {
+    // The unique (student, exam) index rejects a duplicate that slipped past the
+    // check above (e.g. a double-submit) — report it like the check does.
+    if (err?.code === 11000) {
+      return res.status(400).json({ success: false, customMessage: DUPLICATE_SCORE_MESSAGE });
+    }
     console.log(err);
     res.status(500).json({ success: false, message: "An error occurred while adding the exam score.", error: err.message });
   }
@@ -55,6 +62,10 @@ exports.getExamScore = async (req, res) => {
     // Check if a specific exam score is requested
     if (id && mongoose.isValidObjectId(id)) {
       const response = await ExamScore.findById(id).populate("student").populate("exam");
+      // A District Admin may only read results of students in their own district.
+      if (response && userDistrictId && String(response.student?.district) !== String(userDistrictId)) {
+        return res.status(403).json({ success: false, message: "You are not authorized to view results outside your district." });
+      }
       return res.status(200).json({ success: true, message: "Retrieved specific exam score", response });
     }
 
@@ -295,6 +306,10 @@ exports.updateExamScore = async (req, res) => {
     const response = await ExamScore.findByIdAndUpdate(id, updateBody, { new: true });
     res.status(200).json({ success: true, message: `updated specific exam score`, response });
   } catch (err) {
+    // Moving a mark onto an exam the student already has a mark for.
+    if (err?.code === 11000) {
+      return res.status(400).json({ success: false, customMessage: DUPLICATE_SCORE_MESSAGE });
+    }
     console.log(err);
     res.status(204).json({ success: false, message: err });
   }
@@ -331,7 +346,9 @@ exports.deleteExamScore = async (req, res) => {
 // @access    protect
 exports.select = async (req, res) => {
   try {
-    const items = await ExamScore.find({}, { _id: 0, id: "$_id", value: "$score" });
+    // A District Admin only gets the scores of students in their own district.
+    const query = req.user?.districts ? { student: { $in: await examRegistration.find({ district: req.user.districts }).distinct("_id") } } : {};
+    const items = await ExamScore.find(query, { _id: 0, id: "$_id", value: "$score" });
     return res.status(200).send(items);
   } catch (err) {
     console.log(err);

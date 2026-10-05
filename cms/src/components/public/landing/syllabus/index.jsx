@@ -135,67 +135,67 @@ const findPreviousQuestionPaper = (papers, section) => {
 };
 
 const Intro = styled.section`
-  padding: 48px 20px 8px;
+  padding: var(--landing-page-pad-top) 0 4px;
   text-align: center;
 `;
 
 const PageTitle = styled.h1`
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: clamp(1.5rem, 3.6vw, 2.3rem);
+  font-size: var(--landing-h1);
   color: #1a4993;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
 
   &::after {
     content: "";
     display: block;
-    width: 64px;
-    height: 4px;
+    width: 56px;
+    height: 3px;
     background: linear-gradient(90deg, #1a4993, #4f8fe8);
-    margin: 14px auto 0;
+    margin: 10px auto 0;
     border-radius: 4px;
   }
 `;
 
 const GroupWrap = styled.section`
-  padding: 24px 20px 8px;
+  padding: 20px 0 4px;
 `;
 
 const GroupHeading = styled.h2`
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
   color: #0f2743;
   font-weight: 700;
-  margin: 0 0 18px;
-  padding-bottom: 10px;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
   border-bottom: 2px solid rgba(26, 73, 147, 0.12);
 `;
 
 const CardGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--landing-grid-gap);
+  margin-bottom: 20px;
 `;
 
 const Card = styled.div`
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(26, 73, 147, 0.08);
-  padding: 24px;
+  border-radius: var(--landing-card-radius-sm);
+  box-shadow: var(--landing-card-shadow);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 
   @media (max-width: 768px) {
-    padding: 18px;
+    padding: 16px;
   }
 `;
 
 const CardHeading = styled.h3`
   font-family: "Noto Sans Malayalam", sans-serif;
-  font-size: 17px;
+  font-size: 16px;
   color: #1a4993;
   font-weight: 700;
   margin: 0;
@@ -215,14 +215,14 @@ const FieldLabel = styled.div`
 `;
 
 const FieldValue = styled.div`
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.65;
   color: #333333;
 `;
 
 const CardFooter = styled.div`
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 4px;
 `;
 
 const QpButton = styled.a`

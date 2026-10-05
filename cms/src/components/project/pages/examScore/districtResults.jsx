@@ -2,23 +2,26 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Download, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import JSZip from "jszip";
-import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { getData } from "../../../../backend/api";
-import { fillGroupSheet, groupRowsByExamAndStatus } from "./resultSheet";
+import { groupRowsByExamAndStatus } from "./resultSheet";
+import { loadMalayalamFont, registerMalayalamFont, drawGroupPdfPage, hasMalayalam } from "./resultPdf";
 
-// District-wise bulk result download → <District>.zip
+// "All Exam Centre's Results" — result PDFs for every exam centre of a
+// district, in one ZIP:
 //
-//   District/ Area/ Exam Centre/ Private Result.xlsx + Regular Result.xlsx
+//   District/ Area/ Exam Centre/ Private Result.pdf + Regular Result.pdf
 //
-// Each workbook holds one sheet per exam (Preliminary I, II, …) laid out exactly
-// like the Results page's per-centre export. Results come from the same
+// Each PDF has one section per exam (Preliminary I, II, …), drawn exactly like
+// the Results page's per-centre PDF export. Results come from the same
 // GET /exam-score endpoint — it requires a login and scopes District Admins to
 // their own district on the server.
 
 const STATUSES = ["Private", "Regular"];
 
 // Makes a District / Area / Exam Centre name safe as a ZIP path segment on
-// Windows, macOS and Linux. Names shown inside the workbooks are untouched.
+// Windows, macOS and Linux. Names shown inside the PDFs are untouched.
 const safeZipName = (text) => {
   let name = String(text || "")
     .replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-")
@@ -44,10 +47,6 @@ const uniqueName = (name, used, maxLength = Infinity) => {
   return candidate;
 };
 
-// Excel sheet names: max 31 chars, no \ / ? * [ ] :, unique per workbook.
-const uniqueSheetName = (text, used) =>
-  uniqueName(String(text || "").replace(/[\\/?*[\]:]/g, "-").replace(/^'+|'+$/g, "").trim() || "Results", used, 31);
-
 // getData resolves (never throws) on HTTP errors, so check status explicitly —
 // a failed request must not be mistaken for "no results".
 const fetchOrThrow = async (fields, url, what) => {
@@ -65,6 +64,7 @@ const listOf = (data) => (Array.isArray(data) ? data : data?.response || []);
 const yieldToBrowser = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const buildDistrictResultsZip = async (district, onProgress) => {
+  const fontB64 = await loadMalayalamFont();
   const districtId = district.id || district._id;
   const districtName = district.value || district.district;
 
@@ -87,8 +87,9 @@ const buildDistrictResultsZip = async (district, onProgress) => {
   );
   const totalCentres = centreLists.reduce((n, list) => n + list.length, 0);
 
-  // Bucket every result row by the candidate's own area + exam centre — the
-  // same fields the existing Area / Exam Centre filters match on.
+  // Bucket every result row by the candidate's own area + centre (centerRegistration)
+  // — the same fields the existing Area / Exam Centre filters and per-centre
+  // download use, so a candidate is under the same centre in both downloads.
   const buckets = new Map();
   data.forEach((r) => {
     const key = `${r.student?.area?._id || ""}__${r.student?.centerRegistration?._id || ""}`;
@@ -121,20 +122,26 @@ const buildDistrictResultsZip = async (district, onProgress) => {
         const byStatus = { Private: [], Regular: [] };
         groupRowsByExamAndStatus(rows, examTypes).forEach((g) => byStatus[g.status].push(g));
 
-        // Exactly two workbooks per centre, one sheet per exam. An empty one
+        // Exactly two PDFs per centre, one section per exam. An empty one
         // carries a clear "no results" title instead of a table.
         const files = [];
         for (const status of STATUSES) {
-          const workbook = new ExcelJS.Workbook();
-          const sheetNames = new Set();
-          if (byStatus[status].length) {
-            byStatus[status].forEach((g) => {
-              fillGroupSheet(workbook.addWorksheet(uniqueSheetName(g.examLabel, sheetNames)), g.rows, `${g.examLabel} — ${status}`, scope, geo);
-            });
-          } else {
-            fillGroupSheet(workbook.addWorksheet("No Results"), [], `No ${status} candidates have results in this exam centre`, scope, geo);
-          }
-          files.push({ name: `${status} Result.xlsx`, buffer: await workbook.xlsx.writeBuffer() });
+          const sections = byStatus[status].length
+            ? byStatus[status].map((g) => ({ rows: g.rows, title: `${g.examLabel} — ${status}` }))
+            : [{ rows: [], title: `No ${status} candidates have results in this exam centre` }];
+          // Embed the Malayalam font only when this PDF has Malayalam text — it
+          // renders the same and keeps the ZIP far smaller.
+          const needsFont =
+            hasMalayalam(scope) ||
+            sections.some((sec) => hasMalayalam(sec.title) || sec.rows.some((r) => hasMalayalam(`${r.student?.regno} ${r.student?.nameOfApplicant} ${r.grade}`)));
+          const font = needsFont ? fontB64 : null;
+          const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+          registerMalayalamFont(doc, font);
+          sections.forEach((sec, i) => {
+            if (i > 0) doc.addPage();
+            drawGroupPdfPage(doc, sec.rows, sec.title, scope, geo, font);
+          });
+          files.push({ name: `${status} Result.pdf`, buffer: doc.output("arraybuffer") });
         }
 
         const centreFolder = areaFolder.folder(uniqueName(safeZipName(centre.value), centreNames));
@@ -186,7 +193,7 @@ export const useDistrictResultsDownload = ({ getDistrictId }) => {
     if (running) return;
     const districtId = getDistrictId();
     if (!districtId) {
-      setJob({ status: "error", message: "Select a District in the filter first, then click Download District Results." });
+      setJob({ status: "error", message: "Select a District in the filter first, then click All Exam Centre's Results." });
       return;
     }
     setJob({ status: "running", progress: "" });
@@ -214,7 +221,7 @@ export const useDistrictResultsDownload = ({ getDistrictId }) => {
   };
 
   const toolbarButton = {
-    label: running ? "Preparing…" : "Download District Results",
+    label: running ? "Preparing…" : "All Exam Centre's Results",
     icon: "result-certificates",
     disabled: running,
     onClick: start,
@@ -234,7 +241,7 @@ const DistrictResultsDialog = ({ job, onDownloadIncomplete, onClose }) => {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto text-left">
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-base font-semibold text-slate-800">
-            Download District Results{job.districtName ? ` — ${job.districtName}` : ""}
+            All Exam Centre's Results{job.districtName ? ` — ${job.districtName}` : ""}
           </h3>
           {!running && (
             <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-slate-100 text-slate-500">
@@ -247,7 +254,7 @@ const DistrictResultsDialog = ({ job, onDownloadIncomplete, onClose }) => {
           <div className="mt-4 text-sm text-slate-700">
             <div className="flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-indigo-600" />
-              Preparing district results… Please wait.
+              Preparing exam centre results… Please wait.
             </div>
             {job.progress && <div className="text-xs text-slate-500 mt-1 ml-6">{job.progress}</div>}
           </div>
@@ -257,7 +264,7 @@ const DistrictResultsDialog = ({ job, onDownloadIncomplete, onClose }) => {
           <div className="mt-4 text-sm text-emerald-700">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} />
-              District results ready. Downloading…
+              Results ready. Downloading…
             </div>
             <div className="text-xs text-slate-500 mt-1 ml-6">
               {job.report.areas} areas · {job.report.centres} exam centres · {job.report.rows} results

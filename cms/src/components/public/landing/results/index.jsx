@@ -162,19 +162,19 @@ const Results = (props) => {
             style={{
               display: "flex",
               flexDirection: "column",
-              paddingTop: "24px",
-              paddingBottom: "48px",
+              paddingTop: "var(--landing-page-pad-top)",
+              paddingBottom: "var(--landing-page-pad-bottom)",
               flexWrap: "nowrap",
             }}
           >
       {resultEnabled === null ? null : !resultEnabled ? (
       <div>
-        <h2 style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
+        <h2 className="landing-section-title" style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
         <h4 style={{ marginTop: "10px", color: "Red" }}>The result is not published yet</h4>
       </div>
       ) : (
       <div>
-        <h2 style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
+        <h2 className="landing-section-title" style={{ marginTop: "0px", marginBottom: "10px" }}>Exam Result</h2>
         <h4 style={{ marginTop: "10px", color: "Red", fontFamily: "'Noto Sans Malayalam', sans-serif" }}>ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള 2026 വാർഷിക പരീക്ഷ എഴുതിയ ,എല്ലാ വിഭാഗങ്ങളിലുമുള്ള പഠിതാക്കളുടെ റിസൽട്ട് പബ്ലിഷ് ചെയ്തിട്ടുണ്ട്. പഠിതാക്കളുടെ രജിസ്റ്റർ നമ്പർ അല്ലെങ്കിൽ മൊബൈൽ നമ്പർ താഴെ നൽകി, Search Result ക്ലിക്ക് ചെയ്താൽ ലഭിച്ച മാർക്കും ഗ്രേഡും കാണാം. Download Certificate click ചെയ്താൽ ഗ്രേഡ് രേഖപ്പെടുത്തിയ സർട്ടിഫിക്കറ്റ് pdf ഫയൽ ആയി ലഭിക്കുന്നതാണ്. </h4>
         <TextDiv>
           <TextBox

@@ -533,18 +533,18 @@ function Header(props) {
                 Verify Your Registration
               </button>
             )}
-            <a
-              href="/admin"
-              className="landing-header-btn secondary"
-              style={{ padding: "14px 28px", fontSize: "15px", minWidth: "110px" }}
-            >
+            <a href="/admin" className="landing-header-btn secondary">
               Login
             </a>
-            {showMenu ? (
-              <RiCloseFill className="landing-hamburger" onClick={handleMenu} />
-            ) : (
-              <GiHamburgerMenu className="landing-hamburger" onClick={handleMenu} />
-            )}
+            <button
+              type="button"
+              className="landing-hamburger"
+              onClick={handleMenu}
+              aria-label={showMenu ? "Close menu" : "Open menu"}
+              aria-expanded={showMenu}
+            >
+              {showMenu ? <RiCloseFill /> : <GiHamburgerMenu />}
+            </button>
           </div>
         </div>
 

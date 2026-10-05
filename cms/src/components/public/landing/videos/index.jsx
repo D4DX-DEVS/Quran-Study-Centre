@@ -1,31 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Play } from "lucide-react";
 import withLayout from "../../layout";
 import Header from "../Header";
 import Footer from "../footer/footer";
-import { getData } from "../../../../backend/api";
 import "../style.css";
 import "./style.css";
+import usePopIn from "../usePopIn";
+import useLatestVideos from "../useLatestVideos";
+import { VideoCard, VideoCardSkeleton } from "../VideoCard";
+
+const CHANNEL_URL = "https://www.youtube.com/@aayathdarsequran/streams";
 
 const VideosPage = (props) => {
-  const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { videos, status } = useLatestVideos(15);
   const [playingVideoId, setPlayingVideoId] = useState(null);
+  const [gridRef, gridPop] = usePopIn();
 
   useEffect(() => {
     document.title = "Aayath Darse Quran — All Videos";
-
-    let cancelled = false;
-
-    getData({ limit: 15 }, "youtube-videos").then((res) => {
-      if (cancelled) return;
-      setVideos(res?.data?.response || []);
-      setLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   return (
@@ -35,7 +26,7 @@ const VideosPage = (props) => {
         <div className="landing-page-shell videos-page-shell">
           <div className="videos-page-head">
             <a
-              href="https://www.youtube.com/@aayathdarsequran/streams"
+              href={CHANNEL_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="landing-chip-button primary videos-page-all-link"
@@ -46,41 +37,31 @@ const VideosPage = (props) => {
             <p>Latest episodes from our YouTube channel</p>
           </div>
 
-          {loading ? (
-            <div className="videos-page-loading">Loading…</div>
-          ) : videos.length ? (
-            <div className="videos-page-grid">
-              {videos.map((video) => (
-                <div key={video.videoId}>
-                  {playingVideoId === video.videoId ? (
-                    <div className="landing-video-card landing-video-card-playing">
-                      <iframe
-                        src={`https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1`}
-                        title={video.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        frameBorder="0"
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setPlayingVideoId(video.videoId)}
-                      className="landing-video-card"
-                      title={video.title}
-                    >
-                      <img src={video.thumbnail} alt={video.title} loading="lazy" />
-                      <span className="landing-video-play">
-                        <Play size={22} fill="currentColor" />
-                      </span>
-                    </button>
-                  )}
-                  <p className="videos-page-card-title">{video.title}</p>
-                </div>
-              ))}
+          {status === "error" ? (
+            <div className="videos-page-empty">
+              Videos couldn't load right now.{" "}
+              <a href={CHANNEL_URL} target="_blank" rel="noopener noreferrer">
+                Watch on YouTube
+              </a>
             </div>
           ) : (
-            <div className="videos-page-empty">No videos found.</div>
+            <div
+              className="videos-page-grid landing-pop-grid"
+              ref={gridRef}
+              data-pop={gridPop}
+            >
+              {status === "loading"
+                ? [0, 1, 2, 3, 4, 5].map((index) => <VideoCardSkeleton key={index} />)
+                : videos.map((video, index) => (
+                    <VideoCard
+                      key={video.videoId}
+                      video={video}
+                      index={index}
+                      playing={playingVideoId === video.videoId}
+                      onPlay={() => setPlayingVideoId(video.videoId)}
+                    />
+                  ))}
+            </div>
           )}
         </div>
       </main>

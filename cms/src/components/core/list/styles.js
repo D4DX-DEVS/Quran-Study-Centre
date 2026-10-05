@@ -1021,6 +1021,14 @@ export const Filter = styled.button`
   &.filter-button {
     flex: none;
   }
+  &:focus-visible {
+    outline: 2px solid ${appTheme.primary.base};
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
   @media (max-width: 768px) {
     &.filter-button {
       margin-top: 6px;
@@ -1662,6 +1670,13 @@ export const TdView = styled.td`
   .table-theme-district & {
     background: transparent;
     border-bottom: 1px solid #eef2f8;
+  }
+  /* The actions column stays pinned to the right while the table scrolls, so it
+     needs a solid background — otherwise row text shows through the buttons. */
+  .table-theme-district &.actions {
+    background: #ffffff;
+    border-left: 0;
+    box-shadow: -8px 0 12px -10px rgba(15, 23, 42, 0.25);
   }
   .table-theme-district &:last-child td {
     border-bottom: 0;
