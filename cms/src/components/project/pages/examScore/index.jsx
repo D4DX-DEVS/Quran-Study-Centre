@@ -422,7 +422,10 @@ const ExamScore = (props) => {
   // Builds a ZIP with one folder per exam, each containing a Private/ and
   // Regular/ subfolder, each holding a sorted-by-score PDF + Excel of that
   // group's results. Groups with no students are skipped entirely.
-  const buildResultsZip = async (data, scope = "State-wise", geo = { centre: true, area: true, district: true }) => {
+  // `areaFolder` (Area-wise downloads) switches the layout to
+  // "<Area>/ Private Result/ <exam>/" and "<Area>/ Regular Result/ <exam>/";
+  // the files are the same.
+  const buildResultsZip = async (data, scope = "State-wise", geo = { centre: true, area: true, district: true }, areaFolder = null) => {
     const groups = groupRowsByExamAndStatus(data);
     const zip = new JSZip();
     for (const group of groups) {
@@ -436,7 +439,9 @@ const ExamScore = (props) => {
         buildGroupExcelBlob(group.rows, title, scope, geo),
       ]);
 
-      const folder = zip.folder(examFolder).folder(statusFolder);
+      const folder = areaFolder
+        ? zip.folder(safePathSegment(areaFolder)).folder(`${statusFolder} Result`).folder(examFolder)
+        : zip.folder(examFolder).folder(statusFolder);
       folder.file(`${baseName}.pdf`, pdfBlob);
       folder.file(`${baseName}.xlsx`, excelBlob);
     }
@@ -475,7 +480,15 @@ const ExamScore = (props) => {
         return;
       }
 
-      const zip = await buildResultsZip(data, scopeLabel, geoColumns);
+      // Area-wise download (an Area filtered, no single Exam Centre): an Area
+      // folder grouped by Private / Regular first, like the All Exam Centre's
+      // Results ZIP. Exam Centre downloads keep the exam / status layout.
+      let areaFolder = null;
+      if (selArea && !selCenter) {
+        const a = areas.find((x) => (x.id || x._id) === selArea);
+        areaFolder = a?.value || a?.area || "Selected Area";
+      }
+      const zip = await buildResultsZip(data, scopeLabel, geoColumns, areaFolder);
       const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
       await saveZip(zip, `Results-${filterLabel.replace(/[\s·/]+/g, "-")}-${today}.zip`);
     } catch (e) {
@@ -535,21 +548,21 @@ const ExamScore = (props) => {
             </button>
             <button
               type="button"
-              onClick={downloadFiltered}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-              title="Download a ZIP (PDF + Excel per exam/status) with current filters applied"
-            >
-              <FileDown size={14} />
-              Download Filtered
-            </button>
-            <button
-              type="button"
               onClick={downloadAll}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
               title="Download a ZIP with a PDF + Excel per exam, split into Private/Regular folders"
             >
               <FileDown size={14} />
               {adminDistrictId ? "District Result" : "Download All (ZIP)"}
+            </button>
+            <button
+              type="button"
+              onClick={downloadFiltered}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+              title="Download a ZIP (PDF + Excel per exam/status) with current filters applied"
+            >
+              <FileDown size={14} />
+              Download Filtered
             </button>
             {props.addPrivilege && (
               <button
