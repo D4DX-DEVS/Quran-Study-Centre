@@ -549,7 +549,7 @@ const ExamScore = (props) => {
               title="Download a ZIP with a PDF + Excel per exam, split into Private/Regular folders"
             >
               <FileDown size={14} />
-              District Result
+              {adminDistrictId ? "District Result" : "Download All (ZIP)"}
             </button>
             {props.addPrivilege && (
               <button
