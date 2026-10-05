@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   Search,
   Plus,
@@ -22,34 +23,14 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import JSZip from "jszip";
 import ExcelJS from "exceljs";
-
-// Module-level cache so the font is only fetched once per session.
-let _malayalamFontB64 = null;
-
-const loadMalayalamFont = async () => {
-  if (_malayalamFontB64) return _malayalamFontB64;
-  // jsDelivr serves fonts with CORS headers — safe to fetch from the browser.
-  const FONT_URL =
-    "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansMalayalam/NotoSansMalayalam-Regular.ttf";
-  try {
-    const res = await fetch(FONT_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buf = await res.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let bin = "";
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    _malayalamFontB64 = btoa(bin);
-    return _malayalamFontB64;
-  } catch (e) {
-    console.warn("Could not load Malayalam font — falling back to default.", e);
-    return null;
-  }
-};
 import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
 import { getData, postData, putData, deleteData } from "../../../../backend/api";
 import { buildApiUrl } from "../../../../backend/baseUrl";
 import { examName, MAIN_TITLE, upper, fillGroupSheet, groupRowsByExamAndStatus as groupByExamAndStatus } from "./resultSheet";
+import { loadMalayalamFont, registerMalayalamFont, drawGroupPdfPage } from "./resultPdf";
+import { useDistrictResultsDownload } from "./districtResults";
+import { GetIcon } from "../../../../icons";
 
 // Phase — Exam Score / Results redesign.
 // Replaces the generic ListTable view with a card-based results board. Each
@@ -95,7 +76,11 @@ const ExamScore = (props) => {
   const [districts, setDistricts] = useState([]);
   const [areas, setAreas] = useState([]);
   const [centers, setCenters] = useState([]);
-  const [selDistrict, setSelDistrict] = useState("");
+  // District Admins are locked to their own district: it is pre-selected (so the
+  // Area / Exam Centre filters work) and the District dropdown is hidden.
+  const loggedInUser = useSelector((state) => state.login?.data?.user) || {};
+  const adminDistrictId = String(loggedInUser?.districts?._id || loggedInUser?.districts || "");
+  const [selDistrict, setSelDistrict] = useState(adminDistrictId);
   const [selArea, setSelArea] = useState("");
   const [selCenter, setSelCenter] = useState("");
   const [selGender, setSelGender] = useState("");
@@ -106,6 +91,10 @@ const ExamScore = (props) => {
   const [editing, setEditing] = useState(null);
 
   const [confirmDelete, setConfirmDelete] = useState(null);
+
+  // "All Exam Centre's Results" — result PDFs of every exam centre in the
+  // current district (a District Admin's own, or the District filter) as one ZIP.
+  const allCentreResults = useDistrictResultsDownload({ getDistrictId: () => adminDistrictId || selDistrict });
 
   useEffect(() => {
     (async () => {
@@ -405,79 +394,9 @@ const ExamScore = (props) => {
   // (does not save to disk) — used when packing the results ZIP.
   const buildGroupPdfBlob = async (rows, title, scope = "State-wise", geo = { centre: true, area: true, district: true }) => {
     const fontB64 = await loadMalayalamFont();
-    const FONT_NAME = "NotoSansMalayalam";
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    const w = doc.internal.pageSize.getWidth();
-    const hpage = doc.internal.pageSize.getHeight();
-    const today = new Date().toLocaleDateString("en-GB");
-
-    if (fontB64) {
-      doc.addFileToVFS(`${FONT_NAME}-Regular.ttf`, fontB64);
-      doc.addFont(`${FONT_NAME}-Regular.ttf`, FONT_NAME, "normal");
-    }
-
-    const hasMalayalam = (text) => /[ഀ-ൿ]/.test(String(text ?? ""));
-    const setDocFont = (text) => {
-      if (fontB64 && hasMalayalam(text)) doc.setFont(FONT_NAME, "normal");
-      else doc.setFont("helvetica", "normal");
-    };
-
-    doc.setFontSize(16);
-    setDocFont(MAIN_TITLE);
-    doc.text(MAIN_TITLE, w / 2, 26, { align: "center" });
-    doc.setFontSize(11);
-    setDocFont(scope);
-    doc.text(scope.toUpperCase(), w / 2, 44, { align: "center" });
-    doc.setFontSize(14);
-    setDocFont(title);
-    doc.text(title.toUpperCase(), w / 2, 62, { align: "center" });
-
-    const head = [["#", "REG NO", "NAME", "PHONE NUMBER", "SCORE", "GRADE"]];
-    if (geo.centre) head[0].push("CENTRE");
-    if (geo.area) head[0].push("AREA");
-    if (geo.district) head[0].push("DISTRICT");
-
-    doc.autoTable({
-      startY: 76,
-      head,
-      body: rows.map((r, i) => {
-        const row = [
-          i + 1,
-          upper(r.student?.regno),
-          upper(r.student?.nameOfApplicant),
-          upper(r.student?.mobileNumber),
-          r.score ?? "-",
-          upper(r.grade),
-        ];
-        if (geo.centre) row.push(upper(r.student?.centerRegistration?.nameOfCenter));
-        if (geo.area) row.push(upper(r.student?.area?.area));
-        if (geo.district) row.push(upper(r.student?.district?.district));
-        return row;
-      }),
-      styles: { fontSize: 8, cellPadding: 3, lineColor: 0, lineWidth: 0.2, textColor: 0, font: "helvetica" },
-      headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: "bold", font: "helvetica" },
-      theme: "grid",
-      columnStyles: {
-        0: { halign: "center", cellWidth: 28 },
-        4: { halign: "center", cellWidth: 40 },
-        5: { halign: "center", cellWidth: 36 },
-      },
-      didParseCell: (hookData) => {
-        if (fontB64 && hookData.section === "body") {
-          const text = String(hookData.cell.raw ?? "");
-          if (hasMalayalam(text)) {
-            hookData.cell.styles.font = FONT_NAME;
-            hookData.cell.styles.fontStyle = "normal";
-          }
-        }
-      },
-      didDrawPage: () => {
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Printed: ${today}`, w - 20, hpage - 16, { align: "right" });
-      },
-    });
-
+    registerMalayalamFont(doc, fontB64);
+    drawGroupPdfPage(doc, rows, title, scope, geo, fontB64);
     return doc.output("blob");
   };
 
@@ -597,7 +516,7 @@ const ExamScore = (props) => {
               <Award size={14} />
               Exam results
             </div>
-            <h1 className="text-2xl font-bold text-slate-800 mt-1">Results</h1>
+            <h1 className="text-[22px] font-bold tracking-tight text-slate-900 mt-1">Results</h1>
             <p className="text-sm text-slate-500 max-w-2xl mt-1">
               Candidate scores, grades and certificates. Use the filters to narrow down by exam or
               search by candidate name, register number or score.
@@ -630,16 +549,18 @@ const ExamScore = (props) => {
               title="Download a ZIP with a PDF + Excel per exam, split into Private/Regular folders"
             >
               <FileDown size={14} />
-              Download All (ZIP)
+              District Result
             </button>
-            <button
-              type="button"
-              onClick={openAdd}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
-            >
-              <Plus size={14} />
-              Add Result
-            </button>
+            {props.addPrivilege && (
+              <button
+                type="button"
+                onClick={openAdd}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+              >
+                <Plus size={14} />
+                Add Result
+              </button>
+            )}
           </div>
         </div>
 
@@ -676,22 +597,24 @@ const ExamScore = (props) => {
             </select>
           </div>
 
-          <select
-            value={selDistrict}
-            onChange={(e) => {
-              setPage(1);
-              setSelDistrict(e.target.value);
-              setSelArea("");
-            }}
-            className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-          >
-            <option value="">All districts</option>
-            {districts.map((d) => (
-              <option key={d.id || d._id} value={d.id || d._id}>
-                {d.value || d.district}
-              </option>
-            ))}
-          </select>
+          {!adminDistrictId && (
+            <select
+              value={selDistrict}
+              onChange={(e) => {
+                setPage(1);
+                setSelDistrict(e.target.value);
+                setSelArea("");
+              }}
+              className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            >
+              <option value="">All districts</option>
+              {districts.map((d) => (
+                <option key={d.id || d._id} value={d.id || d._id}>
+                  {d.value || d.district}
+                </option>
+              ))}
+            </select>
+          )}
 
           {selDistrict && (
             <select
@@ -764,6 +687,17 @@ const ExamScore = (props) => {
             Apply
           </button>
 
+          <button
+            type="button"
+            onClick={allCentreResults.toolbarButton.onClick}
+            disabled={allCentreResults.toolbarButton.disabled}
+            title="Download result PDFs of every exam centre in the current district as one ZIP (other filters are ignored)"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <GetIcon icon={allCentreResults.toolbarButton.icon} />
+            {allCentreResults.toolbarButton.label}
+          </button>
+
           <div className="w-full sm:w-auto sm:ml-auto text-xs text-slate-500">
             Showing <span className="font-semibold text-slate-700">{rows.length}</span> of{" "}
             <span className="font-semibold text-slate-700">{filterCount}</span>
@@ -788,8 +722,9 @@ const ExamScore = (props) => {
               <ResultCard
                 key={row._id}
                 row={row}
-                onEdit={() => openEdit(row)}
-                onDelete={() => setConfirmDelete(row)}
+                // Edit / Delete follow the Result menu's permissions for this role.
+                onEdit={props.updatePrivilege ? () => openEdit(row) : null}
+                onDelete={props.delPrivilege ? () => setConfirmDelete(row) : null}
                 onDownload={() => downloadCertificate(row)}
               />
             ))}
@@ -854,6 +789,8 @@ const ExamScore = (props) => {
           onConfirm={onDelete}
         />
       )}
+
+      {allCentreResults.dialog}
     </Container>
   );
 };
@@ -940,22 +877,26 @@ const ResultCard = ({ row, onEdit, onDelete, onDownload }) => {
           <Download size={13} />
           Certificate
         </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
-        >
-          <Pencil size={13} />
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-rose-200 text-rose-600 hover:bg-rose-50"
-        >
-          <Trash2 size={13} />
-          Delete
-        </button>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            <Pencil size={13} />
+            Edit
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-rose-200 text-rose-600 hover:bg-rose-50"
+          >
+            <Trash2 size={13} />
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

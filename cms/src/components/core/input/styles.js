@@ -973,6 +973,12 @@ export const SubHead = styled.div`
     letter-spacing: -0.015em;
     text-align: left;
   }
+  /* Page titles of list pages — same size as the other page headings. */
+  &.page-title > div {
+    font-size: 22px;
+    line-height: 28px;
+    color: #0f172a;
+  }
   &.sub > div {
     font-size: 16px;
     font-weight: 500;

@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Nav, SubMenuHead } from "./styels";
 import { useDispatch, useSelector } from "react-redux";
 import { currentMenu, menuStatus, openedMenu, selectedMenu, selectedSubMenu } from "../../../../store/actions/common";
@@ -34,6 +34,13 @@ const Menu = (props) => {
 
   // console.log(selectedMenuItem)
   const isDrawer = props.variant === "drawer";
+  // Also highlight the page that is open now, not only the last menu item clicked,
+  // so a refresh or a direct link still shows where the user is.
+  const { pathname } = useLocation();
+  const isCurrent = (path) => Boolean(path) && pathname.replace(/\/+$/, "") === `/${String(path).replace(/^\/+|\/+$/g, "")}`;
+  const pathIsInMenu = (props.user?.menu ?? []).some((m) => isCurrent(m.path) || (m.submenus ?? []).some((s) => isCurrent(s.path)));
+  // Active by URL when the open page is in the menu; otherwise fall back to the last clicked item.
+  const isActive = (item) => (pathIsInMenu ? isCurrent(item.path) : item._id === selectedMenuItem._id);
   return (
     <>
       <Nav theme={themeColors} className={isDrawer ? "drawer-menu" : ""}>
@@ -59,12 +66,14 @@ const Menu = (props) => {
                           dispatch(selectedMenu(firstSubMenu));
                           dispatch(currentMenu(firstSubMenu.label));
                         }}
-                        className={`${menuItem._id === selectedMenuItem._id || selectedMenuItem.menu === menuItem._id ? "main active" : "main"}`}
+                        className={`${(pathIsInMenu ? menuItem.submenus.some((s) => isCurrent(s.path)) : menuItem._id === selectedMenuItem._id || selectedMenuItem.menu === menuItem._id) ? "main active" : "main"}${selectedSubMenuItem?._id === menuItem._id ? " open-submenu" : ""}`}
                         to={firstSubMenu.path}
+                        title={menuItem.label}
+                        aria-expanded={!props.isMobile ? selectedSubMenuItem?._id === menuItem._id : undefined}
                       >
                         <GetIcon icon={menuItem.icon} />
                         {props.isMobile ? <span>{menuItem.label.substring(0, menuItem.label.indexOf(" ") !== -1 ? menuItem.label.indexOf(" ") : menuItem.label.length)}</span> : <span>{menuItem.label}</span>}
-                        {!props.isMobile && <ChevronRight className="menu-caret" size={15} />}
+                        {!props.isMobile && <ChevronRight className="menu-caret" size={15} aria-hidden="true" />}
                       </Link>
                       {!props.isMobile && selectedSubMenuItem?._id === menuItem._id && (
                         <div className="inline-submenus">
@@ -80,7 +89,8 @@ const Menu = (props) => {
                                       dispatch(selectedMenu(submenu));
                                       dispatch(currentMenu(submenu.label));
                                     }}
-                                    className={submenu._id === selectedMenuItem._id ? "sub active" : "sub"}
+                                    className={isActive(submenu) ? "sub active" : "sub"}
+                                    aria-current={isCurrent(submenu.path) ? "page" : undefined}
                                     to={submenu.path}
                                   >
                                     <GetIcon icon={submenu.icon} /> <span>{submenu.label}</span>
@@ -100,12 +110,13 @@ const Menu = (props) => {
                         dispatch(selectedMenu(menuItem));
                         dispatch(currentMenu(menuItem.label));
                       }}
-                      className={menuItem._id === selectedMenuItem._id ? "main active" : "main"}
+                      className={isActive(menuItem) ? "main active" : "main"}
+                      aria-current={isCurrent(menuItem.path) ? "page" : undefined}
+                      title={menuItem.label}
                       to={menuItem.path}
                     >
                       <GetIcon icon={menuItem.icon} />
                       {props.isMobile ? <span>{menuItem.label.substring(0, menuItem.label.indexOf(" ") !== -1 ? menuItem.label.indexOf(" ") : menuItem.label.length)}</span> : <span>{menuItem.label}</span>}
-                      {!props.isMobile && <ChevronRight className="menu-caret" size={15} />}
                     </Link>
                   )}
                 </div>

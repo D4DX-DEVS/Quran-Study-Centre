@@ -18,8 +18,12 @@ const Dashboard = (props) => {
 
   return (
     <Container className="noshadow">
-      <div className="w-full bg-bg-weak p-6 flex flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-end gap-4">
+      <div className="w-full bg-bg-weak p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-bold tracking-tight text-slate-900">Dashboard</h1>
+            <p className="text-sm text-text-sub mt-0.5">Overview of registrations, exams, syllabus and certificates.</p>
+          </div>
           {addSyllabusEntry && (
             <Link
               to={addSyllabusEntry.path}

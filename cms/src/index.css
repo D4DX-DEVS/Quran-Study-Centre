@@ -105,6 +105,30 @@ body {
   overflow-x: hidden;
 }
 
+/* Keyboard focus ring for every clickable control. Many components reset
+   `outline`, so this is !important — but it only shows for keyboard focus
+   (:focus-visible), never on mouse clicks. Inputs keep their own focus style. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid #1d4ed8 !important;
+  outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   /* Respect iPhone notch / dynamic island */
   padding-left: env(safe-area-inset-left);
