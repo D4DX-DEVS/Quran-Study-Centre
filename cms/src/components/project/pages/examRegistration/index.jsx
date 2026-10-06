@@ -319,7 +319,8 @@ const ExamRegistration = (props) => {
       showItem: "Gender",
       required: true,
       view: true,
-      filter: true,
+      // Hidden from the filter bar for District Admins; the main admin keeps it.
+      filter: !isDistrictAdmin,
       add: true,
       update: true,
       apiType: "CSV",
@@ -514,7 +515,8 @@ const ExamRegistration = (props) => {
       showItem: "",
       required: true,
       view: true,
-      filter: true,
+      // Hidden from the filter bar for District Admins; the main admin keeps it.
+      filter: !isDistrictAdmin,
       add: true,
       update: true,
       apiType: "CSV",
