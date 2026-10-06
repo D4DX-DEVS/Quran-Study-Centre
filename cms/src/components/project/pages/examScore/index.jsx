@@ -448,6 +448,52 @@ const ExamScore = (props) => {
     return zip;
   };
 
+  // Sanitizes + de-duplicates an exam label for use as an Excel worksheet name
+  // (max 31 chars, no \ / ? * [ ] :, unique case-insensitively within a workbook).
+  const uniqueSheetName = (text, used) => {
+    const base = (String(text || "Results").replace(/[\\/?*[\]:]/g, "-").trim() || "Results").slice(0, 31);
+    let name = base;
+    for (let n = 2; used.has(name.toLowerCase()); n++) {
+      const suffix = ` (${n})`;
+      name = `${base.slice(0, 31 - suffix.length)}${suffix}`;
+    }
+    used.add(name.toLowerCase());
+    return name;
+  };
+
+  // Builds the "Download Filtered" ZIP: one "Private Result" and one "Regular
+  // Result" file per format, each holding every exam (Preliminary I, II, III…)
+  // in exam-type order — the PDF as consecutive exam sections, the Excel as one
+  // worksheet per exam. A status with no results produces no files.
+  // `areaFolder` (Area-wise downloads) wraps the files in "<Area>/".
+  const buildFilteredResultsZip = async (data, scope, geo, areaFolder = null) => {
+    const groups = groupRowsByExamAndStatus(data);
+    const fontB64 = await loadMalayalamFont();
+    const zip = new JSZip();
+    const target = areaFolder ? zip.folder(safePathSegment(areaFolder)) : zip;
+
+    for (const status of ["Private", "Regular"]) {
+      const sections = groups.filter((g) => g.status === status);
+      if (!sections.length) continue;
+
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      registerMalayalamFont(doc, fontB64);
+      const workbook = new ExcelJS.Workbook();
+      const usedSheetNames = new Set();
+      sections.forEach((g, i) => {
+        const title = `${g.examLabel} — ${status}`;
+        if (i > 0) doc.addPage();
+        drawGroupPdfPage(doc, g.rows, title, scope, geo, fontB64);
+        fillGroupSheet(workbook.addWorksheet(uniqueSheetName(g.examLabel, usedSheetNames)), g.rows, title, scope, geo);
+      });
+
+      const excelBuffer = await workbook.xlsx.writeBuffer();
+      target.file(`${status} Result.pdf`, doc.output("blob"));
+      target.file(`${status} Result.xlsx`, excelBuffer);
+    }
+    return zip;
+  };
+
   const saveZip = async (zip, filename) => {
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
@@ -460,8 +506,9 @@ const ExamScore = (props) => {
     URL.revokeObjectURL(url);
   };
 
-  // "Download Filtered" — same ZIP layout as "Download All" (exam / status /
-  // PDF + Excel, sorted by mark), but scoped to the currently applied filters.
+  // "Download Filtered" — Private Result / Regular Result PDF + Excel, each with
+  // every exam in sequence (sorted by mark within an exam), scoped to the
+  // currently applied filters.
   const downloadFiltered = async () => {
     props.setLoaderBox?.(true);
     try {
@@ -480,15 +527,14 @@ const ExamScore = (props) => {
         return;
       }
 
-      // Area-wise download (an Area filtered, no single Exam Centre): an Area
-      // folder grouped by Private / Regular first, like the All Exam Centre's
-      // Results ZIP. Exam Centre downloads keep the exam / status layout.
+      // Area-wise download (an Area filtered, no single Exam Centre): the
+      // Private / Regular files sit inside an Area folder.
       let areaFolder = null;
       if (selArea && !selCenter) {
         const a = areas.find((x) => (x.id || x._id) === selArea);
         areaFolder = a?.value || a?.area || "Selected Area";
       }
-      const zip = await buildResultsZip(data, scopeLabel, geoColumns, areaFolder);
+      const zip = await buildFilteredResultsZip(data, scopeLabel, geoColumns, areaFolder);
       const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
       await saveZip(zip, `Results-${filterLabel.replace(/[\s·/]+/g, "-")}-${today}.zip`);
     } catch (e) {
@@ -559,7 +605,7 @@ const ExamScore = (props) => {
               type="button"
               onClick={downloadFiltered}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-              title="Download a ZIP (PDF + Excel per exam/status) with current filters applied"
+              title="Download a ZIP with a Private Result and a Regular Result PDF + Excel (all exams in each) with current filters applied"
             >
               <FileDown size={14} />
               Download Filtered
@@ -666,31 +712,36 @@ const ExamScore = (props) => {
             </select>
           )}
 
-          <select
-            value={selGender}
-            onChange={(e) => {
-              setPage(1);
-              setSelGender(e.target.value);
-            }}
-            className="w-full sm:w-auto sm:max-w-[130px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-          >
-            <option value="">All genders</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
+          {/* Gender and Private/Regular filters are hidden for District Admins. */}
+          {!adminDistrictId && (
+            <select
+              value={selGender}
+              onChange={(e) => {
+                setPage(1);
+                setSelGender(e.target.value);
+              }}
+              className="w-full sm:w-auto sm:max-w-[130px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            >
+              <option value="">All genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          )}
 
-          <select
-            value={selStatus}
-            onChange={(e) => {
-              setPage(1);
-              setSelStatus(e.target.value);
-            }}
-            className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-          >
-            <option value="">Private + Regular</option>
-            <option value="Regular">Regular only</option>
-            <option value="Private">Private only</option>
-          </select>
+          {!adminDistrictId && (
+            <select
+              value={selStatus}
+              onChange={(e) => {
+                setPage(1);
+                setSelStatus(e.target.value);
+              }}
+              className="w-full sm:w-auto sm:max-w-[150px] px-3 py-2 text-sm rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            >
+              <option value="">Private + Regular</option>
+              <option value="Regular">Regular only</option>
+              <option value="Private">Private only</option>
+            </select>
+          )}
 
           <button
             type="button"
