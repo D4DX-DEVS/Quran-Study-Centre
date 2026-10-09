@@ -5,6 +5,8 @@ import withLayout from "../../layout";
 import { getData } from "../../../../backend/api";
 import Header from "../Header";
 import Footer from "../footer/footer";
+import { reveal } from "../scrollReveal";
+import { usePageSeo } from "../../../../utils/seo";
 
 const AboutSection = styled.section`
   margin: 0 auto;
@@ -88,6 +90,7 @@ const Description = styled.div`
 const CDN = import.meta.env.VITE_APP_CDN || "";
 
 const About = (props) => {
+  usePageSeo({ title: "About Us - Quran Study Centre Kerala", description: "About Quran Study Centre Kerala (QSC) - who we are and what we do." });
   const [title, setTitle] = useState("Quran Study Centre Kerala");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
@@ -111,7 +114,7 @@ const About = (props) => {
     <main className="landing-home">
       <div className="landing-page-shell">
         <AboutSection>
-          <Card>
+          <Card ref={reveal}>
             {loading ? (
               <CardBody>
                 <p>Loading…</p>

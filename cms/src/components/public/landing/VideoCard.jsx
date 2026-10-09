@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Play } from "lucide-react";
+import { reveal } from "./scrollReveal";
 
 const formatDate = (value) => {
   const date = value ? new Date(value) : null;
@@ -9,14 +10,18 @@ const formatDate = (value) => {
 
 // One YouTube episode: thumbnail + play overlay until clicked, then the
 // embedded player in place. Shared by the home page and /videos.
-export function VideoCard({ video, playing, onPlay, index = 0 }) {
+export function VideoCard({ video, playing, onPlay, reveal: revealOnScroll = true }) {
   // feed thumbnails are 4:3 hqdefault; fall back to the always-present
   // 16:9 mqdefault if one ever fails to load
   const [thumb, setThumb] = useState(video.thumbnail || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`);
   const date = formatDate(video.publishedAt);
 
   return (
-    <article className="landing-video-item" style={{ "--pop-i": index }}>
+    <article
+      className="landing-video-item"
+      ref={revealOnScroll ? reveal : undefined}
+      data-reveal={revealOnScroll ? "video" : undefined}
+    >
       {playing ? (
         <div className="landing-video-card landing-video-card-playing">
           <iframe

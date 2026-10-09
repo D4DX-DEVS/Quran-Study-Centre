@@ -382,11 +382,12 @@ function Header(props) {
   const [showHallTicket, setHallTicket] = useState(false);
   const [showExamRegistration, setExamRegistration] = useState(false);
   const [showDownloads, setDownloads] = useState(false);
+  const [showModelQuestions, setModelQuestions] = useState(false);
+  const [showResult, setShowResult] = useState(false);
   const [showSyllabus, setSyllabus] = useState(true);
   const [showMaterial, setMaterial] = useState(false);
   const [showAboutUs, setAboutUs] = useState(false);
   const [showLeadership, setLeadership] = useState(true);
-  const [showResult, setResult] = useState(false);
   const [showExamInstructions, setExamInstructions] = useState(false);
   const [showVerifyRegistration, setShowVerifyRegistration] = useState(true);
 
@@ -401,11 +402,14 @@ function Header(props) {
       setHallTicket(!!settings.hallTicket);
       setExamRegistration(!!settings.examRegistration);
       setDownloads(!!settings.downloads);
+      setModelQuestions(settings.modelQuestions === true);
+      // The Result toggle in Landing Page Settings controls the link. Prefer the
+      // server's own verdict (the same check the result API enforces).
+      setShowResult(typeof response?.data?.resultPublished === "boolean" ? response.data.resultPublished : settings.result === true);
       setSyllabus(settings.syllabus !== false);
       setMaterial(settings.material !== false);
       setAboutUs(!!settings.about);
       setLeadership(settings.leadership !== false);
-      setResult(!!settings.result);
       setExamInstructions(!!settings.examInstruction);
       setShowVerifyRegistration(settings.verifyRegistration !== false);
     });
@@ -442,8 +446,11 @@ function Header(props) {
         : { label: "About Us", href: "/about-us" }
       : null,
     showDownloads ? { label: "Downloads", href: "/question-papers" } : null,
+    showModelQuestions ? { label: "Model Question & Answer Key", href: "/model-questions" } : null,
     showSyllabus ? { label: "Syllabus", href: "/syllabus" } : null,
     showMaterial ? { label: "Material", action: "material" } : null,
+    // Shown only while the Result toggle is ON. The Result page and its API enforce
+    // the same switch, so hiding the link is not the only guard.
     showResult ? { label: "Result", href: "/result" } : null,
   ].filter(Boolean);
 

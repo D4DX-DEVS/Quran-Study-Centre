@@ -1,28 +1,19 @@
 const ExamRegistration = require("../models/examRegistration");
 const { default: mongoose } = require("mongoose");
 const ExamScore = require("../models/examScore");
-const { PDFDocument, StandardFonts } = require("pdf-lib");
-const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const path = require("path");
 const fs = require("fs");
 const ExamCenterRegistration = require("../models/examCenterRegistration");
 const ExamType = require("../models/examtype");
-const CertificateManagement = require("../models/certificateManagement");
+const { createLimiter } = require("../middleware/rateLimit");
+const { areResultsPublished, buildLookupFilter, scoresForRegistration, signCertificateRef, verifyCertificateRef, setPrivateHeaders } = require("../utils/resultAccess");
+const { getCertificateType, isCertificateEligible, getExamDisplayName, buildCertificatePdf } = require("../utils/certificate");
 
 const ExamSettings = require("../models/examSettings");
 const { recomputeAllocation } = require("./examAllocation");
 const { nextRegistrationNumberForNewStudent } = require("./registrationNumber");
 const { resolveExamCenterName, genderRank, modeRank, examSortOrder } = require("../utils/studentSort");
 const { regenerateHallTicketForId, markHallTicketPending, deleteHallTicketForRegistration } = require("./hallTicket");
-
-const s3 = new S3Client({
-  endpoint: `https://${process.env.DO_SPACES_ENDPOINT}`,
-  region: "us-east-1",
-  credentials: {
-    accessKeyId: process.env.DO_SPACES_KEY,
-    secretAccessKey: process.env.DO_SPACES_SECRET,
-  },
-});
 
 // @desc      ADD EXAM  REGISTRATION
 // @route     POST /api/user/exam-registration
@@ -354,46 +345,44 @@ exports.select = async (req, res) => {
   }
 };
 
-// @desc      GET EXAM RESULT
+// @desc      LOOK UP A REGISTRATION BY REGISTER / MOBILE NUMBER (legacy shape)
 // @route     GET /api/v1/exam-registration/result
 // @access    public
+// Still feeds "Verify your registration", which needs the registration record.
+// It is NOT the public result lookup (see getPublicResult): marks, grades and
+// ranks are attached only once an admin has published results, and the old
+// "by id" / unfiltered list branches — which exposed registrations to anyone —
+// are gone.
 exports.getExamResult = async (req, res) => {
+  setPrivateHeaders(res);
   try {
-    const { id, skip, limit, searchkey } = req.query;
-
-    if (id && mongoose.isValidObjectId(id)) {
-      const response = await ExamRegistration.findById(id);
-      return res.status(200).json({ success: true, message: "Retrieved specific exam registration", response });
+    const filters = buildLookupFilter(req.query.regno);
+    if (!filters) {
+      return res.status(400).json({ success: false, customMessage: "Please enter a valid register number or mobile number" });
     }
 
-    // Check if regno or mobileNumber is provided in the request query
-    if (req.query.regno) {
-      // Check if the input is a number (mobile number) or string (registration number)
-      const isNumeric = !isNaN(req.query.regno) && !isNaN(parseFloat(req.query.regno));
+    const examData = await ExamRegistration.find(filters)
+      .populate("district")
+      .populate("area")
+      .populate("nameOfExamAppearingNow")
+      .populate("examCenter")
+      .populate("centerRegistration")
+      .populate("assignedExamCenter", "nameOfCenter")
+      .populate("outsideExamCenter", "centerName")
+      .limit(25);
 
-      const filters = {
-        $or: [{ regno: req.query.regno }, ...(isNumeric ? [{ mobileNumber: parseInt(req.query.regno) }] : [])],
-        // Removed the nameOfExamAppearingNow condition
-      };
+    if (examData.length === 0) {
+      return res.status(400).json({ success: false, customMessage: "No Exam result found for the provided register number or mobile number" });
+    }
 
-      const examData = await ExamRegistration.find(filters)
-        .populate("district")
-        .populate("area")
-        .populate("nameOfExamAppearingNow")
-        .populate("examCenter")
-        .populate("centerRegistration")
-        .populate("assignedExamCenter", "nameOfCenter")
-        .populate("outsideExamCenter", "centerName");
-
-      // Check if examData is empty
-      if (examData.length === 0) {
-        return res.status(400).json({ success: false, customMessage: "No Exam result found for the provided register number or mobile number" });
-      }
-
-      const examScore = await ExamScore.findOne({ student: examData[0]._id });
+    // Marks only leave the server after the admin "Result" switch is on.
+    let enrichedResult = null;
+    if (await areResultsPublished()) {
+      const ownScores = await ExamScore.find({ student: examData[0]._id });
+      const examScore = scoresForRegistration(examData[0], ownScores)[0] || null;
 
       // Phase 2.6 — attach rank (district-level, with state-level fallback).
-      let enrichedResult = examScore ? examScore.toObject() : null;
+      enrichedResult = examScore ? examScore.toObject() : null;
       if (examScore && examData[0]?.nameOfExamAppearingNow) {
         try {
           const { computeStudentRank } = require("./rankList");
@@ -417,291 +406,195 @@ exports.getExamResult = async (req, res) => {
           console.error("rank lookup failed:", rankErr.message);
         }
       }
-
-      // If the result is found, return the response and exit the function
-      return res.status(200).json({ success: true, message: "Filtered exam result data", response: examData, result: enrichedResult, count: examData.length });
     }
 
-    // If no regno is provided, execute the rest of the code
-    const query = {
-      ...req.filter,
-      ...(req.user.districts ? { district: req.user.districts } : {}),
-      ...(searchkey && {
-        $or: [{ nameOfApplicant: { $regex: searchkey, $options: "i" } }, { regno: { $regex: searchkey, $options: "i" } }, { mobileNumber: !isNaN(searchkey) ? parseInt(searchkey) : null }].filter((cond) => Object.values(cond)[0] !== null),
-      }),
-    };
-
-    const [totalCount, filterCount, data] = await Promise.all([
-      parseInt(skip) === 0 && ExamRegistration.countDocuments(),
-      parseInt(skip) === 0 && ExamRegistration.countDocuments(query),
-      ExamRegistration.find(query)
-        .populate("district")
-        .populate("area")
-        .populate("nameOfExamAppearingNow")
-        .populate("examCenter")
-        .populate("CenterRegistration")
-        .skip(parseInt(skip) || 0)
-        .limit(parseInt(limit) || 0)
-        .sort({ _id: -1 }),
-    ]);
-
-    return res.status(200).json({ success: true, message: `Retrieved all exam result`, response: data, count: data.length, totalCount: totalCount || 0, filterCount: filterCount || 0 });
+    return res.status(200).json({ success: true, message: "Filtered exam result data", response: examData, result: enrichedResult, count: examData.length });
   } catch (err) {
     console.log(err);
-    return res.status(400).json({ success: false, message: err.toString() });
+    return res.status(400).json({ success: false, message: "Unable to look up this registration" });
   }
 };
 
-exports.downloadCertificate = async (req, res) => {
+// ---------------------------------------------------------------------------
+// Public result lookup + certificate download
+// ---------------------------------------------------------------------------
+
+// `message` mirrors `customMessage` because the front-end getData helper only surfaces `message`.
+const failure = (code, text) => ({ success: false, code, message: text, customMessage: text });
+
+const RESULT_NOT_PUBLISHED = failure("RESULT_NOT_PUBLISHED", "The result is not published yet");
+const RESULT_NOT_FOUND = failure("RESULT_NOT_FOUND", "No published result found for the provided details.");
+const TOO_MANY_MISSES = failure("TOO_MANY_REQUESTS", "Too many unsuccessful searches. Please wait a few minutes and try again.");
+
+// A visitor who keeps searching for numbers that have no result is probably
+// guessing; after this many misses in the window the IP is paused.
+const lookupMisses = createLimiter({ windowMs: 10 * 60 * 1000, max: 20 });
+const downloadMisses = createLimiter({ windowMs: 10 * 60 * 1000, max: 20 });
+
+// @desc      PUBLIC RESULT LOOKUP — published results only, minimal fields
+// @route     GET /api/v1/exam-registration/student-result?regno=<register no | mobile>
+// @access    public (rate limited)
+// Returns just what the Result page shows: name, exam, mark, grade, rank and a
+// short-lived signed `ref` for the certificate download. No contact details,
+// address, centre, district or internal ids. "Not found" and "no marks yet"
+// give the same answer so the endpoint cannot be used to test whether a
+// number is registered.
+exports.getPublicResult = async (req, res) => {
+  setPrivateHeaders(res);
   try {
-    const { regno } = req.query;
+    if (lookupMisses.isBlocked(req)) return res.status(429).json(TOO_MANY_MISSES);
 
-    if (!regno) {
-      return res.status(400).json({
-        success: false,
-        customMessage: "Register number or mobile number is required",
-      });
+    const filter = buildLookupFilter(req.query.regno);
+    if (!filter) {
+      lookupMisses.hit(req);
+      return res.status(400).json(failure("INVALID_INPUT", "Please enter a valid register number or mobile number"));
     }
 
-    let examRegistration;
+    if (!(await areResultsPublished())) return res.status(403).json(RESULT_NOT_PUBLISHED);
 
-    // Check if the input is a mobile number (assume 10-digit numeric input for a mobile number)
-    const isMobileNumber = /^[0-9]{10}$/.test(regno);
+    const registrations = await ExamRegistration.find(filter).select("_id nameOfApplicant nameOfExamAppearingNow").limit(10).lean();
+    const nameByStudent = new Map(registrations.map((r) => [String(r._id), r.nameOfApplicant]));
 
-    if (isMobileNumber) {
-      // If it's a mobile number, search by mobileNumber
-      examRegistration = await ExamRegistration.findOne({ mobileNumber: regno }).populate("nameOfExamAppearingNow").populate("centerRegistration").populate("examCenter");
-    } else {
-      // If it's not a mobile number, assume it's a registration number
-      examRegistration = await ExamRegistration.findOne({ regno: regno }).populate("nameOfExamAppearingNow").populate("centerRegistration").populate("examCenter");
+    const scores = registrations.length
+      ? await ExamScore.find({ student: { $in: registrations.map((r) => r._id) } })
+          .populate("exam", "examType examShortName stageDigit")
+          .lean()
+      : [];
+    // Per registration: only results that can be shown, and only for the exam it was registered for.
+    const eligible = registrations.flatMap((registration) =>
+      scoresForRegistration(
+        registration,
+        scores.filter((score) => String(score.student) === String(registration._id) && isCertificateEligible(score))
+      )
+    );
+
+    if (!eligible.length) {
+      lookupMisses.hit(req);
+      return res.status(404).json(RESULT_NOT_FOUND);
     }
 
-    if (!examRegistration) {
-      return res.status(404).json({
-        success: false,
-        customMessage: "Exam registration not found",
-      });
-    }
-
-    // Fetch the exam score associated with this exam registration
-    const examScore = await ExamScore.findOne({
-      student: examRegistration._id,
-    }).populate("exam");
-
-    if (!examScore) {
-      return res.status(404).json({
-        success: false,
-        customMessage: "Exam score not found",
-      });
-    }
-
-    // Get the certificate template from certificate management
-    let certificate;
-    try {
-      // First try to find a record with the new certificate fields
-      certificate = await CertificateManagement.findOne({
-        $or: [{ stateExamCertificate: { $exists: true } }, { districtExamCertificate: { $exists: true } }],
-      });
-
-      // If no record with new fields found, get any record
-      if (!certificate) {
-        certificate = await CertificateManagement.findOne({});
-      }
-
-      console.log("Certificate management data:", certificate);
-
-      // Additional debugging - check if the specific fields exist
-      if (certificate) {
-        console.log("Certificate fields check:", {
-          hasStateExamCertificate: !!certificate.stateExamCertificate,
-          hasDistrictExamCertificate: !!certificate.districtExamCertificate,
-          stateExamCertificate: certificate.stateExamCertificate,
-          districtExamCertificate: certificate.districtExamCertificate,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching certificate management data:", error);
-      return res.status(500).json({
-        success: false,
-        customMessage: "Error retrieving certificate templates. Please try again.",
-      });
-    }
-
-    // Check if certificate data exists
-    if (!certificate) {
-      console.log("No certificate management record found, creating default...");
+    const { computeStudentRank } = require("./rankList");
+    const results = [];
+    for (const score of eligible) {
+      let rank = null;
       try {
-        // Create a default certificate management record
-        certificate = new CertificateManagement({
-          stateExamCertificate: "uploads/certificate-management/stateExamCertificate-1759240327420.pdf",
-          districtExamCertificate: "uploads/certificate-management/districtExamCertificate-1759240327441.pdf",
-        });
-        await certificate.save();
-        console.log("Default certificate management record created:", certificate);
-      } catch (createError) {
-        console.error("Error creating default certificate management record:", createError);
-        return res.status(500).json({
-          success: false,
-          customMessage: "Error setting up certificate templates. Please contact administrator.",
-        });
+        const ranks = score.exam?._id ? await computeStudentRank({ student: score.student, examType: score.exam._id }) : null;
+        const preferred = ranks?.district || ranks?.state;
+        if (preferred) {
+          rank = { rank: preferred.rank, totalCandidates: preferred.totalCandidates, scopeLabel: ranks.district ? "in district" : "state-wide" };
+        }
+      } catch (rankErr) {
+        console.error("rank lookup failed:", rankErr.message);
+      }
+
+      results.push({
+        ref: signCertificateRef(score._id),
+        name: nameByStudent.get(String(score.student)) || "",
+        exam: getExamDisplayName(score.exam),
+        mark: score.score,
+        grade: score.grade,
+        certificate: getCertificateType(score.exam),
+        ...(rank || {}),
+      });
+    }
+
+    return res.status(200).json({ success: true, results });
+  } catch (err) {
+    console.error("getPublicResult failed:", err.message);
+    return res.status(500).json(failure("SERVER_ERROR", "Unable to fetch the result right now. Please try again later."));
+  }
+};
+
+// Staff roles that may generate a certificate directly (before or after
+// publication) from the admin Results screen. District Admins stay inside
+// their own district. The "Student" portal user only ever gets their own.
+const CERTIFICATE_STAFF_ROLES = ["Admin", "District Admin"];
+
+const certificateFailure = (res, status, text) => res.status(status).json(failure("CERTIFICATE_UNAVAILABLE", text));
+
+// @desc      DOWNLOAD CERTIFICATE (PDF)
+// @route     GET /api/v1/exam-registration/download-state-certificate
+// @access    public with a signed `ref` from student-result; or signed-in
+//            Admin / District Admin (`id` = exam score id); or the signed-in
+//            Student's own result
+// The PDF is built in memory from the bundled green (State) or blue
+// (District) template and streamed straight back — it is never written to
+// storage, so there is no certificate URL that could be shared or indexed.
+// Public and Student callers are re-checked against the publication switch on
+// every request; the student comes from the verified `ref`, never from a
+// request parameter.
+exports.downloadCertificate = async (req, res) => {
+  setPrivateHeaders(res);
+  try {
+    const role = req.user?.userType?.role;
+    const isStaff = CERTIFICATE_STAFF_ROLES.includes(role);
+    const populateScore = (query) =>
+      query
+        .populate("exam", "examType examShortName stageDigit")
+        .populate({ path: "student", select: "nameOfApplicant regno district" });
+
+    let examScore = null;
+
+    if (isStaff) {
+      const { id } = req.query;
+      if (typeof id !== "string" || !mongoose.isValidObjectId(id)) {
+        return certificateFailure(res, 400, "Select a result to generate the certificate.");
+      }
+      examScore = await populateScore(ExamScore.findById(id));
+      if (examScore && req.user.districts && String(examScore.student?.district) !== String(req.user.districts)) {
+        return certificateFailure(res, 403, "You are not authorized to download certificates outside your district.");
+      }
+    } else {
+      // The admin screen asks by score `id`; with no valid session that means the
+      // login expired, which the front end handles by sending the user to sign in.
+      if (!req.user && req.query.id && !req.query.ref) {
+        return certificateFailure(res, 401, "Your session has expired. Please sign in again.");
+      }
+      if (downloadMisses.isBlocked(req)) return res.status(429).json(TOO_MANY_MISSES);
+      if (!(await areResultsPublished())) return res.status(403).json(RESULT_NOT_PUBLISHED);
+
+      if (role === "Student") {
+        const registration = await ExamRegistration.findOne({ mobileNumber: Number(req.user.mobile) }).select("_id nameOfExamAppearingNow");
+        if (registration) {
+          const own = await ExamScore.find({ student: registration._id }).select("_id exam").lean();
+          const chosen = scoresForRegistration(registration, own)[0];
+          if (chosen) examScore = await populateScore(ExamScore.findById(chosen._id));
+        }
+      } else {
+        const verified = verifyCertificateRef(req.query.ref);
+        if (verified.error === "expired") {
+          return certificateFailure(res, 410, "This download link has expired. Please search your result again.");
+        }
+        if (verified.error || !mongoose.isValidObjectId(verified.examScoreId)) {
+          downloadMisses.hit(req);
+          return certificateFailure(res, 400, "Please search your result first and then download the certificate.");
+        }
+        examScore = await populateScore(ExamScore.findById(verified.examScoreId));
       }
     }
 
-    // Determine which certificate template to use based on exam level + exam category.
-    // Phase 3 — the ExamType itself carries examLevel (State/District) and
-    // examCategory (Regular/Private). The same candidate does not switch
-    // between Regular and Private — they are registered for exactly one
-    // variant of the exam — so we drive the template off the exam, not off
-    // the student's status. Fall back to legacy slots, and finally to the
-    // exam-name regex for pre-2026 data that lacks the new fields.
-    const examTypeDoc = examRegistration.nameOfExamAppearingNow;
-    const examType = examTypeDoc?.examType || "";
-    const examLevel =
-      examTypeDoc?.examLevel ||
-      (examType.includes("Preliminary VI") || examType.includes("Secondary III") ? "State" : "District");
-    const examCategory =
-      examTypeDoc?.examCategory ||
-      (examRegistration.status === "Private" ? "Private" : "Regular");
-    const isStateCertificate = examLevel === "State";
+    // Same answer whether the result is missing or just not eligible.
+    if (!examScore || !examScore.student || !isCertificateEligible(examScore)) {
+      if (!isStaff) downloadMisses.hit(req);
+      return certificateFailure(res, 404, "Certificate is not available for this result.");
+    }
 
-    console.log("Certificate selection logic:", {
-      examType,
-      examLevel,
-      examCategory,
-      studentStatus: examRegistration.status,
-      availableTemplates: {
-        stateExamCertificate: certificate?.stateExamCertificate,
-        districtExamCertificate: certificate?.districtExamCertificate,
-        stateExamCertificateRegular: certificate?.stateExamCertificateRegular,
-        stateExamCertificatePrivate: certificate?.stateExamCertificatePrivate,
-        districtExamCertificateRegular: certificate?.districtExamCertificateRegular,
-        districtExamCertificatePrivate: certificate?.districtExamCertificatePrivate,
-        examCertificate: certificate?.examCertificate,
-      },
+    const pdf = await buildCertificatePdf({
+      type: getCertificateType(examScore.exam),
+      name: examScore.student.nameOfApplicant,
+      examName: getExamDisplayName(examScore.exam),
+      grade: examScore.grade,
     });
 
-    let certificateTemplate;
-    if (isStateCertificate) {
-      certificateTemplate =
-        (examCategory === "Private"
-          ? certificate?.stateExamCertificatePrivate
-          : certificate?.stateExamCertificateRegular) || certificate?.stateExamCertificate;
-    } else {
-      certificateTemplate =
-        (examCategory === "Private"
-          ? certificate?.districtExamCertificatePrivate
-          : certificate?.districtExamCertificateRegular) || certificate?.districtExamCertificate;
-    }
-
-    // If specific template is not available, throw an error instead of falling back
-    if (!certificateTemplate) {
-      return res.status(404).json({
-        success: false,
-        customMessage: isStateCertificate
-          ? `State ${examCategory} certificate template not found. Please upload a template under Certificate Management.`
-          : `District ${examCategory} certificate template not found. Please upload a template under Certificate Management.`,
-      });
-    }
-
-    try {
-      // Use the stored path directly as the S3 key
-      const getObjectParams = {
-        Bucket: process.env.DO_SPACES_BUCKET,
-        Key: certificateTemplate,
-      };
-
-      const { Body } = await s3.send(new GetObjectCommand(getObjectParams));
-      const templateBytes = await Body.transformToByteArray();
-
-      // Load and modify the PDF
-      const pdfDoc = await PDFDocument.load(templateBytes);
-
-      // Set document title
-      const documentTitle = "QSC Certificate";
-      pdfDoc.setTitle(documentTitle);
-
-      const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-      const pages = pdfDoc.getPages();
-      const firstPage = pages[0];
-
-      // Log the data we're going to draw
-      console.log("Drawing certificate data:", {
-        name: examRegistration.nameOfApplicant,
-        examType: examRegistration.nameOfExamAppearingNow?.examType,
-        grade: examScore?.grade,
-        certificateType: isStateCertificate ? "State" : "District",
-        templateUsed: certificateTemplate,
-      });
-
-      // Draw applicant's name (positioned on the right side of "Certified that Mr/Mrs." line)
-      firstPage.drawText(examRegistration.nameOfApplicant || "N/A", {
-        x: 300,
-        y: 350,
-        size: 16,
-        font: font,
-      });
-
-      // Draw exam type (positioned on the right side of the same line as name)
-      let examTypeFull = examRegistration.nameOfExamAppearingNow?.examType || "N/A";
-      let examTypeShort = examTypeFull.split(":")[0]; // Get the part before the colon
-      firstPage.drawText(examTypeShort, {
-        x: 320,
-        y: 312,
-        size: 16,
-        font: font,
-      });
-
-      // Draw the fixed date (positioned on the right side of "Examination conducted on" line)
-      firstPage.drawText("13th July 2025", {
-        x: 310,
-        y: 264,
-        size: 16,
-        font: font,
-      });
-
-      // Draw the grade (positioned on the right side of the line ending with "grade.")
-      firstPage.drawText(examScore?.grade || "No grade", {
-        x: 420,
-        y: 220,
-        size: 16,
-        font: font,
-      });
-
-      // Save the modified PDF
-      const modifiedPdfBytes = await pdfDoc.save();
-      const certificateTypePrefix = isStateCertificate ? "State" : "District";
-      const folder = process.env.DO_SPACES_FOLDER || "";
-      const fileName = folder ? `${folder}/certificates/${certificateTypePrefix}-Certificate-${Date.now()}.pdf` : `certificates/${certificateTypePrefix}-Certificate-${Date.now()}.pdf`;
-
-      // Upload to DO Spaces
-      const uploadParams = {
-        Bucket: process.env.DO_SPACES_BUCKET,
-        Key: fileName,
-        Body: modifiedPdfBytes,
-        ContentType: "application/pdf",
-      };
-
-      const command = new PutObjectCommand(uploadParams);
-      await s3.send(command);
-
-      return res.status(200).json({
-        success: true,
-        message: `${documentTitle} generated successfully`,
-        url: fileName,
-      });
-    } catch (s3Error) {
-      console.error("S3 operation error:", s3Error);
-      return res.status(500).json({
-        success: false,
-        customMessage: "Error accessing certificate template. Please ensure the template file exists.",
-      });
-    }
+    const fileSafe = String(examScore.student.regno || "certificate").replace(/[^A-Za-z0-9_-]/g, "");
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="QSC-Certificate-${fileSafe || "certificate"}.pdf"`,
+    });
+    return res.status(200).send(pdf);
   } catch (error) {
-    console.error("Certificate generation error:", error);
-    return res.status(400).json({
-      success: false,
-      message: error.toString(),
-    });
+    console.error("Certificate generation error:", error.message);
+    return res.status(500).json(failure("SERVER_ERROR", "Unable to generate the certificate right now. Please try again later."));
   }
 };
 

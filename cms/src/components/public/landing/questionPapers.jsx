@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import withLayout from "../layout";
 import Header from "./Header";
 import Footer from "./footer/footer";
+import { reveal } from "./scrollReveal";
+import { usePageSeo } from "../../../utils/seo";
 
 const Main = styled.div`
   display: flex;
@@ -33,7 +35,7 @@ const Column = styled.div`
   }
 `;
 
-const Title = styled.div`
+const Title = styled.h1`
   display: flex;
   align-items: center;
   justify-content: start;
@@ -41,7 +43,7 @@ const Title = styled.div`
   font-size: var(--landing-h2);
   font-weight: 700;
   color: #0f2743;
-  margin-top: var(--landing-page-pad-top);
+  margin: var(--landing-page-pad-top) 0 0;
   width: 100%;
 `;
 
@@ -123,6 +125,7 @@ const TabBox = styled.div`
 `;
 
 const QuestionPapersComponent = (props) => {
+  usePageSeo({ title: "Question Bank - Quran Study Centre Kerala", description: "Download previous question papers (Question Bank) of Quran Study Centre Kerala exams." });
   const [activeTab, setActiveTab] = useState(0);
   const [tabs, setTabs] = useState([]);
   useEffect(() => {
@@ -158,7 +161,7 @@ const QuestionPapersComponent = (props) => {
         <div className="landing-page-shell">
           <Main>
             <Column>
-              <Title>Download Question Banks Now!</Title>
+              <Title ref={reveal}>Download Question Banks Now!</Title>
               <TabBox>
                 {tabs.map((tab, index) => (
                   <StyledButton key={index} $active={index === activeTab} onClick={() => handleTabClick(index)}>
@@ -166,7 +169,7 @@ const QuestionPapersComponent = (props) => {
                   </StyledButton>
                 ))}
               </TabBox>
-              <ContentBox>
+              <ContentBox ref={reveal}>
                 {tabs.length === 0 ? (
                   <p style={{ textAlign: "center", color: "#888" }}>
                     No question papers found.

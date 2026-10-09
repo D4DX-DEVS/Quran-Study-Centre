@@ -1,30 +1,28 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import withLayout from "../../layout";
 import Header from "../Header";
 import Footer from "../footer/footer";
 import "../style.css";
 import "./style.css";
-import usePopIn from "../usePopIn";
+import { reveal } from "../scrollReveal";
 import useLatestVideos from "../useLatestVideos";
 import { VideoCard, VideoCardSkeleton } from "../VideoCard";
+import { usePageSeo } from "../../../../utils/seo";
 
 const CHANNEL_URL = "https://www.youtube.com/@aayathdarsequran/streams";
 
 const VideosPage = (props) => {
   const { videos, status } = useLatestVideos(15);
   const [playingVideoId, setPlayingVideoId] = useState(null);
-  const [gridRef, gridPop] = usePopIn();
 
-  useEffect(() => {
-    document.title = "Aayath Darse Quran — All Videos";
-  }, []);
+  usePageSeo({ title: "Aayath Darse Quran Videos - Quran Study Centre Kerala", description: "Watch all Aayath Darse Quran videos from Quran Study Centre Kerala." });
 
   return (
     <>
       <Header {...props} />
       <main className="landing-home">
         <div className="landing-page-shell videos-page-shell">
-          <div className="videos-page-head">
+          <div className="videos-page-head" ref={reveal}>
             <a
               href={CHANNEL_URL}
               target="_blank"
@@ -45,18 +43,13 @@ const VideosPage = (props) => {
               </a>
             </div>
           ) : (
-            <div
-              className="videos-page-grid landing-pop-grid"
-              ref={gridRef}
-              data-pop={gridPop}
-            >
+            <div className="videos-page-grid">
               {status === "loading"
                 ? [0, 1, 2, 3, 4, 5].map((index) => <VideoCardSkeleton key={index} />)
-                : videos.map((video, index) => (
+                : videos.map((video) => (
                     <VideoCard
                       key={video.videoId}
                       video={video}
-                      index={index}
                       playing={playingVideoId === video.videoId}
                       onPlay={() => setPlayingVideoId(video.videoId)}
                     />

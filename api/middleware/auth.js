@@ -58,3 +58,38 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+// Like `protect`, but never rejects: a valid token populates req.user, anything
+// else (no token, bad token, deleted user) just continues as an anonymous
+// caller. For public endpoints that also serve staff — the front-end's API
+// helpers always send an Authorization header, even for signed-out visitors.
+exports.optionalProtect = asyncHandler(async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer")) {
+    const token = header.split(" ")[1];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).populate("userType");
+        if (user) req.user = user;
+      } catch (_) {
+        // Expired / malformed token — treat as anonymous.
+      }
+    }
+  }
+  next();
+});
+
+// Block specific roles (e.g. the low-privilege "Student" login) from routes
+// that are staff-only, without having to enumerate every staff role.
+exports.denyRoles = (...roles) => {
+  return (req, res, next) => {
+    if (roles.includes(req?.user?.userType?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to access this route",
+      });
+    }
+    next();
+  };
+};

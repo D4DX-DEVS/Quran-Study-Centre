@@ -5,8 +5,11 @@ const { addResultAndCertificates, select, updateResultAndCertificates, deleteRes
 const { protect, authorize } = require("../middleware/auth");
 const { reqFilter } = require("../middleware/filter");
 
-router.route("/").post(addResultAndCertificates).get(reqFilter, getResultAndCertificates).put(updateResultAndCertificates).delete(deleteResultAndCertificates);
+// Legacy results store — nothing public reads it, so keep it staff-only.
+const staff = [protect, authorize("Admin", "District Admin")];
 
-router.route("/select").get(reqFilter, select);
+router.route("/").post(...staff, addResultAndCertificates).get(reqFilter, ...staff, getResultAndCertificates).put(...staff, updateResultAndCertificates).delete(...staff, deleteResultAndCertificates);
+
+router.route("/select").get(reqFilter, ...staff, select);
 
 module.exports = router;

@@ -4,6 +4,8 @@ import withLayout from "../../layout";
 import { getData } from "../../../../backend/api";
 import Header from "../Header";
 import Footer from "../footer/footer";
+import { reveal } from "../scrollReveal";
+import { usePageSeo } from "../../../../utils/seo";
 
 const CDN = import.meta.env.VITE_APP_CDN || "";
 
@@ -230,6 +232,7 @@ const STATE_ROLES = [
 ];
 
 const Leadership = (props) => {
+  usePageSeo({ title: "Leadership - Quran Study Centre Kerala", description: "The state, district and area leadership of Quran Study Centre Kerala (QSC)." });
   const [stateLeadership, setStateLeadership] = useState({});
   const [districts, setDistricts] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -264,7 +267,7 @@ const Leadership = (props) => {
       <Header {...props} />
       <main className="landing-home">
         <div className="landing-page-shell">
-          <HeroSection>
+          <HeroSection ref={reveal}>
             <Breadcrumb>
               <a href="/">Home</a> &gt; Leadership
             </Breadcrumb>
@@ -280,7 +283,7 @@ const Leadership = (props) => {
           ) : (
             <>
               <SectionWrap>
-                <SectionHead>
+                <SectionHead ref={reveal}>
                   <SectionEyebrow>State Leaders</SectionEyebrow>
                   <SectionTitle>State Leadership</SectionTitle>
                 </SectionHead>
@@ -289,7 +292,7 @@ const Leadership = (props) => {
                 ) : (
                   <StateGrid>
                     {stateCards.map((person, index) => (
-                      <StateCard key={index}>
+                      <StateCard key={index} ref={reveal}>
                         <StatePhoto>
                           {person.photo ? <img src={`${CDN}${person.photo}`} alt={person.name} /> : null}
                         </StatePhoto>
@@ -302,14 +305,14 @@ const Leadership = (props) => {
               </SectionWrap>
 
               <SectionWrap>
-                <SectionHead>
+                <SectionHead ref={reveal}>
                   <SectionEyebrow>District Co-ordinators</SectionEyebrow>
                   <SectionTitle>District Co-ordinators</SectionTitle>
                 </SectionHead>
                 {districts.length === 0 ? (
                   <EmptyState>No district coordinators added yet.</EmptyState>
                 ) : (
-                  <CoordGrid>
+                  <CoordGrid ref={reveal}>
                     {districts.map((district) => (
                       <CoordCard key={district._id}>
                         <CoordHeader>{district.districtName}</CoordHeader>
@@ -330,14 +333,14 @@ const Leadership = (props) => {
               </SectionWrap>
 
               <SectionWrap>
-                <SectionHead>
+                <SectionHead ref={reveal}>
                   <SectionEyebrow>Area Co-ordinators</SectionEyebrow>
                   <SectionTitle>Area Co-ordinators</SectionTitle>
                 </SectionHead>
                 {areas.length === 0 ? (
                   <EmptyState>No area coordinators added yet.</EmptyState>
                 ) : (
-                  <CoordGrid>
+                  <CoordGrid ref={reveal}>
                     {areas.map((area) => (
                       <CoordCard key={area._id}>
                         <CoordHeader>{area.areaName}</CoordHeader>

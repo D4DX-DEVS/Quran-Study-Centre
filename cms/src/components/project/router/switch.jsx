@@ -19,6 +19,7 @@ const ExamRegistration = lazy(() => import("../pages/examRegistration/index.jsx"
 const ExamType = lazy(() => import("../pages/examType/index.jsx"));
 const HallTicket = lazy(() => import("../pages/hallTicket/index.jsx"));
 const OldQuestionPapers = lazy(() => import("../pages/oldQuestionPapers/index.jsx"));
+const ModelQuestionPapers = lazy(() => import("../pages/modelQuestionPapers/index.jsx"));
 const ExamCenterStickers = lazy(() => import("../pages/examCenterStickers/index.jsx"));
 const ExamCenterRegistration = lazy(() => import("../pages/examCenterRegistration/index.jsx"));
 const CenterRegistration = lazy(() => import("../pages/centerRegistration/index.jsx"));
@@ -92,6 +93,8 @@ const RenderPage = (page, key, privileges) => {
       return renderComponent(HallTicket);
     case "old-question-papers":
       return renderComponent(OldQuestionPapers);
+    case "model-question-papers":
+      return renderComponent(ModelQuestionPapers);
     case "exam-center-stickers":
       return renderComponent(ExamCenterStickers);
     case "about-us":

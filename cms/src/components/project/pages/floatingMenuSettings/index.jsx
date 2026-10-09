@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Download,
+  FileCheck2,
   Eye,
   EyeOff,
   FileText,
@@ -60,6 +61,13 @@ const MENU_ITEMS = [
     tone: "bg-sky-50 text-sky-600 ring-sky-100",
   },
   {
+    key: "modelQuestions",
+    label: "Model Question & Answer Key",
+    description: "Shows the Model Question & Answer Key menu option with model papers and answer keys for the nine exams. Separate from Downloads (Question Bank).",
+    icon: FileCheck2,
+    tone: "bg-lime-50 text-lime-700 ring-lime-100",
+  },
+  {
     key: "syllabus",
     label: "Syllabus",
     description: "Shows the exam syllabus page from the landing page.",
@@ -83,7 +91,7 @@ const MENU_ITEMS = [
   {
     key: "result",
     label: "Result",
-    description: "Enables the result lookup entry point.",
+    description: "Turns exam results on for students: the public Result link, result search and certificate download. Keep off until results are final.",
     icon: Trophy,
     tone: "bg-rose-50 text-rose-600 ring-rose-100",
   },
@@ -287,6 +295,9 @@ const FloatingMenuSettings = (props) => {
   const enableAll = () => {
     const next = {};
     MENU_ITEMS.forEach((item) => {
+      // "Result" is the publication switch for exam results — it is only ever
+      // turned on deliberately, never as a side effect of "Enable all".
+      if (item.key === "result") return;
       next[item.key] = true;
     });
     setValues((current) => ({ ...current, ...next }));
@@ -445,7 +456,7 @@ const FloatingMenuSettings = (props) => {
       className="noshadow"
       style={{ flex: 1, minHeight: 0, overflowY: "auto" }}
     >
-      <div className="p-6 w-full max-w-7xl mx-auto">
+      <div className="p-6 w-full max-w-[1600px] mx-auto">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600">
@@ -552,7 +563,7 @@ const FloatingMenuSettings = (props) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
           <div className="space-y-6">
             {duplicateCount > 0 && (
               <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm">
@@ -984,30 +995,21 @@ const FloatingMenuSettings = (props) => {
             </SectionCard>
           </div>
 
-          <aside className="xl:sticky xl:top-4 h-fit space-y-4">
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-                Quick action preview
-              </div>
-              <PreviewMock values={values} />
-              <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
-                This approximates the floating actions shown on the public
-                landing page.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
+          {/* Stays in view while the long settings column scrolls. It is capped to the visible
+              area and scrolls on its own, so no card is ever pushed off-screen out of reach. */}
+          <aside className="xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-13rem)] xl:overflow-y-auto xl:pr-1 xl:[scrollbar-width:thin] space-y-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4 shrink-0">
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
                 Public snapshot preview
               </div>
               <SnapshotPreview values={values} />
-              <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
+              <p className="text-xs text-slate-500 mt-3 leading-relaxed">
                 These cards are the only public numbers shown. They are edited
                 manually here and are not read live from district data.
               </p>
             </div>
 
-            <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4 shrink-0">
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
                 Content source
               </div>
@@ -1220,66 +1222,13 @@ const ToggleSwitch = ({ checked, onChange }) => (
   </button>
 );
 
-const PreviewMock = ({ values }) => {
-  const visible = MENU_ITEMS.filter((item) => values[item.key]);
-
-  return (
-    <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 rounded-md border border-slate-200 h-72 overflow-hidden">
-      <div className="absolute inset-0 p-3 space-y-2">
-        <div className="h-3 w-1/3 bg-slate-200 rounded" />
-        <div className="h-2 w-2/3 bg-slate-200/70 rounded" />
-        <div className="h-2 w-1/2 bg-slate-200/70 rounded" />
-        <div className="h-24 w-full bg-white/70 rounded-md mt-2 border border-slate-200/70" />
-        <div className="grid grid-cols-2 gap-2 pt-2">
-          {values.heroStats.slice(0, 4).map((item, index) => (
-            <div key={`hero-preview-${index}`} className="h-12 rounded-md bg-white/80 border border-slate-200/70 p-2">
-              <div className="h-2 w-1/2 bg-slate-200 rounded mb-2" />
-              <div className="text-[10px] font-semibold text-slate-600 truncate">
-                {item.value || "--"}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-        {visible.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.key}
-              className="flex items-center gap-2 bg-white shadow-sm border border-slate-200 rounded-full pl-2 pr-3 py-1"
-            >
-              <span className={`flex items-center justify-center w-6 h-6 rounded-full ring-1 ${item.tone}`}>
-                <Icon size={12} />
-              </span>
-              <span className="text-[11px] text-slate-700 font-medium whitespace-nowrap">
-                {item.label}
-              </span>
-            </div>
-          );
-        })}
-        <div className="mt-1 w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg">
-          <Sparkles size={18} />
-        </div>
-      </div>
-
-      {visible.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs text-slate-400 bg-white/80 px-3 py-1 rounded-full border border-slate-200">
-            No menu items enabled
-          </span>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const SnapshotPreview = ({ values }) => {
   if (!values.showPublicSnapshot) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 text-center">
-        Public snapshot is currently hidden.
+      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+        <EyeOff size={20} className="mx-auto mb-2 text-slate-400" aria-hidden="true" />
+        <div className="text-sm font-medium text-slate-700">Public snapshot is currently hidden.</div>
+        <p className="text-xs text-slate-500 mt-1">Switch on "Show public snapshot section" to preview the cards here.</p>
       </div>
     );
   }
