@@ -85,6 +85,11 @@ const FloatingSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // "Model Question & Answer Key" menu option. Off until an admin switches it on.
+    modelQuestions: {
+      type: Boolean,
+      default: false,
+    },
     syllabus: {
       type: Boolean,
       default: true,

@@ -1,6 +1,7 @@
 const FloatingSettings = require("../models/floatingMenuSettings");
 const { default: mongoose } = require("mongoose");
 const { errorLog } = require("../utils/errorLog");
+const { areResultsPublished } = require("../utils/resultAccess");
 
 // @desc      ADD USER TYPE
 // @route     POST /api/user/exam-type
@@ -26,7 +27,7 @@ exports.getFloatingSettings = async (req, res) => {
 
     if (id && mongoose.isValidObjectId(id)) {
       const response = await FloatingSettings.findById(id);
-      return res.status(200).json({ success: true, message: "Retrieved specific floatingSettings", response });
+      return res.status(200).json({ success: true, message: "Retrieved specific floatingSettings", response, resultPublished: await areResultsPublished() });
     }
     const query = searchkey
       ? {
@@ -42,7 +43,11 @@ exports.getFloatingSettings = async (req, res) => {
         .limit(parseInt(limit) || 0),
     ]);
 
-    res.status(200).json({ success: true, message: `Retrieved all floatingSettings`, response: data, count: data.length, totalCount: totalCount || 0, filterCount: filterCount || 0 });
+    // `resultPublished` mirrors the Result toggle exactly as the result endpoints
+    // enforce it (latest settings record), so the public site and the API can
+    // never disagree about whether results are live.
+    const resultPublished = await areResultsPublished();
+    res.status(200).json({ success: true, message: `Retrieved all floatingSettings`, response: data, resultPublished, count: data.length, totalCount: totalCount || 0, filterCount: filterCount || 0 });
   } catch (err) {
     console.log(err);
     errorLog(req, err);

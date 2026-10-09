@@ -149,31 +149,30 @@ exports.getRankList = async (req, res) => {
 exports.computeStudentRank = async ({ student, examType }) => {
   if (!student || !examType) return null;
 
-  // Derive the student's own district / area / centre to compute their
-  // district- and centre-level ranks in one go.
-  const reg = await ExamRegistration.findById(student).select(
-    "district area centerRegistration"
-  );
-  if (!reg) return null;
+  // Same dense ranking as buildRankList (ties share a rank, no gaps) but worked
+  // out with counts instead of building and joining the whole cohort — that
+  // join took ~3s for the largest exam and ran on every public result lookup.
+  const [reg, own] = await Promise.all([
+    ExamRegistration.findById(student).select("district").lean(),
+    ExamScore.findOne({ student, exam: examType }).select("score").lean(),
+  ]);
+  if (!reg || !own || typeof own.score !== "number") return null;
 
-  const districtRows = reg.district
-    ? await buildRankList({ scope: "district", scopeId: reg.district, examType })
-    : [];
-  const stateRows = await buildRankList({ scope: "state", scopeId: null, examType });
+  const rankWithin = async (studentIds) => {
+    const scope = { exam: examType, ...(studentIds ? { student: { $in: studentIds } } : {}) };
+    const [totalCandidates, higherScores] = await Promise.all([
+      ExamScore.countDocuments(scope),
+      ExamScore.distinct("score", { ...scope, score: { $gt: own.score } }),
+    ]);
+    return { rank: higherScores.length + 1, totalCandidates };
+  };
 
-  const find = (rows) => rows.find((r) => String(r.studentId) === String(student));
-  const districtRow = find(districtRows);
-  const stateRow = find(stateRows);
+  // Registrations in the student's district (only students who have a registration count, as before).
+  const districtIds = reg.district ? await ExamRegistration.find({ district: reg.district }).distinct("_id") : null;
+  const [district, state] = await Promise.all([districtIds ? rankWithin(districtIds) : null, rankWithin(null)]);
 
   // Prefer district rank (more meaningful to student); include both.
-  return {
-    district: districtRow
-      ? { rank: districtRow.rank, totalCandidates: districtRows.length }
-      : null,
-    state: stateRow
-      ? { rank: stateRow.rank, totalCandidates: stateRows.length }
-      : null,
-  };
+  return { district, state };
 };
 
 exports.buildRankList = buildRankList;

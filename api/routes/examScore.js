@@ -18,7 +18,9 @@ router.route("/mark-entry-report").get(protect, resultRoles, getMarkEntryReport)
 // Recomputes every grade — Admin only (scripts/recompute-exam-score-grades.js does the same offline).
 router.put("/update", protect, authorize("Admin"), updateGradesForExamScores);
 
-// Phase 2.6 — rank list (public read-only).
-router.get("/ranklist", getRankList);
+// Phase 2.6 — rank list.
+// Lists names, register numbers, marks and grades of whole cohorts — staff only
+// (it used to be open to anyone, published or not).
+router.get("/ranklist", reqFilter, protect, resultRoles, getRankList);
 
 module.exports = router;
