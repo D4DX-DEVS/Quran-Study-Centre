@@ -7,6 +7,8 @@ import Header from "../Header";
 import Footer from "../footer/footer";
 import { thafheem } from "../../../project/brand";
 import { AppleLogo, PlayStoreLogo, StoreBadge } from "../storeBadges";
+import { reveal } from "../scrollReveal";
+import { usePageSeo } from "../../../../utils/seo";
 
 const CDN = import.meta.env.VITE_APP_CDN || "";
 
@@ -266,9 +268,7 @@ const SECTION_GROUPS = SECTIONS.reduce((groups, section) => {
 const SyllabusPage = (props) => {
   const [papers, setPapers] = useState([]);
 
-  useEffect(() => {
-    document.title = "Syllabus - ഖുർആൻ സ്റ്റഡി സെന്റർ കേരള";
-  }, []);
+  usePageSeo({ title: "Exam Syllabus - Quran Study Centre Kerala", description: "Annual exam syllabus for Preliminary I-VI and Secondary I-III of Quran Study Centre Kerala (QSC)." });
 
   useEffect(() => {
     getData({}, "old-question-papers")
@@ -287,18 +287,22 @@ const SyllabusPage = (props) => {
       <Header {...props} />
       <main className="landing-home">
         <div className="landing-page-shell">
-          <Intro>
+          <Intro ref={reveal}>
             <PageTitle>പരീക്ഷ സിലബസ്</PageTitle>
           </Intro>
 
           {SECTION_GROUPS.map((groupBlock) => (
             <GroupWrap key={groupBlock.group}>
-              <GroupHeading>{groupBlock.group}</GroupHeading>
+              <GroupHeading ref={reveal}>{groupBlock.group}</GroupHeading>
               <CardGrid>
                 {groupBlock.items.map((section) => {
                   const previousPaper = findPreviousQuestionPaper(papers, section);
                   return (
-                    <Card key={`${section.code}-${section.num}`}>
+                    <Card
+                      key={`${section.code}-${section.num}`}
+                      ref={reveal}
+                      className="landing-hover-lift"
+                    >
                       <CardHeading>{section.heading}</CardHeading>
 
                       <Field>

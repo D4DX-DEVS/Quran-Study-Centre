@@ -1,0 +1,98 @@
+import React, { useEffect, useState } from "react";
+import Layout from "../../../core/layout";
+import ListTable from "../../../core/list/list";
+import { Container } from "../../../core/layout/styels";
+import { EXAM_CATEGORIES, MODEL_PAPER_KINDS } from "../../../public/landing/examCategories";
+//src/components/styles/page/index.js
+//if you want to write custom style wirte in above file
+
+// Admin screen for the public "Model Question & Answer Key" section. Same list
+// / upload mechanism as the Question Bank page, but a separate collection: a
+// file added here only ever appears under Model Question & Answer Key.
+const ModelQuestionPapers = (props) => {
+  //to update the page title
+  useEffect(() => {
+    document.title = `Model Question & Answer Key - QSC Automation`;
+  }, []);
+
+  const [attributes] = useState([
+    {
+      type: "select",
+      placeholder: "Exam",
+      apiType: "CSV",
+      selectApi: EXAM_CATEGORIES.map((category) => category.value).join(", "),
+      name: "category",
+      validation: "",
+      default: "",
+      label: "Exam",
+      required: true,
+      view: true,
+      add: true,
+      update: true,
+      tag: true,
+    },
+    {
+      type: "select",
+      placeholder: "Type",
+      apiType: "CSV",
+      selectApi: MODEL_PAPER_KINDS.join(", "),
+      name: "kind",
+      validation: "",
+      default: "",
+      label: "Type",
+      required: true,
+      view: true,
+      add: true,
+      update: true,
+      tag: true,
+    },
+    {
+      type: "text",
+      placeholder: "Title",
+      name: "title",
+      validation: "",
+      default: "",
+      label: "Title",
+      tag: true,
+      required: true,
+      view: true,
+      add: true,
+      update: true,
+    },
+    {
+      type: "file",
+      placeholder: "PDF file",
+      name: "attachment",
+      validation: "",
+      default: "",
+      tag: false,
+      label: "PDF file",
+      showItem: "",
+      required: true,
+      view: true,
+      add: true,
+      update: true,
+      allowedFileTypes: ["application/pdf"],
+    },
+  ]);
+
+  return (
+    <Container className="noshadow">
+      <ListTable
+        api={`model-question-papers`}
+        itemTitle={{
+          name: "title",
+          type: "text",
+          collection: "",
+        }}
+        shortName={`Model Question & Answer Key`}
+        formMode={`single`}
+        surfaceTheme={"district"}
+        {...props}
+        attributes={attributes}
+      ></ListTable>
+    </Container>
+  );
+};
+
+export default Layout(ModelQuestionPapers);

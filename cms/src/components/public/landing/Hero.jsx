@@ -7,9 +7,10 @@ import { thafheem } from "../../project/brand";
 import { AppleLogo, PlayStoreLogo, StoreBadge } from "./storeBadges";
 import heroScene from "./assets/hero-scene.webp";
 import heroCalligraphy from "./assets/hero-calligraphy.svg";
-import usePopIn from "./usePopIn";
+import { reveal } from "./scrollReveal";
 import useLatestVideos from "./useLatestVideos";
-import { VideoCard, VideoCardSkeleton } from "./VideoCard";
+import { VideoCardSkeleton } from "./VideoCard";
+import VideoCarousel from "./VideoCarousel";
 import qscLogo from "./assets/qsc-icon-mark.png";
 import aayathLogo from "./assets/aayath-logo.png";
 
@@ -107,9 +108,7 @@ function Hero() {
   );
   const [loading, setLoading] = useState(true);
   const [introImageFailed, setIntroImageFailed] = useState(false);
-  const { videos, status: videoStatus } = useLatestVideos(3);
-  const [playingVideoId, setPlayingVideoId] = useState(null);
-  const [videoGridRef, videoGridPop] = usePopIn();
+  const { videos, status: videoStatus } = useLatestVideos(12);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,7 +180,7 @@ function Hero() {
             {(landingSettings.copy.heroStoryBadge ||
               landingSettings.copy.heroStoryTitle ||
               landingSettings.copy.heroStoryDescription) && (
-              <div className="landing-story-card">
+              <div className="landing-story-card" ref={reveal}>
                 {landingSettings.copy.heroStoryBadge && (
                   <span className="landing-story-badge">
                     {landingSettings.copy.heroStoryBadge}
@@ -217,7 +216,7 @@ function Hero() {
               {landingSettings.heroStats
                 .filter((stat) => stat.value || stat.label)
                 .map((stat, index) => (
-                  <div className="landing-stat-card" key={`hero-stat-${index}`}>
+                  <div className="landing-stat-card" key={`hero-stat-${index}`} ref={reveal}>
                     <span className="landing-stat-value">{stat.value}</span>
                     <span className="landing-stat-label">{stat.label}</span>
                   </div>
@@ -230,11 +229,11 @@ function Hero() {
       {/* ── QSC intro: heading + copy + Read More, logo mark right ── */}
       {hasIntroSection && (
         <section className="landing-page-shell landing-section landing-intro-shell">
-          <div className="landing-intro-card">
+          <div className="landing-intro-card" ref={reveal}>
             <div className="landing-intro-grid">
               <div className="landing-intro-copy">
                 {content.landingTitle && (
-                  <h2 className="landing-hero-title">{content.landingTitle}</h2>
+                  <h1 className="landing-hero-title">{content.landingTitle}</h1>
                 )}
                 {content.landingDescription &&
                   content.landingDescription.split("\n\n").map((para, index) => (
@@ -266,11 +265,12 @@ function Hero() {
           target="_blank"
           rel="noopener noreferrer"
           className="landing-app-banner"
+          ref={reveal}
         >
           <img src={thafheem} alt="Thafheem ul Quran — samagramaya Quran app" />
         </a>
 
-        <div className="landing-thafheem-card">
+        <div className="landing-thafheem-card" ref={reveal}>
           <div className="landing-thafheem-copy">
             <p className="landing-thafheem-malayalam">
               പരീക്ഷ പൂർണമായും തഫ്ഹീമുൽ ഖുർആനെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്. പഠനത്തിനായി
@@ -303,7 +303,7 @@ function Hero() {
 
       {/* ── Aayath Darse Quran videos ── */}
       <section className="landing-page-shell landing-section landing-section-tight">
-        <div className="landing-video-head">
+        <div className="landing-video-head" ref={reveal}>
           <div className="landing-video-title-group">
             <img src={aayathLogo} alt="Aayath Darse Quran" className="landing-video-logo" />
             <h2 className="landing-section-title">Aayath Darse Quran</h2>
@@ -317,24 +317,14 @@ function Hero() {
             <ArrowRight size={18} className="landing-more-videos-arrow" />
           </a>
         </div>
-        <div
-          className="landing-video-grid landing-pop-grid"
-          ref={videoGridRef}
-          data-pop={videoGridPop}
-        >
-          {videoStatus === "ready" &&
-            videos.map((video, index) => (
-              <VideoCard
-                key={video.videoId}
-                video={video}
-                index={index}
-                playing={playingVideoId === video.videoId}
-                onPlay={() => setPlayingVideoId(video.videoId)}
-              />
+        {videoStatus === "ready" && <VideoCarousel videos={videos} />}
+        {videoStatus === "loading" && (
+          <div className="landing-video-grid">
+            {[0, 1, 2].map((index) => (
+              <VideoCardSkeleton key={index} />
             ))}
-          {videoStatus === "loading" &&
-            [0, 1, 2].map((index) => <VideoCardSkeleton key={index} />)}
-        </div>
+          </div>
+        )}
         {videoStatus === "error" && (
           <p className="landing-video-error">
             Videos couldn't load right now.{" "}

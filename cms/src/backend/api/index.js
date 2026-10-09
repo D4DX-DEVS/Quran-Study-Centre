@@ -594,10 +594,21 @@ const getBlobData = async (fields, ulr, dispatch, navigate) => {
           console.error("Error during error handling:", cleanupError);
         }
       }
+      // The body of a failed response is still an ArrayBuffer here; pull the
+      // server's message out of it so callers can show something useful.
+      let serverMessage = "";
+      try {
+        const raw = error.response?.data;
+        if (raw && typeof raw.byteLength === "number") {
+          const parsed = JSON.parse(new TextDecoder().decode(raw));
+          serverMessage = parsed?.customMessage || parsed?.message || "";
+        }
+      } catch (_) {}
       resolve({
         status: error.response?.status,
         data: null,
         error: error.message || "Failed to fetch PDF",
+        message: serverMessage,
       });
     }
   });

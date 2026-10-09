@@ -124,7 +124,11 @@
   align-items: center;
   gap: 8px;
   flex: 1;
-  justify-content: center;
+  /* Menu sits against the right side, next to the action buttons; logo and
+     buttons stay put. The header's 18px gap plus this padding is the space
+     between the last item and Hall Ticket, so the menu can never overlap them. */
+  justify-content: flex-end;
+  padding-right: 12px;
 }
 
 .landing-navbar a,
@@ -1385,7 +1389,7 @@
   background: #0f1b2d;
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(15, 39, 67, 0.14);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
 button.landing-video-card {
@@ -1402,7 +1406,7 @@ button.landing-video-card {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: transform 0.5s ease;
 }
 
 /* Dark wash — faint at rest so titles in the art stay readable,
@@ -1412,7 +1416,7 @@ button.landing-video-card::after {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(8, 18, 36, 0) 40%, rgba(8, 18, 36, 0.35) 100%);
-  transition: background-color 0.25s ease;
+  transition: background-color 0.35s ease;
 }
 
 .landing-video-play {
@@ -1428,31 +1432,64 @@ button.landing-video-card::after {
   background: rgba(255, 255, 255, 0.92);
   color: #1e3a8a;
   box-shadow: 0 6px 18px rgba(8, 18, 36, 0.3);
-  transition: transform 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
-/* Hover: slight lift + scale, darker wash, play button grows and turns brand blue. */
-button.landing-video-card:hover,
+/* Hover / keyboard focus: slight scale + deeper shadow, thumbnail eases in
+   a little, darker wash, and the play button grows, gets a soft halo and
+   turns brand blue. Hover only where a mouse exists (touch devices get the
+   :active press below instead of a stuck hover state). */
+.landing-video-title {
+  transition: color 0.3s ease;
+}
+
 button.landing-video-card:focus-visible {
   transform: scale(1.02);
   box-shadow: 0 14px 30px rgba(15, 39, 67, 0.22);
+  outline: 3px solid rgba(29, 78, 216, 0.5);
+  outline-offset: 3px;
 }
 
-button.landing-video-card:hover::after,
 button.landing-video-card:focus-visible::after {
   background-color: rgba(8, 18, 36, 0.28);
 }
 
-button.landing-video-card:hover .landing-video-play,
 button.landing-video-card:focus-visible .landing-video-play {
   transform: scale(1.1);
   background: var(--landing-blue);
   color: #ffffff;
 }
 
-button.landing-video-card:focus-visible {
-  outline: 3px solid rgba(29, 78, 216, 0.5);
-  outline-offset: 3px;
+@media (hover: hover) and (pointer: fine) {
+  button.landing-video-card:hover {
+    transform: scale(1.025);
+    box-shadow: 0 16px 34px rgba(15, 39, 67, 0.24);
+  }
+
+  button.landing-video-card:hover img {
+    transform: scale(1.06);
+  }
+
+  button.landing-video-card:hover::after {
+    background-color: rgba(8, 18, 36, 0.28);
+  }
+
+  button.landing-video-card:hover .landing-video-play {
+    transform: scale(1.12);
+    background: var(--landing-blue);
+    color: #ffffff;
+    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0.28), 0 8px 22px rgba(8, 18, 36, 0.35);
+  }
+
+  .landing-video-item:hover .landing-video-title {
+    color: var(--landing-blue);
+  }
+}
+
+/* Tap feedback on touch screens. */
+button.landing-video-card:active {
+  transform: scale(0.985);
 }
 
 .landing-video-card-playing {
@@ -1539,35 +1576,7 @@ button.landing-video-card:focus-visible {
   }
 }
 
-/* Pop-in: cards fade in from 95% scale as their grid scrolls into view
-   (see usePopIn). Transform + opacity only, so nothing around them shifts.
-   Skeletons are excluded — only real videos "pop" into place. */
-@keyframes landing-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.landing-pop-grid[data-pop="pending"] > :not(.landing-video-skeleton) {
-  opacity: 0;
-}
-
-.landing-pop-grid[data-pop="in"] > :not(.landing-video-skeleton) {
-  animation: landing-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(min(var(--pop-i, 0), 8) * 90ms);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .landing-pop-grid[data-pop] > * {
-    opacity: 1;
-    animation: none;
-  }
-
   .landing-video-skeleton .landing-video-card,
   .landing-video-skeleton-line {
     animation: none;
@@ -1575,6 +1584,9 @@ button.landing-video-card:focus-visible {
 
   button.landing-video-card:hover,
   button.landing-video-card:focus-visible,
+  button.landing-video-card:active,
+  button.landing-video-card:hover img,
+  button.landing-video-card:focus-visible img,
   button.landing-video-card:hover .landing-video-play,
   button.landing-video-card:focus-visible .landing-video-play {
     transform: none;
@@ -1591,6 +1603,108 @@ button.landing-video-card:focus-visible {
   .landing-video-grid {
     grid-template-columns: 1fr;
     gap: 18px;
+  }
+}
+
+/* ─── Video carousel (home page) ───
+   --per-view comes from VideoCarousel (3 / 2 / 1 cards), --index is the first
+   visible card. Each slide is one card wide; the track slides by one card. */
+.landing-video-carousel {
+  --video-gap: var(--landing-grid-gap);
+  position: relative;
+}
+
+.landing-video-carousel-viewport {
+  overflow: hidden;
+  overflow: clip;
+  /* room for the hover lift/shadow of the cards at the top and bottom */
+  padding: 8px 0 12px;
+  margin: -8px 0 -12px;
+}
+
+.landing-video-carousel-track {
+  display: flex;
+  gap: var(--video-gap);
+  transform: translateX(
+    calc(
+      var(--index) * -1 *
+        (((100% - (var(--per-view) - 1) * var(--video-gap)) / var(--per-view)) + var(--video-gap))
+    )
+  );
+  transition: transform 1.3s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+.landing-video-carousel-slide {
+  flex: 0 0 calc((100% - (var(--per-view) - 1) * var(--video-gap)) / var(--per-view));
+  min-width: 0;
+}
+
+.landing-video-carousel-arrow {
+  position: absolute;
+  top: calc(50% - 40px);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1e3a8a;
+  box-shadow: 0 6px 18px rgba(8, 18, 36, 0.28);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.landing-video-carousel-arrow.prev {
+  left: 8px;
+}
+
+.landing-video-carousel-arrow.next {
+  right: 8px;
+}
+
+.landing-video-carousel-arrow:focus-visible {
+  outline: 3px solid rgba(29, 78, 216, 0.5);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-video-carousel-arrow:hover {
+    background: var(--landing-blue);
+    color: #ffffff;
+  }
+}
+
+.landing-video-carousel-dots {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.landing-video-carousel-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(29, 78, 216, 0.22);
+  cursor: pointer;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.landing-video-carousel-dot.active {
+  width: 22px;
+  background: var(--landing-blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-video-carousel-track {
+    transition: none;
   }
 }
 
@@ -1810,5 +1924,337 @@ button.landing-video-card:focus-visible {
 
   .landing-more-videos-text {
     display: none;
+  }
+}
+/* ─────────────────────────────────────────────────────────────
+   Motion: scroll reveal + hover polish.
+   Opacity/translate/transform only — nothing here changes layout.
+   Reveal is driven by scrollReveal.js, which sets data-reveal-state
+   ("pending" → "in") so content stays visible without JS.
+   ───────────────────────────────────────────────────────────── */
+
+/* Scroll reveal: fade in + 15px rise, once. Uses the standalone `translate`
+   property so it never fights an element's own hover `transform`. */
+@keyframes landing-reveal {
+  from {
+    opacity: 0;
+    translate: 0 15px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* Video cards: a little more presence — rise further, grow from 94%. */
+@keyframes landing-video-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-reveal-state="pending"] {
+  opacity: 0;
+}
+
+/* `backwards` fill: holds the first frame during the stagger delay, then
+   leaves no lingering transform/stacking context once finished. */
+[data-reveal-state="in"] {
+  animation: landing-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1)
+    var(--reveal-delay, 0ms) backwards;
+}
+
+[data-reveal="video"][data-reveal-state="in"] {
+  animation: landing-video-reveal 0.65s cubic-bezier(0.22, 1, 0.36, 1)
+    var(--reveal-delay, 0ms) backwards;
+}
+
+/* Soft lift for cards (opt in with .landing-hover-lift on other pages). */
+.landing-story-card,
+.landing-stat-card,
+.landing-intro-card,
+.landing-hover-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Interactive text colours ease instead of snapping. */
+.landing-navbar a,
+.landing-navbar .landing-nav-btn,
+.landing-footer-link {
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    transform 0.2s ease, color 0.2s ease;
+}
+
+.landing-nav-dropdown-menu a {
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+/* Hover — only for devices that really hover, so phones/tablets never get a
+   stuck hover state after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .landing-story-card:hover,
+  .landing-stat-card:hover,
+  .landing-intro-card:hover,
+  .landing-hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--landing-card-shadow-hover);
+  }
+
+  .landing-navbar a:hover,
+  .landing-navbar .landing-nav-btn:hover {
+    color: var(--landing-blue);
+  }
+
+  .landing-nav-dropdown-menu a:hover {
+    transform: translateX(3px);
+  }
+
+  .landing-footer-link:hover {
+    color: #ffffff;
+  }
+
+  .landing-header-btn.primary:hover,
+  .landing-register-btn:hover,
+  .landing-chip-button.primary:hover {
+    box-shadow: 0 22px 40px rgba(29, 78, 216, 0.32);
+  }
+
+  .landing-header-btn.secondary:hover,
+  .landing-chip-button.secondary:hover {
+    border-color: rgba(29, 78, 216, 0.3);
+    box-shadow: 0 16px 30px rgba(15, 39, 67, 0.14);
+  }
+
+  .landing-store-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42);
+  }
+
+  .landing-app-banner:hover {
+    box-shadow: var(--landing-card-shadow-hover);
+  }
+
+  .landing-more-videos:hover .landing-more-videos-arrow {
+    transform: translateX(3px);
+  }
+}
+
+.landing-more-videos-arrow {
+  transition: transform 0.2s ease;
+}
+
+.landing-app-banner {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Press feedback — also what touch users feel instead of hover. */
+.landing-header-btn:active,
+.landing-register-btn:active,
+.landing-mob-register-btn:active,
+.landing-chip-button:active,
+.landing-thafheem-btn:active,
+.landing-store-badge:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal-state] {
+    opacity: 1;
+    animation: none;
+  }
+
+  .landing-story-card,
+  .landing-stat-card,
+  .landing-intro-card,
+  .landing-hover-lift,
+  .landing-store-badge,
+  .landing-app-banner,
+  .landing-more-videos-arrow,
+  .landing-nav-dropdown-menu a {
+    transition: none;
+  }
+
+  .landing-story-card:hover,
+  .landing-stat-card:hover,
+  .landing-intro-card:hover,
+  .landing-hover-lift:hover,
+  .landing-store-badge:hover,
+  .landing-nav-dropdown-menu a:hover,
+  .landing-more-videos:hover .landing-more-videos-arrow {
+    transform: none;
+  }
+
+  .landing-header-btn:active,
+  .landing-register-btn:active,
+  .landing-mob-register-btn:active,
+  .landing-chip-button:active,
+  .landing-thafheem-btn:active,
+  .landing-store-badge:active {
+    transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Result page: loading states, entry motion, hover polish.
+   CSS only (opacity / transform / background-position), so nothing
+   here changes layout. Result rows use the shared scroll-reveal
+   (scrollReveal.js) and its landing-reveal keyframes.
+   ───────────────────────────────────────────────────────────── */
+
+@keyframes landing-result-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes landing-result-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Page entry: heading, intro and form fade in with a small rise, in turn. */
+.landing-result-enter {
+  animation: landing-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1)
+    var(--enter-delay, 0ms) backwards;
+}
+
+/* Loading indicators. The short delay on the fade means a response that
+   arrives straight away never flashes a spinner (no artificial wait). */
+.landing-result-loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 0;
+  color: var(--landing-ink);
+  font-family: "Manrope", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  animation: landing-result-fade 0.3s ease 0.15s backwards;
+}
+
+.landing-result-spinner {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(29, 78, 216, 0.18);
+  border-top-color: var(--landing-blue, #1d4ed8);
+  animation: landing-result-spin 0.8s linear infinite;
+}
+
+.landing-result-skeleton {
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
+  padding: 18px 0;
+  animation: landing-result-fade 0.3s ease 0.1s backwards;
+}
+
+.landing-result-skeleton span {
+  display: block;
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(29, 78, 216, 0.07) 25%,
+    rgba(29, 78, 216, 0.17) 50%,
+    rgba(29, 78, 216, 0.07) 75%
+  );
+  background-size: 200% 100%;
+  animation: landing-shimmer 1.4s linear infinite;
+}
+
+/* Empty / error notices under the search box. */
+.landing-result-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  max-width: 520px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-family: "Manrope", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  animation: landing-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.landing-result-note.empty {
+  background: rgba(89, 113, 138, 0.12);
+  color: #3d5268;
+}
+
+.landing-result-note.error {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b42318;
+}
+
+.landing-result-retry {
+  padding: 6px 14px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* Buttons on this page: press feedback everywhere, a gentle lift only for
+   devices that really hover. */
+.landing-result-page button {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-result-page button:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.landing-result-page button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-result-page button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(29, 78, 216, 0.18);
+  }
+
+  .landing-result-retry:hover {
+    background: rgba(180, 35, 24, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-result-enter,
+  .landing-result-loading,
+  .landing-result-skeleton,
+  .landing-result-skeleton span,
+  .landing-result-note,
+  .landing-result-spinner {
+    animation: none;
+  }
+
+  .landing-result-page button,
+  .landing-result-retry {
+    transition: none;
+  }
+
+  .landing-result-page button:not(:disabled):hover,
+  .landing-result-page button:not(:disabled):active {
+    transform: none;
   }
 }

@@ -26,7 +26,7 @@ import ExcelJS from "exceljs";
 import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
 import { getData, postData, putData, deleteData } from "../../../../backend/api";
-import { buildApiUrl } from "../../../../backend/baseUrl";
+import { downloadCertificatePdf } from "../../../../utils/certificateDownload";
 import { examName, MAIN_TITLE, upper, fillGroupSheet, groupRowsByExamAndStatus as groupByExamAndStatus } from "./resultSheet";
 import { loadMalayalamFont, registerMalayalamFont, drawGroupPdfPage } from "./resultPdf";
 import { useDistrictResultsDownload } from "./districtResults";
@@ -214,19 +214,13 @@ const ExamScore = (props) => {
     }
     try {
       props.setLoaderBox?.(true);
-      const r = await getData(
-        { id: row._id, regno: row.student.mobileNumber },
-        "exam-registration/download-state-certificate"
-      );
-      const urlPath = r?.data?.url;
-      if (urlPath) {
-        const base = import.meta.env.VITE_APP_CDN || buildApiUrl("");
-        const full = base.endsWith("/") ? base + urlPath : `${base}/${urlPath}`;
-        window.open(full, "_blank");
-      } else {
+      // The certificate is built per request for this exact result (score id)
+      // and streamed back — it is no longer stored at a public URL.
+      const outcome = await downloadCertificatePdf({ id: row._id }, `QSC-Certificate-${row.student?.regno || row._id}.pdf`);
+      if (!outcome.ok) {
         props.setMessage?.({
           type: 1,
-          content: r?.data?.message || "Failed to generate certificate.",
+          content: outcome.message || "Failed to generate certificate.",
           proceed: "Okay",
         });
       }

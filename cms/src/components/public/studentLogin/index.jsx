@@ -8,6 +8,7 @@ import styled from "styled-components";
 import { projectSettings } from "../../project/brand/project";
 import { postData } from "../../../backend/api";
 import { getDefaultMenuPath } from "../../../menuSections";
+import { usePageSeo } from "../../../utils/seo";
 
 const StudentLogin = () => {
   const navigate = useNavigate();
@@ -18,9 +19,7 @@ const StudentLogin = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    document.title = `Student Login - ${projectSettings.title}`;
-  }, []);
+  usePageSeo({ title: `Student Login - ${projectSettings.title}`, noindex: true });
 
   useEffect(() => {
     if (user.data?.token) {

@@ -37,7 +37,7 @@ const Footer = () => {
       const aboutRow = aboutResponse?.data?.response?.[0] || {};
       const menuRow = menuResponse?.data?.response?.[0] || {};
       setFooterContent((current) => ({ ...current, ...aboutRow }));
-      setLandingSettings(normalizeLandingSettings(menuRow));
+      setLandingSettings(normalizeLandingSettings({ ...menuRow, resultPublished: typeof menuResponse?.data?.resultPublished === "boolean" ? menuResponse.data.resultPublished : menuRow.result === true }));
     };
 
     loadFooter();
@@ -81,6 +81,11 @@ const Footer = () => {
               Downloads
             </a>
           )}
+          {landingSettings.modelQuestions === true && (
+            <a href="/model-questions" className="landing-footer-link">
+              Model Question &amp; Answer Key
+            </a>
+          )}
           {landingSettings.syllabus !== false && (
             <a href="/syllabus" className="landing-footer-link">
               Syllabus
@@ -96,7 +101,7 @@ const Footer = () => {
               Leadership
             </a>
           )}
-          {landingSettings.result === true && (
+          {landingSettings.resultPublished === true && (
             <a href="/result" className="landing-footer-link">
               Result
             </a>

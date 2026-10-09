@@ -22,6 +22,7 @@ import Layout from "../../../core/layout";
 import { Container } from "../../../core/layout/styels";
 import { getData, postData } from "../../../../backend/api";
 import { getStoredStudentProfile, resolveAssetUrl } from "../shared/studentSession";
+import { CERTIFICATE_DOWNLOADED_MESSAGE, downloadCertificatePdf } from "../../../../utils/certificateDownload";
 import { thafheem } from "../../brand";
 
 const THAFHEEM_LINKS = {
@@ -173,20 +174,15 @@ const StudentHome = (props) => {
   const handleDownloadCertificate = async () => {
     props.setLoaderBox?.(true);
     try {
-      const response = await getData(
-        { regno: summary?.downloads?.certificate?.regno || student.regno || student.mobile },
-        "exam-registration/download-state-certificate"
-      );
+      // The server works out whose certificate this is from the signed-in student
+      // and only issues it once results are published.
+      const outcome = await downloadCertificatePdf({}, `QSC-Certificate-${student.regno || "certificate"}.pdf`);
 
-      if (response?.data?.success && response?.data?.url) {
-        window.open(resolveAssetUrl(response.data.url), "_blank", "noopener,noreferrer");
-      } else {
-        props.setMessage?.({
-          type: 1,
-          content: response?.data?.customMessage || response?.data?.message || "Certificate is not available right now.",
-          proceed: "Okay",
-        });
-      }
+      props.setMessage?.(
+        outcome.ok
+          ? { type: 1, content: CERTIFICATE_DOWNLOADED_MESSAGE, icon: "success" }
+          : { type: 1, content: outcome.message || "Certificate is not available right now.", proceed: "Okay" }
+      );
     } finally {
       props.setLoaderBox?.(false);
     }
