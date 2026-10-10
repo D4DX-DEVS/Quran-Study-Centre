@@ -434,7 +434,7 @@ const downloadMisses = createLimiter({ windowMs: 10 * 60 * 1000, max: 20 });
 // @desc      PUBLIC RESULT LOOKUP — published results only, minimal fields
 // @route     GET /api/v1/exam-registration/student-result?regno=<register no | mobile>
 // @access    public (rate limited)
-// Returns just what the Result page shows: name, exam, mark, grade, rank and a
+// Returns just what the Result page shows: name, exam, mark, grade and a
 // short-lived signed `ref` for the certificate download. No contact details,
 // address, centre, district or internal ids. "Not found" and "no marks yet"
 // give the same answer so the endpoint cannot be used to test whether a
@@ -473,30 +473,14 @@ exports.getPublicResult = async (req, res) => {
       return res.status(404).json(RESULT_NOT_FOUND);
     }
 
-    const { computeStudentRank } = require("./rankList");
-    const results = [];
-    for (const score of eligible) {
-      let rank = null;
-      try {
-        const ranks = score.exam?._id ? await computeStudentRank({ student: score.student, examType: score.exam._id }) : null;
-        const preferred = ranks?.district || ranks?.state;
-        if (preferred) {
-          rank = { rank: preferred.rank, totalCandidates: preferred.totalCandidates, scopeLabel: ranks.district ? "in district" : "state-wide" };
-        }
-      } catch (rankErr) {
-        console.error("rank lookup failed:", rankErr.message);
-      }
-
-      results.push({
-        ref: signCertificateRef(score._id),
-        name: nameByStudent.get(String(score.student)) || "",
-        exam: getExamDisplayName(score.exam),
-        mark: score.score,
-        grade: score.grade,
-        certificate: getCertificateType(score.exam),
-        ...(rank || {}),
-      });
-    }
+    const results = eligible.map((score) => ({
+      ref: signCertificateRef(score._id),
+      name: nameByStudent.get(String(score.student)) || "",
+      exam: getExamDisplayName(score.exam),
+      mark: score.score,
+      grade: score.grade,
+      certificate: getCertificateType(score.exam),
+    }));
 
     return res.status(200).json({ success: true, results });
   } catch (err) {

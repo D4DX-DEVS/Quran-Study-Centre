@@ -6,6 +6,10 @@ import { EXAM_CATEGORIES, MODEL_PAPER_KINDS } from "../../../public/landing/exam
 //src/components/styles/page/index.js
 //if you want to write custom style wirte in above file
 
+// Next year down to 2016 (the Question Bank's first year), so a model paper can
+// be uploaded ahead of the coming exam.
+const YEAR_OPTIONS = Array.from({ length: new Date().getFullYear() + 2 - 2016 }, (_, i) => new Date().getFullYear() + 1 - i).join(", ");
+
 // Admin screen for the public "Model Question & Answer Key" section. Same list
 // / upload mechanism as the Question Bank page, but a separate collection: a
 // file added here only ever appears under Model Question & Answer Key.
@@ -33,6 +37,21 @@ const ModelQuestionPapers = (props) => {
     },
     {
       type: "select",
+      placeholder: "Year",
+      apiType: "CSV",
+      selectApi: YEAR_OPTIONS,
+      name: "year",
+      validation: "",
+      default: "",
+      label: "Year",
+      required: true,
+      view: true,
+      add: true,
+      update: true,
+      tag: true,
+    },
+    {
+      type: "select",
       placeholder: "Type",
       apiType: "CSV",
       selectApi: MODEL_PAPER_KINDS.join(", "),
@@ -45,19 +64,6 @@ const ModelQuestionPapers = (props) => {
       add: true,
       update: true,
       tag: true,
-    },
-    {
-      type: "text",
-      placeholder: "Title",
-      name: "title",
-      validation: "",
-      default: "",
-      label: "Title",
-      tag: true,
-      required: true,
-      view: true,
-      add: true,
-      update: true,
     },
     {
       type: "file",
@@ -81,7 +87,7 @@ const ModelQuestionPapers = (props) => {
       <ListTable
         api={`model-question-papers`}
         itemTitle={{
-          name: "title",
+          name: "category",
           type: "text",
           collection: "",
         }}

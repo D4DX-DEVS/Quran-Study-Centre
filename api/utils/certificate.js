@@ -31,10 +31,9 @@ const MALAYALAM_FONT_FILE = path.join(__dirname, "..", "controllers", "hallTicke
 // Preliminary VI (6) and Secondary III (9).
 const STATE_CERTIFICATE_STAGES = new Set([6, 9]);
 
-// The annual exam date printed on every certificate. Same fixed date the hall
-// tickets carry (controllers/hallTicketDocument.js EXAM_DATE); override with
+// The annual exam date printed on every certificate; override with
 // CERTIFICATE_EXAM_DATE for a different sitting without a code change.
-const DEFAULT_EXAM_DATE = { year: 2026, month: 8, day: 2 };
+const DEFAULT_EXAM_DATE = { year: 2026, month: 8, day: 30 };
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const ordinal = (n) => {
@@ -182,12 +181,13 @@ const buildCertificatePdf = async ({ type, name, examName, grade, examDate }) =>
   pdfDoc.setProducer("Quran Study Centre Kerala");
   pdfDoc.setCreator("Quran Study Centre Kerala");
 
+  // Every value is printed in capitals. Malayalam has no case, so it is unchanged.
   const values = [
     [FIELDS.name, name],
     [FIELDS.exam, examName],
     [FIELDS.date, examDate || getExamDateText()],
     [FIELDS.grade, grade],
-  ];
+  ].map(([field, text]) => [field, cleanText(text).toUpperCase()]);
 
   // Embed only the fonts the values actually need. Full (non-subset) embedding:
   // pdf-lib's subsetter is incompatible with fontkit 2.x.

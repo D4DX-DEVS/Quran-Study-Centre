@@ -85,7 +85,7 @@ const Results = (props) => {
   usePageSeo({ title: "Exam Result - Quran Study Centre Kerala", description: "Check your Quran Study Centre Kerala exam result and download your certificate using your register number or mobile number." });
   const [regNo, setRegNo] = useState("");
   // Published results returned by the server for the last search. Each carries
-  // only name / exam / mark / grade / rank plus a short-lived `ref` that the
+  // only name / exam / mark / grade plus a short-lived `ref` that the
   // certificate download needs — nothing else about the student.
   const [results, setResults] = useState([]);
   // loading -> ready (Landing Page Settings "Result" toggle is on) | off (toggle is off) | error (settings could not be loaded)
@@ -260,17 +260,6 @@ const Results = (props) => {
             <p ref={reveal} style={detailStyle}>
               <b>Grade :</b> {item.grade}
             </p>
-            {item.rank && (
-              <p ref={reveal} style={detailStyle}>
-                <b>Rank :</b>{" "}
-                <span style={{ color: "#1a4993", fontWeight: 700 }}>
-                  #{item.rank}
-                </span>{" "}
-                <span style={{ color: "#666", fontSize: 13 }}>
-                  (of {item.totalCandidates} — {item.scopeLabel})
-                </span>
-              </p>
-            )}
             <ButtonDiv ref={reveal} style={{ marginTop: "20px" }}>
               <Button
                 key={item.ref}

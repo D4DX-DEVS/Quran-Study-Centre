@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { Download } from "lucide-react";
 import { getData } from "../../../backend/api";
@@ -7,7 +7,7 @@ import Header from "./Header";
 import Footer from "./footer/footer";
 import { reveal } from "./scrollReveal";
 import { usePageSeo } from "../../../utils/seo";
-import { EXAM_CATEGORY_GROUPS, MODEL_PAPER_KINDS } from "./examCategories";
+import { EXAM_CATEGORIES, MODEL_PAPER_KINDS } from "./examCategories";
 
 const CDN = import.meta.env.VITE_APP_CDN || "";
 
@@ -43,25 +43,72 @@ const Lead = styled.p`
   max-width: 560px;
 `;
 
-const GroupWrap = styled.section`
-  padding: 20px 0 4px;
-`;
-
-const GroupHeading = styled.h2`
-  font-family: "Fraunces", serif;
-  font-size: clamp(1.05rem, 2vw, 1.3rem);
-  color: #0f2743;
-  font-weight: 700;
-  margin: 0 0 14px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid rgba(26, 73, 147, 0.12);
-`;
-
-const CardGrid = styled.div`
+const Picker = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 720px;
+  margin: 24px auto 0;
+  background: #ffffff;
+  border-radius: var(--landing-card-radius-sm);
+  box-shadow: var(--landing-card-shadow);
+  padding: 20px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+`;
+
+const Field = styled.label`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: "Manrope", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #59718a;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(29, 78, 216, 0.2);
+  background: #ffffff;
+  color: #0f2743;
+  font-family: "Manrope", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: #f4f7fb;
+    color: #8aa0b6;
+  }
+`;
+
+const ResultGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--landing-grid-gap);
-  margin-bottom: 20px;
+  max-width: 720px;
+  margin: 20px auto var(--landing-page-pad-bottom);
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const Card = styled.div`
@@ -144,6 +191,8 @@ const ModelQuestionsPage = (props) => {
   // loading | off (switched off in Landing Page Settings) | ready | error
   const [status, setStatus] = useState("loading");
   const [papers, setPapers] = useState([]);
+  const [year, setYear] = useState("");
+  const [exam, setExam] = useState("");
 
   // Switched-off sections stay out of search results (see the `off` effect below).
   usePageSeo({
@@ -164,8 +213,8 @@ const ModelQuestionsPage = (props) => {
       const files = await getData({}, "model-question-papers");
       if (cancelled) return;
       if (files?.status === 200 && Array.isArray(files.data?.response)) {
-        // A record without an uploaded file is not something a visitor can download.
-        setPapers(files.data.response.filter((item) => item.attachment));
+        // A record without an uploaded file or year is not something a visitor can pick.
+        setPapers(files.data.response.filter((item) => item.attachment && item.year));
         setStatus("ready");
       } else {
         setStatus("error");
@@ -177,9 +226,22 @@ const ModelQuestionsPage = (props) => {
     };
   }, []);
 
-  const filesFor = (category, kind) =>
+  // Only years and exams that actually have files are offered, newest year first.
+  const years = useMemo(() => [...new Set(papers.map((item) => item.year))].sort((a, b) => b.localeCompare(a)), [papers]);
+  const exams = useMemo(
+    () => EXAM_CATEGORIES.map((category) => category.value).filter((category) => papers.some((item) => item.year === year && item.category === category)),
+    [papers, year]
+  );
+
+  const changeYear = (value) => {
+    setYear(value);
+    // Keep the exam when the new year has it too; otherwise ask again.
+    if (!papers.some((item) => item.year === value && item.category === exam)) setExam("");
+  };
+
+  const filesFor = (kind) =>
     papers
-      .filter((item) => item.category === category && item.kind === kind)
+      .filter((item) => item.year === year && item.category === exam && item.kind === kind)
       .sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
 
   return (
@@ -189,51 +251,79 @@ const ModelQuestionsPage = (props) => {
         <div className="landing-page-shell">
           <Intro ref={reveal}>
             <PageTitle>Model Question &amp; Answer Key</PageTitle>
-            {status === "ready" && <Lead>Download the model question paper and its answer key for each exam.</Lead>}
+            {status === "ready" && years.length > 0 && <Lead>Choose the year and exam to view the model question paper and its answer key.</Lead>}
           </Intro>
 
           {status === "loading" && null}
           {status === "off" && <Notice>This section is not available right now.</Notice>}
           {status === "error" && <Notice>Unable to load the files right now. Please try again later.</Notice>}
+          {status === "ready" && years.length === 0 && <Notice>Model question papers and answer keys will be published here soon.</Notice>}
 
-          {status === "ready" &&
-            EXAM_CATEGORY_GROUPS.map(({ group, categories }) => (
-              <GroupWrap key={group}>
-                <GroupHeading ref={reveal}>{group}</GroupHeading>
-                <CardGrid>
-                  {categories.map((category) => (
-                    <Card key={category} ref={reveal} className="landing-hover-lift">
-                      <CardHeading>{category}</CardHeading>
-                      {MODEL_PAPER_KINDS.map((kind) => {
-                        const files = filesFor(category, kind);
-                        return (
-                          <KindBlock key={kind}>
-                            <KindLabel>{kind}</KindLabel>
-                            {files.length === 0 ? (
-                              <NotAvailable>Not available yet</NotAvailable>
-                            ) : (
-                              files.map((file) => (
-                                <FileLink
-                                  key={file._id}
-                                  href={CDN + file.attachment}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  download={CDN + file.attachment}
-                                  aria-label={`Download ${kind} - ${category}`}
-                                >
-                                  <Download size={15} aria-hidden="true" />
-                                  {file.title || `Download ${kind}`}
-                                </FileLink>
-                              ))
-                            )}
-                          </KindBlock>
-                        );
-                      })}
-                    </Card>
-                  ))}
-                </CardGrid>
-              </GroupWrap>
-            ))}
+          {status === "ready" && years.length > 0 && (
+            <>
+              <Picker>
+                <Field>
+                  Year
+                  <Select value={year} onChange={(event) => changeYear(event.target.value)}>
+                    <option value="">Select year</option>
+                    {years.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field>
+                  Exam
+                  <Select value={exam} onChange={(event) => setExam(event.target.value)} disabled={!year}>
+                    <option value="">{year ? "Select exam" : "Select year first"}</option>
+                    {exams.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </Picker>
+
+              {year && exam ? (
+                <ResultGrid>
+                  {MODEL_PAPER_KINDS.map((kind) => {
+                    const files = filesFor(kind);
+                    return (
+                      <Card key={kind} className="landing-hover-lift">
+                        <CardHeading>{exam}</CardHeading>
+                        <KindBlock>
+                          <KindLabel>
+                            {kind} · {year}
+                          </KindLabel>
+                          {files.length === 0 ? (
+                            <NotAvailable>Not available yet</NotAvailable>
+                          ) : (
+                            files.map((file) => (
+                              <FileLink
+                                key={file._id}
+                                href={CDN + file.attachment}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={CDN + file.attachment}
+                                aria-label={`Download ${kind} - ${exam} ${year}`}
+                              >
+                                <Download size={15} aria-hidden="true" />
+                                {file.title || `Download ${kind}`}
+                              </FileLink>
+                            ))
+                          )}
+                        </KindBlock>
+                      </Card>
+                    );
+                  })}
+                </ResultGrid>
+              ) : (
+                <Notice>Select a year and an exam to see the files.</Notice>
+              )}
+            </>
+          )}
         </div>
       </main>
       <Footer />
