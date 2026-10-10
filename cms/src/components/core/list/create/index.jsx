@@ -18,6 +18,7 @@ import { IconButton, TabMenu } from "../../elements";
 import { FootNote } from "../../input/styles";
 import { ArrowLeft, Loader } from "lucide-react";
 import { useMessage } from "../../message/useMessage.jsx";
+import { confirmDialog } from "../../confirm";
 
 const CrudForm = React.memo((props) => {
   // Use the useTranslation hook from react-i18next to handle translations
@@ -1160,15 +1161,16 @@ const CrudForm = React.memo((props) => {
     return JSON.stringify(formValues) !== JSON.stringify(lastUpdated);
   };
 
-  const closeModal = () => {
+  const closeModal = async () => {
     if (hasUnsavedChanges()) {
-      // The custom confirmation popup wasn't reliably showing/responding on
-      // mobile across several rounds of CSS/JS fixes — window.confirm is a
-      // native browser dialog, so it renders and works identically on every
-      // device without depending on any of our own overlay/CSS stacking.
-      if (window.confirm(t("unsavedChanges", { defaultValue: "You have unsaved changes. Are you sure you want to discard them?" }))) {
-        props.isOpenHandler(false);
-      }
+      // confirmDialog, not the core/message popup: that one did not reliably
+      // show or respond on mobile (see core/confirm).
+      const discard = await confirmDialog({
+        message: t("unsavedChanges", { defaultValue: "You have unsaved changes. Are you sure you want to discard them?" }),
+        confirmLabel: "Discard",
+        danger: true,
+      });
+      if (discard) props.isOpenHandler(false);
     } else {
       props.isOpenHandler(false);
     }

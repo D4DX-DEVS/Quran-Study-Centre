@@ -12,6 +12,7 @@ import {
   Upload,
 } from "lucide-react";
 import Layout from "../../../core/layout";
+import { confirmDialog } from "../../../core/confirm";
 import { Container } from "../../../core/layout/styels";
 import { getData, postData, putData, deleteData } from "../../../../backend/api";
 
@@ -192,9 +193,11 @@ const AboutUs = (props) => {
 
   const cleanupDuplicates = async () => {
     if (!duplicateCount) return;
-    const ok = window.confirm(
-      `Found ${duplicateCount} older About Us record(s). Keep only the newest and delete the rest?`
-    );
+    const ok = await confirmDialog({
+      message: `Found ${duplicateCount} older About Us record(s). Keep only the newest and delete the rest?`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!ok) return;
     setCleaning(true);
     try {
