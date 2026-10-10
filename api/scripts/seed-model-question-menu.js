@@ -19,6 +19,7 @@ const Menu = require("../models/menu");
 const MenuRole = require("../models/menuRole");
 const SubMenu = require("../models/subMenu");
 const SubMenuRole = require("../models/subMenuRole");
+require("../models/userTypes"); // registers "UserType" for the role populate below
 
 const ELEMENT = "model-question-papers";
 const SIBLING_ELEMENT = "old-question-papers"; // the Question Bank

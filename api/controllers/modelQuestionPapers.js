@@ -3,7 +3,7 @@ const FloatingSettings = require("../models/floatingMenuSettings");
 const { default: mongoose } = require("mongoose");
 
 // Fields an admin may set; everything else in the body is ignored.
-const EDITABLE_FIELDS = ["category", "kind", "title", "attachment"];
+const EDITABLE_FIELDS = ["category", "kind", "year", "title", "attachment"];
 const pickEditable = (body) =>
   EDITABLE_FIELDS.reduce((acc, field) => {
     if (typeof body[field] === "string") acc[field] = body[field];
@@ -46,10 +46,11 @@ exports.getModelQuestionPaper = async (req, res) => {
       return res.status(200).json({ success: true, message: "Retrieved specific file", response });
     }
 
-    // Only plain-string category / kind filters are honoured (no operators).
+    // Only plain-string category / kind / year filters are honoured (no operators).
     const query = {};
     if (typeof req.filter?.category === "string") query.category = req.filter.category;
     if (typeof req.filter?.kind === "string") query.kind = req.filter.kind;
+    if (typeof req.filter?.year === "string") query.year = req.filter.year;
 
     const [totalCount, filterCount, data] = await Promise.all([
       parseInt(skip) === 0 && ModelQuestionPaper.countDocuments(),

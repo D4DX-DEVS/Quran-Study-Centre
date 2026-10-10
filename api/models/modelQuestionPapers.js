@@ -25,6 +25,13 @@ const ModelQuestionPaperSchema = new mongoose.Schema(
       required: true,
       enum: MODEL_PAPER_KINDS,
     },
+    // Exam year, e.g. "2026" — stored as a string like the Question Bank's year.
+    year: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^\d{4}$/, "Year must be a 4-digit year"],
+    },
     title: {
       type: String,
       trim: true,
@@ -38,7 +45,7 @@ const ModelQuestionPaperSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-ModelQuestionPaperSchema.index({ category: 1, kind: 1 });
+ModelQuestionPaperSchema.index({ year: 1, category: 1, kind: 1 });
 
 module.exports = mongoose.model("modelQuestionPaper", ModelQuestionPaperSchema);
 module.exports.MODEL_PAPER_KINDS = MODEL_PAPER_KINDS;

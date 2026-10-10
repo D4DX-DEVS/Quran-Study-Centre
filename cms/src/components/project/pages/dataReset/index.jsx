@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Layout from "../../../core/layout";
+import { confirmDialog } from "../../../core/confirm";
 import { Container } from "../../../core/layout/styels";
 import { GetAccessToken } from "../../../../backend/authentication";
 import { getData } from "../../../../backend/api";
@@ -79,10 +80,12 @@ const DataReset = (props) => {
       });
       return;
     }
-    // Final browser-level confirm so a stray click can't wipe live data.
-    const ok = window.confirm(
-      `This will permanently delete ${totalSelectedRows} records across ${selectedKeys.length} collection(s).\n\nThis action cannot be undone. Continue?`
-    );
+    // Final confirm so a stray click can't wipe live data.
+    const ok = await confirmDialog({
+      message: `This will permanently delete ${totalSelectedRows} records across ${selectedKeys.length} collection(s).\n\nThis action cannot be undone. Continue?`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!ok) return;
 
     setRunning(true);
