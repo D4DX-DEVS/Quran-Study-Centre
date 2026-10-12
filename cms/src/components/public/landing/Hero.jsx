@@ -11,6 +11,7 @@ import { reveal } from "./scrollReveal";
 import useLatestVideos from "./useLatestVideos";
 import { VideoCardSkeleton } from "./VideoCard";
 import VideoCarousel from "./VideoCarousel";
+import StoryGallery from "./StoryGallery";
 import qscLogo from "./assets/qsc-icon-mark.png";
 import aayathLogo from "./assets/aayath-logo.png";
 
@@ -42,6 +43,7 @@ const defaultContent = {
   image: "",
   landingMainbanner: "",
   landingStoryImage: "",
+  landingStoryImages: [],
   welcomeTitleLine1: "Quran Study",
   welcomeTitleHighlight: "Centre Kerala",
   welcomeDescription:
@@ -101,6 +103,16 @@ const resolveAssetUrl = (value) => {
   return `${import.meta.env.VITE_APP_CDN}${value}`;
 };
 
+// Story images in display order. Records saved before the gallery existed only
+// hold the single `landingStoryImage`, so fall back to it.
+const getStoryImageUrls = (row) => {
+  const list = Array.isArray(row.landingStoryImages)
+    ? row.landingStoryImages.filter((item) => typeof item === "string" && item)
+    : [];
+  const paths = list.length ? list : row.landingStoryImage ? [row.landingStoryImage] : [];
+  return paths.map(resolveAssetUrl);
+};
+
 function Hero() {
   const [content, setContent] = useState(defaultContent);
   const [landingSettings, setLandingSettings] = useState(
@@ -108,6 +120,7 @@ function Hero() {
   );
   const [loading, setLoading] = useState(true);
   const [introImageFailed, setIntroImageFailed] = useState(false);
+  const [storyGalleryFailed, setStoryGalleryFailed] = useState(false);
   const { videos, status: videoStatus } = useLatestVideos(12);
 
   useEffect(() => {
@@ -152,7 +165,8 @@ function Hero() {
     );
   }
 
-  const storyImageUrl = resolveAssetUrl(content.landingStoryImage);
+  const storyImages = getStoryImageUrls(content);
+  const showStoryGallery = storyImages.length > 0 && !storyGalleryFailed;
 
   const hasIntroSection = Boolean(
     content.landingTitle?.trim() || content.landingDescription?.trim()
@@ -180,17 +194,17 @@ function Hero() {
             {(landingSettings.copy.heroStoryBadge ||
               landingSettings.copy.heroStoryTitle ||
               landingSettings.copy.heroStoryDescription) && (
-              <div className="landing-story-card" ref={reveal}>
-                {landingSettings.copy.heroStoryBadge && (
-                  <span className="landing-story-badge">
-                    {landingSettings.copy.heroStoryBadge}
-                  </span>
-                )}
-                <div
-                  className={`landing-story-card-grid${
-                    storyImageUrl ? "" : " landing-story-card-grid-full"
-                  }`}
-                >
+              <div
+                className={`landing-story-layout${
+                  showStoryGallery ? "" : " landing-story-layout-full"
+                }`}
+              >
+                <div className="landing-story-card" ref={reveal}>
+                  {landingSettings.copy.heroStoryBadge && (
+                    <span className="landing-story-badge">
+                      {landingSettings.copy.heroStoryBadge}
+                    </span>
+                  )}
                   <div className="landing-story-card-copy">
                     {landingSettings.copy.heroStoryTitle && (
                       <h2 className="landing-section-title">
@@ -203,12 +217,13 @@ function Hero() {
                       </p>
                     )}
                   </div>
-                  {storyImageUrl && (
-                    <div className="landing-story-card-visual">
-                      <img src={storyImageUrl} alt="" />
-                    </div>
-                  )}
                 </div>
+                {showStoryGallery && (
+                  <StoryGallery
+                    images={storyImages}
+                    onEmpty={() => setStoryGalleryFailed(true)}
+                  />
+                )}
               </div>
             )}
 

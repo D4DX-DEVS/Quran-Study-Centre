@@ -22,34 +22,22 @@ const s3 = new S3Client({
 
 exports.getS3Middleware = (fieldNames, doThumbnail = true, compress = true, maxWidth = 1000, deleteFile = true) => {
   return async (req, res, next) => {
-    const processField = async (fieldName) => {
-      const filePath = req.body[fieldName];
-      const ogFilePath = req.body["old_" + fieldName] || "";
+    // Keys already pushed to storage by this request, so a failed batch can be rolled back.
+    const uploadedKeys = [];
 
-      if (typeof filePath === "undefined" || filePath === null || filePath === "") {
-        delete req.body[fieldName];
-        delete req.body[fieldName + "Thumbnail"];
-        return;
-      }
-
-      if (typeof filePath !== "string") {
-        console.log(`Invalid filePath for field ${fieldName}:`, filePath);
-        delete req.body[fieldName];
-        delete req.body[fieldName + "Thumbnail"];
-        return;
-      }
-
+    // Uploads one local file (plus thumbnail / old-file cleanup) and returns its storage keys.
+    const uploadFile = async (filePath, ogFilePath = "") => {
       const folder = process.env.DO_SPACES_FOLDER || "";
       const s3Key = folder ? `${folder}/${filePath}` : filePath;
 
       const isImage = filePath.endsWith(".jpg") || filePath.endsWith(".jpeg") || filePath.endsWith(".png");
       let thumbnailKey = "";
-      compress = compress && isImage;
+      const shouldCompress = compress && isImage;
       let fileContent;
       let ContentType;
 
       try {
-        if (compress) {
+        if (shouldCompress) {
           fileContent = await sharp(filePath).resize({ width: maxWidth }).png({ quality: 100 }).toBuffer();
           ContentType = mime.lookup(filePath) || "application/octet-stream";
         } else {
@@ -69,6 +57,7 @@ exports.getS3Middleware = (fieldNames, doThumbnail = true, compress = true, maxW
         ContentType: ContentType,
         ACL: "public-read",
       }));
+      uploadedKeys.push(s3Key);
 
       if (doThumbnail && isImage) {
         const lastSlashIndex = s3Key.lastIndexOf("/");
@@ -83,6 +72,7 @@ exports.getS3Middleware = (fieldNames, doThumbnail = true, compress = true, maxW
           ContentType: "image/png",
           ACL: "public-read",
         }));
+        uploadedKeys.push(thumbnailKey);
       }
 
       if (deleteFile) {
@@ -102,6 +92,41 @@ exports.getS3Middleware = (fieldNames, doThumbnail = true, compress = true, maxW
         }
       }
 
+      return { s3Key, thumbnailKey };
+    };
+
+    const processField = async (fieldName) => {
+      const filePath = req.body[fieldName];
+      const ogFilePath = req.body["old_" + fieldName] || "";
+
+      if (typeof filePath === "undefined" || filePath === null || filePath === "") {
+        delete req.body[fieldName];
+        delete req.body[fieldName + "Thumbnail"];
+        return;
+      }
+
+      // Multi-file field: the upload middleware leaves an array of local paths.
+      // Order is kept; the field ends up as an array of storage keys.
+      if (Array.isArray(filePath)) {
+        const keys = [];
+        for (const item of filePath) {
+          if (typeof item !== "string" || item === "") continue;
+          const { s3Key } = await uploadFile(item);
+          keys.push(s3Key);
+        }
+        req.body = { ...req.body, [fieldName]: keys };
+        return;
+      }
+
+      if (typeof filePath !== "string") {
+        console.log(`Invalid filePath for field ${fieldName}:`, filePath);
+        delete req.body[fieldName];
+        delete req.body[fieldName + "Thumbnail"];
+        return;
+      }
+
+      const { s3Key, thumbnailKey } = await uploadFile(filePath, ogFilePath);
+
       if (doThumbnail) {
         req.body = { ...req.body, [fieldName]: s3Key, [fieldName + "Thumbnail"]: thumbnailKey };
       } else {
@@ -115,14 +140,20 @@ exports.getS3Middleware = (fieldNames, doThumbnail = true, compress = true, maxW
     } catch (error) {
       console.log("DO Spaces upload failed:", error.name, error.message);
       fieldNames.forEach((fieldName) => {
-        const fp = req.body[fieldName];
-        if (fp && typeof fp === "string" && fs.existsSync(fp)) {
-          try { fs.unlinkSync(fp); } catch (_) {}
-        }
+        const value = req.body[fieldName];
+        (Array.isArray(value) ? value : [value]).forEach((fp) => {
+          if (fp && typeof fp === "string" && fs.existsSync(fp)) {
+            try { fs.unlinkSync(fp); } catch (_) {}
+          }
+        });
       });
+      // Roll back anything this request already stored, so a failed batch leaves no orphans.
+      await Promise.all(
+        uploadedKeys.map((Key) =>
+          s3.send(new DeleteObjectCommand({ Bucket: process.env.DO_SPACES_BUCKET, Key })).catch(() => {})
+        )
+      );
       return res.status(500).json({ success: false, message: "File upload to storage failed. Please try again." });
     }
   };
 };
-
-
