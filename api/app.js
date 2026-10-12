@@ -35,6 +35,12 @@ const defaultAllowedOrigins = [
   "http://localhost:3002",
   "http://localhost:3003",
   "http://localhost:8072",
+  // Same dev servers opened by loopback IP (browsers treat it as a different origin)
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+  "http://127.0.0.1:3002",
+  "http://127.0.0.1:3003",
+  "http://127.0.0.1:8072",
   "https://sio-kerala-deconquista-qywe3.ondigitalocean.app",
   "https://lemon-grass-0c88ad110.3.azurestaticapps.net",
   "https://lively-wave-04701e810.3.azurestaticapps.net",

@@ -4,7 +4,7 @@ import { buildApiUrl } from "../baseUrl";
 
 // You can now use the formData object as needed, such as sending it via AJAX or submitting a form
 
-const postData = async (fields, url, dispatch, navigate) => {
+const postData = async (fields, url, dispatch, navigate, options = {}) => {
   const data = new Promise(async (resolve, reject) => {
     try {
       let token = GetAccessToken();
@@ -88,6 +88,7 @@ const postData = async (fields, url, dispatch, navigate) => {
           "Content-Type": isUploading ? "multipart/form-data" : "application/json",
           Authorization: "Bearer " + token,
         },
+        onUploadProgress: options?.onUploadProgress,
       });
 
       const tokenUpdated = response.headers.get("Token-Updated");
@@ -194,7 +195,7 @@ const postDataCustom = async (fields, ulr, dispatch, navigate) => {
 
   return data;
 };
-const putData = async (fields, ulr, dispatch, navigate) => {
+const putData = async (fields, ulr, dispatch, navigate, options = {}) => {
   console.log("PutData", fields, { ulr });
   try {
     let token = GetAccessToken();
@@ -278,6 +279,7 @@ const putData = async (fields, ulr, dispatch, navigate) => {
         "Content-Type": isUploading ? "multipart/form-data" : "application/json",
         Authorization: "Bearer " + token,
       },
+      onUploadProgress: options?.onUploadProgress,
     });
 
     const tokenUpdated = response.headers.get("Token-Updated");

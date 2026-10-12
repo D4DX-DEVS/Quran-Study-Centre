@@ -134,6 +134,30 @@ const EMPTY_ABOUT_FORM = {
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
+// Homepage story gallery rules — same limits the image uploader states elsewhere
+// in the admin (JPG, JPEG, PNG, GIF, WEBP, up to 5MB) and the API enforces.
+const STORY_IMAGE_MAX = 12;
+const STORY_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const STORY_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+const STORY_IMAGE_ACCEPT = ".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp";
+
+const escapeHtml = (value) =>
+  String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+
+const formatBytes = (bytes) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+const fileKey = (file) => `${file.name}-${file.size}-${file.lastModified}`;
+
+// Saved records may only carry the old single `landingStoryImage`.
+const resolveStoryImages = (row = {}) => {
+  const list = Array.isArray(row.landingStoryImages)
+    ? row.landingStoryImages.filter((item) => typeof item === "string" && item)
+    : [];
+  if (list.length) return list;
+  return row.landingStoryImage ? [row.landingStoryImage] : [];
+};
+
 const mapAboutForm = (row = {}) => ({
   title: row.title || "",
   description: row.description || "",
@@ -145,6 +169,7 @@ const mapAboutForm = (row = {}) => ({
   image: row.image || "",
   landingMainbanner: row.landingMainbanner || "",
   landingStoryImage: row.landingStoryImage || "",
+  landingStoryImages: resolveStoryImages(row),
   welcomeTitleLine1: row.welcomeTitleLine1 || "",
   welcomeTitleHighlight: row.welcomeTitleHighlight || "",
   welcomeDescription: row.welcomeDescription || "",
@@ -167,11 +192,12 @@ const FloatingMenuSettings = (props) => {
   const [aboutInitial, setAboutInitial] = useState(EMPTY_ABOUT_FORM);
   const [imageFile, setImageFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
-  const [storyImageFile, setStoryImageFile] = useState(null);
+  const [storyKept, setStoryKept] = useState([]); // saved story images still wanted
+  const [storyNew, setStoryNew] = useState([]); // [{ id, file }] picked, uploaded on save
+  const [storyProgress, setStoryProgress] = useState(null); // 0-100 while uploading
   const [welcomeImageFile, setWelcomeImageFile] = useState(null);
   const [imageRemoved, setImageRemoved] = useState(false);
   const [bannerRemoved, setBannerRemoved] = useState(false);
-  const [storyRemoved, setStoryRemoved] = useState(false);
   const [welcomeImageRemoved, setWelcomeImageRemoved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -200,19 +226,20 @@ const FloatingMenuSettings = (props) => {
         setAboutRecordId(aboutRow._id || null);
         setAboutForm(aboutNext);
         setAboutInitial(aboutNext);
+        setStoryKept(aboutNext.landingStoryImages);
       } else {
         setAboutRecordId(null);
         setAboutForm(EMPTY_ABOUT_FORM);
         setAboutInitial(EMPTY_ABOUT_FORM);
+        setStoryKept([]);
       }
 
       setImageFile(null);
       setBannerFile(null);
-      setStoryImageFile(null);
+      setStoryNew([]);
       setWelcomeImageFile(null);
       setImageRemoved(false);
       setBannerRemoved(false);
-      setStoryRemoved(false);
       setWelcomeImageRemoved(false);
     } catch (error) {
       props.setMessage?.({
@@ -268,9 +295,21 @@ const FloatingMenuSettings = (props) => {
 
   const duplicateCount = Math.max(0, aboutRecords.length - 1);
 
+  const storyInitial = useMemo(
+    () => aboutInitial.landingStoryImages || [],
+    [aboutInitial]
+  );
+  const storyDirty = useMemo(
+    () =>
+      storyNew.length > 0 ||
+      JSON.stringify(storyKept) !== JSON.stringify(storyInitial),
+    [storyNew, storyKept, storyInitial]
+  );
+
   const aboutDirty = useMemo(() => {
-    if (imageFile || bannerFile || storyImageFile || welcomeImageFile) return true;
-    if (imageRemoved || bannerRemoved || storyRemoved || welcomeImageRemoved) return true;
+    if (imageFile || bannerFile || welcomeImageFile) return true;
+    if (imageRemoved || bannerRemoved || welcomeImageRemoved) return true;
+    if (storyDirty) return true;
     return Object.keys(EMPTY_ABOUT_FORM).some(
       (key) => (aboutForm[key] || "") !== (aboutInitial[key] || "")
     );
@@ -279,12 +318,11 @@ const FloatingMenuSettings = (props) => {
     aboutInitial,
     imageFile,
     bannerFile,
-    storyImageFile,
     welcomeImageFile,
     imageRemoved,
     bannerRemoved,
-    storyRemoved,
     welcomeImageRemoved,
+    storyDirty,
   ]);
 
   const isDirty = useMemo(
@@ -319,13 +357,59 @@ const FloatingMenuSettings = (props) => {
     setAboutForm(aboutInitial);
     setImageFile(null);
     setBannerFile(null);
-    setStoryImageFile(null);
+    setStoryNew([]);
+    setStoryKept(storyInitial);
     setWelcomeImageFile(null);
     setImageRemoved(false);
     setBannerRemoved(false);
-    setStoryRemoved(false);
     setWelcomeImageRemoved(false);
   };
+
+  const addStoryFiles = (fileList) => {
+    const incoming = Array.from(fileList || []);
+    if (!incoming.length) return;
+
+    const accepted = [];
+    const problems = [];
+    const seen = new Set(storyNew.map((item) => item.id));
+    let room = STORY_IMAGE_MAX - storyKept.length - storyNew.length;
+
+    incoming.forEach((file) => {
+      const dot = file.name.lastIndexOf(".");
+      const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
+      const id = fileKey(file);
+      if (!STORY_IMAGE_EXTENSIONS.includes(ext) || (file.type && !file.type.startsWith("image/"))) {
+        problems.push(`${escapeHtml(file.name)} — only JPG, JPEG, PNG, GIF or WEBP images are allowed`);
+      } else if (file.size > STORY_IMAGE_MAX_BYTES) {
+        problems.push(`${escapeHtml(file.name)} — ${formatBytes(file.size)} is over the 5 MB limit`);
+      } else if (seen.has(id)) {
+        problems.push(`${escapeHtml(file.name)} — already added`);
+      } else if (room <= 0) {
+        problems.push(`${escapeHtml(file.name)} — the gallery is limited to ${STORY_IMAGE_MAX} images`);
+      } else {
+        seen.add(id);
+        room -= 1;
+        accepted.push({ id, file });
+      }
+    });
+
+    if (accepted.length) setStoryNew((current) => [...current, ...accepted]);
+    if (problems.length) {
+      props.setMessage?.({
+        type: 1,
+        content: `${accepted.length ? `${accepted.length} image(s) added. ` : ""}These files were not added:<br/>${problems.join("<br/>")}`,
+        proceed: "Okay",
+      });
+    }
+  };
+
+  const removeStoryKept = (path) =>
+    setStoryKept((current) => current.filter((item) => item !== path));
+
+  const removeStoryNew = (id) =>
+    setStoryNew((current) => current.filter((item) => item.id !== id));
+
+  const undoStoryRemovals = () => setStoryKept(storyInitial);
 
   const validateAbout = () => {
     const missing = [];
@@ -401,15 +485,30 @@ const FloatingMenuSettings = (props) => {
         if (bannerFile) aboutPayload.landingMainbanner = bannerFile;
         else if (bannerRemoved) aboutPayload.removeLandingMainbanner = true;
 
-        if (storyImageFile) aboutPayload.landingStoryImage = storyImageFile;
-        else if (storyRemoved) aboutPayload.removeLandingStoryImage = true;
+        // Sent only when the gallery changed, so saving other settings never touches it.
+        // `landingStoryImages` is the saved images to keep (JSON, so an empty list still
+        // reaches the API); new files go in `landingStoryImageFiles`.
+        if (storyDirty) {
+          aboutPayload.landingStoryImages = JSON.stringify(storyKept);
+          if (storyNew.length) {
+            aboutPayload.landingStoryImageFiles = storyNew.map((item) => item.file);
+          }
+        }
 
         if (welcomeImageFile) aboutPayload.welcomeImage = welcomeImageFile;
         else if (welcomeImageRemoved) aboutPayload.removeWelcomeImage = true;
 
+        const uploadOptions = {
+          onUploadProgress: (event) =>
+            setStoryProgress(
+              event.total ? Math.min(100, Math.round((event.loaded / event.total) * 100)) : null
+            ),
+        };
+        if (storyNew.length) setStoryProgress(0);
+
         const aboutResponse = aboutRecordId
-          ? await putData({ id: aboutRecordId, ...aboutPayload }, "about-us")
-          : await postData(aboutPayload, "about-us");
+          ? await putData({ id: aboutRecordId, ...aboutPayload }, "about-us", undefined, undefined, uploadOptions)
+          : await postData(aboutPayload, "about-us", undefined, undefined, uploadOptions);
 
         if (!aboutResponse?.data?.success) {
           props.setMessage?.({
@@ -439,7 +538,9 @@ const FloatingMenuSettings = (props) => {
 
       props.setMessage?.({
         type: 2,
-        content: "Landing page settings saved.",
+        content: storyDirty
+          ? `Landing page settings saved. The homepage story now has ${storyKept.length + storyNew.length} image(s).`
+          : "Landing page settings saved.",
         proceed: "Okay",
       });
       await load();
@@ -451,6 +552,7 @@ const FloatingMenuSettings = (props) => {
       });
     } finally {
       setSaving(false);
+      setStoryProgress(null);
     }
   };
 
@@ -696,20 +798,23 @@ const FloatingMenuSettings = (props) => {
               </Field>
 
               <div className="mt-6">
-                <ImageField
+                <MultiImageField
                   label="Homepage Story Image"
-                  hint="Shown in the 'QSC overview' story section on the homepage — separate from the About page banner above."
-                  existingUrl={aboutForm.landingStoryImage ? `${CDN}${aboutForm.landingStoryImage}` : ""}
-                  file={storyImageFile}
-                  onChange={(f) => {
-                    setStoryImageFile(f);
-                    if (f) setStoryRemoved(false);
-                  }}
-                  removed={storyRemoved}
-                  onRemove={() => {
-                    setStoryRemoved(true);
-                    setStoryImageFile(null);
-                  }}
+                  hint="Shown in the 'QSC overview' story section on the homepage — separate from the About page banner above. Add as many as you like (up to 12); visitors can browse them as a gallery."
+                  max={STORY_IMAGE_MAX}
+                  existing={storyKept.map((path) => ({
+                    path,
+                    url: /^https?:\/\//i.test(path) ? path : `${CDN}${path}`,
+                  }))}
+                  staged={storyNew}
+                  removedCount={storyInitial.filter((path) => !storyKept.includes(path)).length}
+                  accept={STORY_IMAGE_ACCEPT}
+                  disabled={saving || loading}
+                  progress={saving ? storyProgress : null}
+                  onAddFiles={addStoryFiles}
+                  onRemoveExisting={removeStoryKept}
+                  onRemoveStaged={removeStoryNew}
+                  onUndoRemovals={undoStoryRemovals}
                 />
               </div>
 
@@ -1191,6 +1296,175 @@ const ImageField = ({ label, required, hint, existingUrl, file, onChange, remove
     </div>
   );
 };
+
+// Gallery picker for the homepage story. Saved images (`existing`) and newly picked
+// files (`staged`) sit in one grid; every tile has its own Remove button, and
+// adding never touches what is already there. Nothing is uploaded until Save.
+const MultiImageField = ({
+  label,
+  hint,
+  max,
+  existing,
+  staged,
+  removedCount,
+  accept,
+  disabled,
+  progress,
+  onAddFiles,
+  onRemoveExisting,
+  onRemoveStaged,
+  onUndoRemovals,
+}) => {
+  const inputRef = useRef(null);
+
+  const stagedPreviews = useMemo(
+    () => staged.map((item) => ({ ...item, url: URL.createObjectURL(item.file) })),
+    [staged]
+  );
+  useEffect(
+    () => () => stagedPreviews.forEach((item) => URL.revokeObjectURL(item.url)),
+    [stagedPreviews]
+  );
+
+  const total = existing.length + staged.length;
+  const full = total >= max;
+  const pick = () => inputRef.current?.click();
+
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 mb-1">
+        <ImagePlus size={14} />
+        <span>{label}</span>
+        <span className="font-normal text-slate-400">
+          ({total}/{max})
+        </span>
+      </label>
+
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={accept}
+        className="hidden"
+        onChange={(event) => {
+          onAddFiles(event.target.files);
+          // Reset so picking the same file again still fires onChange.
+          event.target.value = "";
+        }}
+      />
+
+      {total === 0 ? (
+        <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
+          <ImagePlus size={22} className="mx-auto mb-2 text-slate-400" aria-hidden="true" />
+          <div className="text-sm font-medium text-slate-700">No story images yet</div>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Select one or more images (JPG, PNG, GIF or WEBP, up to 5 MB each).
+          </p>
+          <button
+            type="button"
+            onClick={pick}
+            disabled={disabled}
+            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <Upload size={13} />
+            Upload images
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {existing.map((item, index) => (
+            <GalleryTile
+              key={item.path}
+              url={item.url}
+              alt={`${label} ${index + 1}`}
+              disabled={disabled}
+              onRemove={() => onRemoveExisting(item.path)}
+            />
+          ))}
+          {stagedPreviews.map((item) => (
+            <GalleryTile
+              key={item.id}
+              url={item.url}
+              alt={item.file.name}
+              badge="New"
+              caption={item.file.name}
+              disabled={disabled}
+              onRemove={() => onRemoveStaged(item.id)}
+            />
+          ))}
+          {!full && (
+            <button
+              type="button"
+              onClick={pick}
+              disabled={disabled}
+              className="min-h-[7.5rem] rounded-md border border-dashed border-slate-300 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 flex flex-col items-center justify-center gap-1.5 text-xs disabled:opacity-50"
+            >
+              <Upload size={16} />
+              Add images
+            </button>
+          )}
+        </div>
+      )}
+
+      {progress !== null && progress !== undefined && (
+        <div className="mt-3" role="status" aria-live="polite">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+            <span>{progress >= 100 ? "Processing images…" : "Uploading images…"}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-indigo-500 transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {staged.length > 0 && (
+        <p className="text-[11px] text-slate-500 mt-2">
+          {staged.length} new image(s) will be uploaded when you save.
+        </p>
+      )}
+      {removedCount > 0 && (
+        <p className="text-[11px] text-rose-500 mt-1">
+          {removedCount} saved image(s) will be removed when you save.{" "}
+          <button type="button" onClick={onUndoRemovals} className="underline hover:text-rose-600">
+            Undo
+          </button>
+        </p>
+      )}
+      {hint && <p className="text-[11px] text-slate-400 mt-1">{hint}</p>}
+    </div>
+  );
+};
+
+const GalleryTile = ({ url, alt, badge, caption, disabled, onRemove }) => (
+  <div className="rounded-md border border-slate-200 bg-white overflow-hidden flex flex-col">
+    <div className="relative aspect-[4/3] bg-slate-50">
+      <img src={url} alt={alt} className="w-full h-full object-cover" />
+      {badge && (
+        <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
+          {badge}
+        </span>
+      )}
+    </div>
+    <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+      <span className="text-[11px] text-slate-500 truncate" title={caption || ""}>
+        {caption || ""}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        disabled={disabled}
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded text-rose-600 hover:bg-rose-50 shrink-0 disabled:opacity-50"
+      >
+        <Trash2 size={12} />
+        Remove
+      </button>
+    </div>
+  </div>
+);
 
 const TextAreaField = ({ label, value, onChange }) => (
   <label className="flex flex-col gap-1.5 text-sm text-slate-600">

@@ -20,8 +20,15 @@ const AboutUsSchema = new mongoose.Schema(
     landingMainbanner: {
       type: String,
     },
+    // Legacy single image. Kept (mirrors the first gallery image) so older
+    // records and any client that still reads it keep working.
     landingStoryImage: {
       type: String,
+    },
+    // Homepage story gallery, in display order.
+    landingStoryImages: {
+      type: [String],
+      default: [],
     },
     welcomeEyebrow: {
       type: String,
